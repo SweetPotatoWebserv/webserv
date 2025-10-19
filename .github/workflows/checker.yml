@@ -1,0 +1,32 @@
+name: C++ Linter & Formatter
+
+on:
+  push:
+    branches: [ main, master, develop ]
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y clang-format clang-tidy
+
+      # Run the Formatter (clang-format)
+      - name: Run clang-format check
+        run: |
+          echo "Checking C++ formatting..."
+          # Find all .cpp and .hpp files, but exclude any 'vendor' or 'lib' folders
+          find . -type f \( -name "*.cpp" -o -name "*.h" \) -not -path "./vendor/*" -not -path "./lib/*" | xargs clang-format --dry-run --Werror
+          echo "Formatting check passed!"
+
+      # Run the Linter (clang-tiidy)
+      - name: Run clang-tidy
+        run: |
+          echo "Running C++ linter..."
+          # Pass --warnings-as-errors='*' to fail the action on any issue
+          find ./srcs/ -type f -name "*.cpp" | xargs clang-tidy --warnings-as-errors='*' -- -std=c++98 -I./includes/
+          echo "Linter check passed!"
