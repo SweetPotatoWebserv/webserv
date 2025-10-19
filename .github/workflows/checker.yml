@@ -18,7 +18,7 @@ jobs:
       - name: Run clang-format check
         run: |
           echo "Checking C++ formatting..."
-          # Find all .cpp and .hpp files, but exclude any 'vendor' or 'lib' folders
+          # Find all .cpp and .h files, but exclude any 'vendor' or 'lib' folders
           find . -type f \( -name "*.cpp" -o -name "*.h" \) | xargs clang-format --dry-run --Werror
           echo "Formatting check passed!"
 
