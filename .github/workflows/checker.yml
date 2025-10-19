@@ -22,7 +22,7 @@ jobs:
           find . -type f \( -name "*.cpp" -o -name "*.h" \) -not -path "./vendor/*" -not -path "./lib/*" | xargs clang-format --dry-run --Werror
           echo "Formatting check passed!"
 
-      # Run the Linter (clang-tiidy)
+      # Run the Linter (clang-tidy)
       - name: Run clang-tidy
         run: |
           echo "Running C++ linter..."
