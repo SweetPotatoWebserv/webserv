@@ -9,7 +9,6 @@ Checks: >
   readability-*,
   -misc-use-internal-linkage,
   -readability-braces-around-statements,
-  -google-objc-function-naming,
   -google-readability-braces-around-statements,
   -google-readability-namespace-comments,
   -google-runtime-references,
