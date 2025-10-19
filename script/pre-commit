@@ -11,9 +11,13 @@ echo "$files"
 if [ -n "$files" ]; then
     echo "$files" | xargs clang-format -i
     cpps=$(echo "$files" | grep -E "\.cpp$")
-    echo "$cpps" | xargs -I {} clang-tidy {} --fix -- -I./src -std=c++98
-    status=$?
+    if [ -n "$cpps" ]; then
+        echo "$cpps" | xargs -I {} clang-tidy {} --fix -- -I./src -std=c++98
+        status=$?
+    fi
 fi
+
+
 
 if [ "$status" -gt 0 ]; then
     echo -e "${red} pre-commit 失敗${endcolor}"
