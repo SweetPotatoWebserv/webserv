@@ -2,6 +2,8 @@ name: C++ Linter & Formatter
 
 on:
   push:
+    branches: [ main ]
+  pull_request:
 
 jobs:
   lint-and-format:
