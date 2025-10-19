@@ -2,7 +2,7 @@ name: C++ Linter & Formatter
 
 on:
   push:
-    branches: [ main, master, develop ]
+  pull_request:
 
 jobs:
   lint-and-format:
