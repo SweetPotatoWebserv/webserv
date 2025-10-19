@@ -11,7 +11,7 @@ echo "$files"
 if [ -n "$files" ]; then
     echo "$files" | xargs clang-format -i
     cpps=$(echo "$files" | grep -E "\.cpp$")
-    echo "$cpps" | xargs -I {} clang-tidy {} --fix -- -isysroot $(xcrun --show-sdk-path) -I./src -std=c++98
+    echo "$cpps" | xargs -I {} clang-tidy {} --fix -- -I./src -std=c++98
     status=$?
 fi
 
