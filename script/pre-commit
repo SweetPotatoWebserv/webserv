@@ -1,0 +1,22 @@
+#!/bin/bash
+
+red='\033[0;31m'
+green='\033[0;32m'
+endcolor='\033[0m'
+
+files=$(git diff --staged --name-only --diff-filter=ACM -- "*.h" "*.cpp")
+echo "$files"
+
+if [ -n "$files" ]; then
+    echo "$files" | xargs clang-format -i
+    cpps=$(echo "$files" | grep -E "\.cpp$")
+    echo "$cpps" | xargs -I {} clang-tidy {} --fix -- -isysroot $(xcrun --show-sdk-path) -I./src -std=c++98
+    status=$?
+fi
+
+if [ "$status" -gt 0 ]; then
+    echo -e "${red} pre-commit 失敗${endcolor}"
+    exit 1
+fi
+
+echo -e "${green} pre-commit 完了${endcolor}"
