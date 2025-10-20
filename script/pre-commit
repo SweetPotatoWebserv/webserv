@@ -12,7 +12,7 @@ if [ -n "$files" ]; then
     echo "$files" | xargs clang-format -i
     cpps=$(echo "$files" | grep -E "\.cpp$")
     if [ -n "$cpps" ]; then
-        echo "$cpps" | xargs -I {} clang-tidy {} --fix -- -I./src -std=c++98
+        echo "$cpps" | xargs -I {} clang-tidy {} -- -I./src -std=c++98
         status=$?
     fi
 fi
@@ -24,4 +24,5 @@ if [ "$status" -gt 0 ]; then
     exit 1
 fi
 
+echo "$files" | xargs git add
 echo -e "${green} pre-commit 完了${endcolor}"
