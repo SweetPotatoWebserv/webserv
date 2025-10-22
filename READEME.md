@@ -1,7 +1,9 @@
 ## pre-commit 設定
 1. linux または、mac のリンターのコメントアウトを外す
 2. シンボリックリンクを貼る
-`ln -snf $(pwd)/script/pre-commit .git/hooks/pre-commit`
+```
+ln -snf $(pwd)/script/pre-commit .git/hooks/pre-commit
+```
 
 ## ディレクトリ構造
 ```
