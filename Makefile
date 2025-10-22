@@ -6,25 +6,20 @@ CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -pedantic
 
 SRC_DIR = src/
-INCLUDES_DIR = includes/
-
 SRC_FILES =  # you can add *.cpp files here 
 SRC = $(addprefix($(SRC_DIR), $(SRC_FILES)))
 
-HEADERS_FILES = # you can add *.h files here
-HEADERS = $(addprefix($(INCLUDES_DIR), $(HEADERS_FILES)))
+HEADERS = # you can add *.h files here
 
 OBJS = $(SRC:.cpp=.o)
 	
-INCLUDES = -I $(INCLUDES_DIR)
-
 all: $(NAME)
 
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $(NAME) $(OBJS)
 
 %.o: %.cpp $(HEADERS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 	
 clean:
 	$(RM) $(OBJS)
