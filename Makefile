@@ -5,16 +5,16 @@ DEV_IMAGE_NAME = webserv-dev
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -pedantic
 
-SRCS_DIR = srcs/
+SRC_DIR = src/
 INCLUDES_DIR = includes/
 
-SRCS_FILES =  # you can add *.cpp files here 
-SRCS = $(addprefix($(SRCS_DIR), $(SRCS_FILES)))
+SRC_FILES =  # you can add *.cpp files here 
+SRC = $(addprefix($(SRC_DIR), $(SRC_FILES)))
 
-HEADERS_FILES = # you can add *.hpp files here
+HEADERS_FILES = # you can add *.h files here
 HEADERS = $(addprefix($(INCLUDES_DIR), $(HEADERS_FILES)))
 
-OBJS = $(SRCS:.cpp=.o)
+OBJS = $(SRC:.cpp=.o)
 	
 INCLUDES = -I $(INCLUDES_DIR)
 
@@ -41,7 +41,7 @@ build:
 	docker build -t $(DEV_IMAGE_NAME) .
 
 run:
-	docker run -it --rm -v "$(CURDIR)":/srcs $(DEV_IMAGE_NAME)
+	docker run -it --rm -v "$(CURDIR)":/src $(DEV_IMAGE_NAME)
 
 up: build run
 

@@ -21,7 +21,7 @@ RUN cmake -S /usr/src/googletest -B /tmp/gtest-build \
  && cmake --install /tmp/gtest-build \
  && rm -rf /tmp/gtest-build
 
-COPY . /srcs
-WORKDIR /srcs
+COPY . /src
+WORKDIR /src
 
 CMD ["bash"]
