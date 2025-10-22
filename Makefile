@@ -41,7 +41,7 @@ build:
 	docker build -t $(DEV_IMAGE_NAME) .
 
 run:
-	docker run -it --rm -v "$(CURDIR)":/src $(DEV_IMAGE_NAME)
+	docker run -it --rm --mount type=bind,src="$(CURDIR)",target=/src $(DEV_IMAGE_NAME)
 
 up: build run
 
