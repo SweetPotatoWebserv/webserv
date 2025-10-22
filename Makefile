@@ -16,7 +16,7 @@ HEADERS = $(addprefix($(INCLUDES_DIR), $(HEADERS_FILES)))
 
 OBJS = $(SRCS:.cpp=.o)
 	
-INCLUDES = -I INCLUDES_DIR
+INCLUDES = -I $(INCLUDES_DIR)
 
 all: $(NAME)
 
