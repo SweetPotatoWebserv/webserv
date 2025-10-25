@@ -1,5 +1,7 @@
 #include "common.h"
 
+#include <sys/socket.h>
+
 const char* const HTTP_VERSION = "HTTP/1.1";
 const uint16_t DEFAULT_PORT = 80;
 
@@ -38,3 +40,8 @@ std::string HttpStatus::reason(int code) {
     if (it != ReasonMap.end()) return it->second;
     return "Unknown Status";
 }
+
+const int SOCKET_DOMAIN = AF_INET;
+const int SOCKET_TYPE = SOCK_STREAM;
+const int SOCKET_PROTOCOL = 0;
+const int SOCKET_BACKLOG = 128;

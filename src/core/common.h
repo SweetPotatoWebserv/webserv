@@ -1,5 +1,8 @@
 #pragma once
 
+#include <netdb.h>
+
+#include <exception>
 #include <iostream>
 #include <map>
 #include <string>
@@ -47,4 +50,40 @@ class HttpStatus {
 
    private:
     static std::map<int, std::string> createReasonMap();
+};
+
+extern const int SOCKET_DOMAIN;
+extern const int SOCKET_TYPE;
+extern const int SOCKET_PROTOCOL;
+extern const int SOCKET_BACKLOG;
+
+class HostHeader {
+   public:
+    static bool resolve_ipv4(const std::string& host, uint16_t port,
+                             struct sockaddr_in& out_addr) {
+        struct addrinfo hints;
+        struct addrinfo* res = NULL;
+
+        std::memset(&hints, 0, sizeof(hints));
+        hints.ai_family = SOCKET_DOMAIN;
+        hints.ai_socktype = SOCK_STREAM;
+
+        int ret = getaddrinfo(host.c_str(), NULL, &hints, &res);
+        if (ret != 0 || res == NULL) {
+            return false;
+        }
+
+        struct sockaddr_in* addr_in = (struct sockaddr_in*)res->ai_addr;
+        std::memcpy(&out_addr, addr_in, sizeof(sockaddr_in));
+        out_addr.sin_port = htons(port);
+
+        freeaddrinfo(res);
+        return true;
+    }
+
+    HostHeader() : port_(DEFAULT_PORT) {}
+
+   private:
+    std::string address_;
+    uint16_t port_;
 };
