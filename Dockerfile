@@ -16,8 +16,8 @@ RUN apt-get update && apt-get install -y \
     net-tools \
     && rm -rf /var/lib/apt/lists/*
 
-RUN cmake -S /usr/src/googletest -B /tmp/gtest-build \
- && cmake --build /tmp/gtest-build --config Release \
+RUN cmake -S /usr/src/googletest -B /tmp/gtest-build -DCMAKE_BUILD_TYPE=Release \
+ && cmake --build /tmp/gtest-build \
  && cmake --install /tmp/gtest-build \
  && rm -rf /tmp/gtest-build
 
