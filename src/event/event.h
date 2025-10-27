@@ -2,8 +2,6 @@
 
 #include <sys/epoll.h>
 
-#include <cstdint>
-
 class EventLoop {
    public:
     void add(int fd, uint32_t events, void* user);
