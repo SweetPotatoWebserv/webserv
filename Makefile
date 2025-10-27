@@ -5,31 +5,30 @@ DEV_IMAGE_NAME = webserv-dev
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -pedantic
 
-SRC_DIR = src/
-SRC_FILES =  # you can add *.cpp files here 
-SRC = $(addprefix($(SRC_DIR), $(SRC_FILES)))
+SRC_DIR = src
+SRC = $(wildcard $(SRC_DIR)/*/*.cpp)
 
 HEADERS = # you can add *.h files here
 
-OBJS = $(SRC:.cpp=.o)
-	
+OBJ = $(SRC:.cpp=.o)
+
 all: $(NAME)
 
-$(NAME): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(NAME) $(OBJS)
+$(NAME): $(OBJ)
+	$(CXX) $(CXXFLAGS) -o $(NAME) $(OBJ)
 
 %.o: %.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-	
+
 clean:
-	$(RM) $(OBJS)
+	$(RM) $(OBJ)
 
 fclean: clean
 	$(RM) $(NAME)
 
 re: fclean all
 
-test: 
+test:
 	@echo "No test defined" # c++ -std=c++17 test_sample.cpp sample.cpp -L/usr/local/lib -lgtest -lgtest_main -pthread
 
 build:
