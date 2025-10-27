@@ -2,23 +2,17 @@
 
 #include <netdb.h>
 
+#include <cstring>
 #include <exception>
 #include <iostream>
 #include <map>
 #include <string>
 #include <vector>
 
-enum Method : std::uint8_t {
-    MethodGET,
-    MethodHEAD,
-    MethodPOST,
-    MethodDELETE,
-};
+enum Method { MethodGET, MethodHEAD, MethodPOST, MethodDELETE };
 
 // uint16_t が c++98 だと標準でサポートされるか怪しいため、typedef で定義
 typedef unsigned short uint16_t;
-
-typedef long long off_t;
 
 extern const char* const HTTP_VERSION;
 extern const uint16_t DEFAULT_PORT;
@@ -60,26 +54,7 @@ extern const int SOCKET_BACKLOG;
 class HostHeader {
    public:
     static bool resolve_ipv4(const std::string& host, uint16_t port,
-                             struct sockaddr_in& out_addr) {
-        struct addrinfo hints;
-        struct addrinfo* res = NULL;
-
-        std::memset(&hints, 0, sizeof(hints));
-        hints.ai_family = SOCKET_DOMAIN;
-        hints.ai_socktype = SOCK_STREAM;
-
-        int ret = getaddrinfo(host.c_str(), NULL, &hints, &res);
-        if (ret != 0 || res == NULL) {
-            return false;
-        }
-
-        struct sockaddr_in* addr_in = (struct sockaddr_in*)res->ai_addr;
-        std::memcpy(&out_addr, addr_in, sizeof(sockaddr_in));
-        out_addr.sin_port = htons(port);
-
-        freeaddrinfo(res);
-        return true;
-    }
+                             struct sockaddr_in& out_addr);
 
     HostHeader() : port_(DEFAULT_PORT) {}
 

@@ -2,8 +2,13 @@
 
 #include <sys/socket.h>
 
+// 定数
 const char* const HTTP_VERSION = "HTTP/1.1";
 const uint16_t DEFAULT_PORT = 80;
+const int SOCKET_DOMAIN = AF_INET;
+const int SOCKET_TYPE = SOCK_STREAM;
+const int SOCKET_PROTOCOL = 0;
+const int SOCKET_BACKLOG = 128;
 
 std::map<int, std::string> HttpStatus::createReasonMap() {
     std::map<int, std::string> m;
@@ -41,7 +46,25 @@ std::string HttpStatus::reason(int code) {
     return "Unknown Status";
 }
 
-const int SOCKET_DOMAIN = AF_INET;
-const int SOCKET_TYPE = SOCK_STREAM;
-const int SOCKET_PROTOCOL = 0;
-const int SOCKET_BACKLOG = 128;
+bool HostHeader::resolve_ipv4(const std::string& host, uint16_t port,
+                              struct sockaddr_in& out_addr) {
+    struct addrinfo hints;
+    struct addrinfo* res = NULL;
+
+    std::memset(&hints, 0, sizeof(hints));
+    hints.ai_family = SOCKET_DOMAIN;
+    hints.ai_socktype = SOCK_STREAM;
+
+    int ret = getaddrinfo(host.c_str(), NULL, &hints, &res);
+    if (ret != 0 || res == NULL) {
+        return false;
+    }
+
+    struct sockaddr_in* addr_in =
+        reinterpret_cast<struct sockaddr_in*>(res->ai_addr);
+    std::memcpy(&out_addr, addr_in, sizeof(sockaddr_in));
+    out_addr.sin_port = htons(port);
+
+    freeaddrinfo(res);
+    return true;
+}
