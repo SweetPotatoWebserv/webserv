@@ -1,7 +1,9 @@
 #pragma once
 
 #include <netdb.h>
+#include <unistd.h>
 
+#include <cerrno>
 #include <cstring>
 #include <exception>
 #include <iostream>
@@ -61,4 +63,17 @@ class HostHeader {
    private:
     std::string address_;
     uint16_t port_;
+};
+
+class Socket {
+   public:
+    static Socket listen_tcp(const std::string& host, uint16_t port);
+    int getFd() const;
+
+   private:
+    int fd_;
+    Socket();
+    ~Socket();
+    Socket(const Socket&);
+    Socket& operator=(const Socket& rhs);
 };
