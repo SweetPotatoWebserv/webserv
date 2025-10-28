@@ -14,7 +14,7 @@ class Event {
     void add(int fd, uint32_t events, EventCallback callback, void* user);
     void mod(int fd, uint32_t events);
     void del(int fd);
-    void run(const Socket& listen);
+    void run();
     Event();
     ~Event();
 

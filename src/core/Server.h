@@ -21,5 +21,5 @@ class Server {
     Socket listen_;
     Event& event_;
     Router& router_;
-    static void on_acceptable(int fd, void* self);
+    static void on_acceptable(int fd, uint32_t event, void* self);
 };

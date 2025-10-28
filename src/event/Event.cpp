@@ -63,7 +63,7 @@ void Event::del(int fd) {  // NOLINT
     registry_.erase(iter);
 }
 
-void Event::run(const Socket& listen) {  // NOLINT
+void Event::run() {  // NOLINT
     struct epoll_event events[MAX_EVENTS];
 
     for (;;) {
