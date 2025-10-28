@@ -8,13 +8,13 @@
 
 #include "../core/Common.h"
 
+typedef void (*EventCallback)(int, uint32_t, void*);
 class Event {
    public:
-    void add(int fd, uint32_t events, void* user);
-    void mod(int fd, uint32_t events, void* user);
+    void add(int fd, uint32_t events, EventCallback callback, void* user);
+    void mod(int fd, uint32_t events);
     void del(int fd);
-    Event init_listen(const Socket& listen, void* user, uint32_t events);
-    void run();
+    void run(const Socket& listen);
     Event();
     ~Event();
 
@@ -27,4 +27,11 @@ class Event {
     static const uint32_t EVENT_ERR = EPOLLERR;
     static const uint32_t EVENT_HUP = EPOLLHUP;
     static const int MAX_EVENTS = 10000;
+    struct EventData {
+        int fd;
+        uint32_t events;
+        EventCallback callback;
+        void* user;
+    };
+    std::map<int, EventData*> registry_;
 };

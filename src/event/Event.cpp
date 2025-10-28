@@ -13,23 +13,38 @@ Event::Event() {
     }
 }
 
-void Event::add(int fd, uint32_t events, void* user) {  // NOLINT
+void Event::add(int fd, uint32_t events, EventCallback callback,  // NOLINT
+                void* user) {
+    EventData* data = new EventData;
+    data->fd = fd;
+    data->events = events;
+    data->callback = callback;
+    data->user = user;
+
     struct epoll_event ev;
     std::memset(&ev, 0, sizeof(ev));
     ev.events = events;
-    ev.data.ptr = user;
+    ev.data.ptr = data;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) == -1) {
+        delete data;
         throw std::runtime_error("epoll_ctl ADD failed: " +
                                  std::string(std::strerror(errno)));
     }
+    registry_[fd] = data;
 }
 
-void Event::mod(int fd, uint32_t events, void* user) {  // NOLINT
+void Event::mod(int fd, uint32_t events) {  // NOLINT
+    std::map<int, EventData*>::iterator iter = registry_.find(fd);
+    if (iter == registry_.end()) return;
+
+    EventData* data = iter->second;
+    data->events = events;
+
     struct epoll_event ev;
     std::memset(&ev, 0, sizeof(ev));
     ev.events = events;
-    ev.data.ptr = user;
+    ev.data.ptr = data;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev) == -1) {
         throw std::runtime_error("epoll_ctl MOD failed: " +
@@ -38,31 +53,30 @@ void Event::mod(int fd, uint32_t events, void* user) {  // NOLINT
 }
 
 void Event::del(int fd) {  // NOLINT
+    std::map<int, EventData*>::iterator iter = registry_.find(fd);
+    if (iter == registry_.end()) return;
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, NULL) == -1) {
         throw std::runtime_error("epoll_ctl DEL failed: " +
                                  std::string(std::strerror(errno)));
     }
+    delete iter->second;
+    registry_.erase(iter);
 }
 
-void Event::run() {  // NOLINT
+void Event::run(const Socket& listen) {  // NOLINT
     struct epoll_event events[MAX_EVENTS];
+
     for (;;) {
-        int number_of_df = epoll_wait(epoll_fd_, events, MAX_EVENTS, -1);
-        if (number_of_df == -1) {
+        int number_of_fd = epoll_wait(epoll_fd_, events, MAX_EVENTS, -1);
+        if (number_of_fd == -1) {
             throw std::runtime_error("epoll_wait failed:" +
                                      std::string(std::strerror(errno)));
         }
-        for (int i = 0; i < number_of_df; ++i) {
-            // event の処理
+        for (int i = 0; i < number_of_fd; ++i) {
+            EventData* data = static_cast<EventData*>(events[i].data.ptr);
+            data->callback(data->fd, events[i].events, data->user);
         }
     }
-}
-
-Event Event::init_listen(const Socket& listen, void* user = 0,
-                         uint32_t events = EPOLLIN) {
-    Event epoll;
-    add(listen.getFd(), events, user);
-    return epoll;
 }
 
 Event::~Event() {
