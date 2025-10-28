@@ -3,6 +3,7 @@
 #include <netdb.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <exception>
@@ -10,7 +11,6 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 enum Method { MethodGET, MethodHEAD, MethodPOST, MethodDELETE };
 
