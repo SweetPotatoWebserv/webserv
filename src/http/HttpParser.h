@@ -47,9 +47,7 @@ class HttpResponse : public HttpCommonHeader {
 class HttpParser {
    public:
     void http_request_parse();
-    void http_response_parse();
 
    private:
     HttpRequest request_;
-    HttpResponse response_;
 };
