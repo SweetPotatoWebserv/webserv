@@ -1,5 +1,6 @@
 #include "Common.h"
 
+#include <fcntl.h>
 #include <sys/socket.h>
 
 #include <cstring>
@@ -127,3 +128,15 @@ Socket& Socket::operator=(const Socket& rhs) {
 }
 
 int Socket::getFd() const { return fd_; }
+
+void Socket::set_nonblocking(int fd) {  // NOLINT
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1) {
+        throw std::runtime_error("fcntl failed: " +
+                                 std::string(strerror(errno)));
+    }
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+        throw std::runtime_error("fcntl failed: " +
+                                 std::string(strerror(errno)));
+    }
+}

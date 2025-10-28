@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fcntl.h>
 #include <netdb.h>
 #include <unistd.h>
 
@@ -73,6 +74,7 @@ class Socket {
     Socket& operator=(const Socket& rhs);
     Socket(const Socket&);
     ~Socket();
+    static void set_nonblocking(int fd);
 
    private:
     int fd_;
