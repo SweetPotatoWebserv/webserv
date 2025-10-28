@@ -1,3 +1,6 @@
+## git メッセージ設定
+`git config --local commit.template .gitmessage.txt`
+
 ## pre-commit 設定
 1. linux または、mac の linter のコメントアウトを外す
 2. シンボリックリンクを貼る
