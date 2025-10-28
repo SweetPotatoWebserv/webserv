@@ -6,9 +6,9 @@
 #include <cstring>
 #include <stdexcept>
 
-#include "../event/event.h"
+#include "../event/Event.h"
 #include "../http/Router.h"
-#include "common.h"
+#include "Common.h"
 
 class Server {
    public:

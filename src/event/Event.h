@@ -6,7 +6,7 @@
 #include <cstring>
 #include <stdexcept>
 
-#include "../core/common.h"
+#include "../core/Common.h"
 
 class Event {
    public:
