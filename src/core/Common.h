@@ -10,6 +10,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 enum Method { MethodGET, MethodHEAD, MethodPOST, MethodDELETE };
 
@@ -18,6 +19,11 @@ typedef unsigned short uint16_t;
 
 extern const char* const HTTP_VERSION;
 extern const uint16_t DEFAULT_PORT;
+extern const char* const DEFAULT_ADDRESS;
+extern const int SOCKET_DOMAIN;
+extern const int SOCKET_TYPE;
+extern const int SOCKET_PROTOCOL;
+extern const int SOCKET_BACKLOG;
 
 class HttpStatus {
    public:
@@ -48,11 +54,6 @@ class HttpStatus {
     static std::map<int, std::string> createReasonMap();
 };
 
-extern const int SOCKET_DOMAIN;
-extern const int SOCKET_TYPE;
-extern const int SOCKET_PROTOCOL;
-extern const int SOCKET_BACKLOG;
-
 class HostHeader {
    public:
     static bool resolve_ipv4(const std::string& host, uint16_t port,
@@ -69,11 +70,11 @@ class Socket {
    public:
     static Socket listen_tcp(const std::string& host, uint16_t port);
     int getFd() const;
+    Socket& operator=(const Socket& rhs);
+    Socket(const Socket&);
+    ~Socket();
 
    private:
     int fd_;
     Socket();
-    ~Socket();
-    Socket(const Socket&);
-    Socket& operator=(const Socket& rhs);
 };
