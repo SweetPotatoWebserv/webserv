@@ -2,9 +2,13 @@
 
 #include <sys/socket.h>
 
+#include <cstring>
+#include <stdexcept>
+
 // 定数
 const char* const HTTP_VERSION = "HTTP/1.1";
-const uint16_t DEFAULT_PORT = 80;
+const uint16_t DEFAULT_PORT = 8080;
+const char* const DEFAULT_ADDRESS = "127.0.0.1";
 const int SOCKET_DOMAIN = AF_INET;
 const int SOCKET_TYPE = SOCK_STREAM;
 const int SOCKET_PROTOCOL = 0;
@@ -86,8 +90,8 @@ Socket::~Socket() {
 Socket Socket::listen_tcp(const std::string& host, uint16_t port) {
     Socket server_fd;
     sockaddr_in addr = {};
-    if (HostHeader::resolve_ipv4(host, port, addr)) {
-        std::cerr << "resolve_ipv4 failed";
+    if (!HostHeader::resolve_ipv4(host, port, addr)) {
+        throw std::runtime_error("resolve_ipv4 failed");
     }
     if (::bind(server_fd.fd_, reinterpret_cast<sockaddr*>(&addr),
                sizeof(addr)) == -1) {
@@ -100,6 +104,26 @@ Socket Socket::listen_tcp(const std::string& host, uint16_t port) {
     }
 
     return server_fd;
+}
+
+Socket::Socket(const Socket& other) : fd_(-1) {
+    if (other.fd_ >= 0) {
+        int new_fd = ::dup(other.fd_);
+        if (new_fd == -1) {
+            throw std::runtime_error("dup failed: " +
+                                     std::string(strerror(errno)));
+        }
+        fd_ = new_fd;
+    }
+}
+
+Socket& Socket::operator=(const Socket& rhs) {
+    if (this == &rhs) {
+        return *this;
+    }
+    Socket tmp(rhs);
+    std::swap(fd_, tmp.fd_);
+    return *this;
 }
 
 int Socket::getFd() const { return fd_; }

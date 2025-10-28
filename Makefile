@@ -3,7 +3,7 @@ NAME = webserv
 DEV_IMAGE_NAME = webserv-dev
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -pedantic
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -pedantic -g
 
 SRC_DIR = src
 SRC = $(wildcard $(SRC_DIR)/*/*.cpp)
@@ -35,7 +35,7 @@ build:
 	docker build -t $(DEV_IMAGE_NAME) .
 
 run:
-	docker run -it --rm -p 8080:80 --mount type=bind,src="$(CURDIR)",target=/src $(DEV_IMAGE_NAME)
+	docker run -it --rm -p 8080:8080 --mount type=bind,src="$(CURDIR)",target=/src $(DEV_IMAGE_NAME)
 
 up: build run
 
