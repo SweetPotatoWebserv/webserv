@@ -13,14 +13,9 @@ class ClientHandler {
 
    private:
     int fd_;
+    std::string buffer_;
     Event& event_;
     const Router& router_;
-    HttpParser parser_;
     HttpRequest request_;
     HttpResponse response_;
-
-    // TODO echo サーバー用の変数を削除する
-    char buf_[1024];  // NOLINT
-    ssize_t written_;
-    ssize_t len_;
 };

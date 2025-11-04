@@ -7,10 +7,7 @@
 #include <stdexcept>
 
 ClientHandler::ClientHandler(int fd, Event& event, const Router& router)
-    : fd_(fd), event_(event), router_(router) {
-    written_ = 0;
-    len_ = 0;
-}
+    : fd_(fd), event_(event), router_(router) {}
 
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
     static_cast<void>(fd);
@@ -26,33 +23,65 @@ void ClientHandler::on_close() {
     delete this;
 }
 
+// TODO transfer-encoding にも対応
+bool is_request_complete(std::string& buffer) {
+    size_t header_end = buffer.find("\r\n\r\n");
+    if (header_end == std::string::npos) {
+        return false;
+    }
+
+    std::string header_part = buffer.substr(0, header_end + 4);
+
+    size_t content_length = 0;
+    std::string::size_type pos = header_part.find("Content-Length:");
+    if (pos != std::string::npos) {
+        pos += strlen("Content-Length:");
+        while (pos < header_part.size() && std::isspace(header_part[pos]))
+            pos++;
+        size_t end = pos;
+        while (end < header_part.size() && isdigit(header_part[end])) end++;
+        content_length = std::strtoul(
+            header_part.substr(pos, end - pos).c_str(), NULL, 10);  // NOLINT
+    }
+    size_t total_len = header_end + 2 + content_length;
+    return buffer.size() >= total_len;
+}
+
 void ClientHandler::on_readable() {  // NOLINT
-    len_ = ::read(fd_, buf_, sizeof(buf_));
-    if (len_ < 0) {
+    char buf[4096];                  // NOLINT
+    ssize_t len = 0;
+    len = ::recv(fd_, buf, sizeof(buf), 0);
+    if (len < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) return;  // no data now
         on_close();
         return;
     }
-    if (len_ == 0) {  // EOF
+    if (len == 0) {  // EOF
         on_close();
         return;
     }
-    written_ = 0;
-    event_.mod(fd_, EPOLLOUT);
+    buffer_.append(buf, len);
+    if (is_request_complete(buffer_)) {
+        request_ = HttpParser::http_request_parse(buffer_);
+        event_.mod(fd_, EPOLLOUT);
+    }
 }
 
-void ClientHandler::on_writable() {
-    ssize_t ret;
-    ret = ::write(fd_, buf_ + written_, len_ - written_);
-    if (ret == -1) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) return;  // try again later
-        throw std::runtime_error("write failed: " +
-                                 std::string(strerror(errno)));
-    }
-    written_ += ret;
-    if (written_ == len_) {
-        len_ = 0;
-        written_ = 0;
-        event_.mod(fd_, EPOLLIN);
-    }
+void ClientHandler::on_writable() {  // NOLINT
+    std::cout << "method: " << request_.method_ << '\n';
+    std::cout << "path: " << request_.request_target_.path_ << '\n';
+    // ssize_t ret;
+    // ret = ::write(fd_, buf_ + written_, len_ - written_);
+    // if (ret == -1) {
+    //     if (errno == EAGAIN || errno == EWOULDBLOCK) return;  // try again
+    //     later throw std::runtime_error("write failed: " +
+    //                              std::string(strerror(errno)));
+    // }
+    // written_ += ret;
+    // if (written_ == len_) {
+    //     len_ = 0;
+    //     written_ = 0;
+    //     std::memset(buf_, 0, sizeof(buf_));
+    //     event_.mod(fd_, EPOLLIN);
+    // }
 }
