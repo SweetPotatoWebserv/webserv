@@ -140,3 +140,11 @@ void Socket::set_nonblocking(int fd) {  // NOLINT
                                  std::string(strerror(errno)));
     }
 }
+
+Method string_to_method(const std::string& method_str) {
+    if (method_str == "GET") return MethodGET;
+    if (method_str == "HEAD") return MethodHEAD;
+    if (method_str == "POST") return MethodPOST;
+    if (method_str == "DELETE") return MethodDELETE;
+    throw std::invalid_argument("Unknown HTTP Method: " + method_str);
+}
