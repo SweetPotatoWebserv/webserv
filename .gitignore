@@ -1,4 +1,4 @@
 **/*.o
 *.history
 *.out
-*.dSYM
+webserv
