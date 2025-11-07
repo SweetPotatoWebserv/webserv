@@ -68,8 +68,7 @@ void ClientHandler::on_readable() {  // NOLINT
 }
 
 void ClientHandler::on_writable() {  // NOLINT
-    std::cout << "method: " << request_.method_ << '\n';
-    std::cout << "path: " << request_.request_target_.path_ << '\n';
+    response_ = router_.create_response(request_);
     // ssize_t ret;
     // ret = ::write(fd_, buf_ + written_, len_ - written_);
     // if (ret == -1) {

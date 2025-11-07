@@ -41,6 +41,8 @@ HttpRequest HttpParser::http_request_parse(const std::string& buffer) {
     for (std::vector<std::string>::iterator it = header_vec.begin();
          it != header_vec.end(); ++it) {
         // TODO 他のヘッダーも対応する
+        // 全て小文字に変換する
+        // 定数に置き換える
         std::vector<std::string> header = split(*it, ": ");
         if (header[0] == "Host") {
             std::vector<std::string> host_and_port = split(header[1], ":");

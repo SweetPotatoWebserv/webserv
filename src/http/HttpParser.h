@@ -14,7 +14,7 @@ struct UriPath {
 
 class HttpDate {
    public:
-    static HttpDate from_string(const std::string& s);
+    HttpDate from_string(const std::string& s) const;
     std::string to_string() const;
 
    private:

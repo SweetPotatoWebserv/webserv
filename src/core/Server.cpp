@@ -7,6 +7,7 @@ Server::Server(Event& event, Router& router, const std::string& host,
     : listen_(Socket::listen_tcp(host, port)), event_(event), router_(router) {}
 
 void Server::start() {
+    // TODO Config の Server の個数分 add する
     event_.add(listen_.getFd(), EPOLLIN,
                reinterpret_cast<EventCallback>(on_acceptable), this);
     event_.run();
