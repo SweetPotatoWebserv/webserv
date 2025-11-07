@@ -6,10 +6,10 @@
 #include <string>
 
 enum class StatusCode : u_int16_t {
-    kOk = 200,
-    kRedirect = 300,
-    kClientError = 400,
-    kServerError = 500
+    Ok = 200,
+    Redirect = 300,
+    ClientError = 400,
+    ServerError = 500
 };
 
 class CgiExecutionException : public std::exception {
