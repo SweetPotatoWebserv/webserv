@@ -2,8 +2,6 @@
 #include "../config/HttpConfig.h"
 #include "HttpParser.h"
 
-// TODO HttpConfig をメンバにもつ
-// レスポンスを作る
 class Router {
    public:
     explicit Router(const HttpConfig& config);

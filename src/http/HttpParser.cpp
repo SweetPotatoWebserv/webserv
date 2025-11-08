@@ -1,5 +1,9 @@
 #include "HttpParser.h"
 
+#include <unistd.h>
+
+#include <sstream>
+
 std::vector<std::string> split(const std::string& buffer,
                                const std::string& sep = " ") {
     std::vector<std::string> res;
@@ -54,4 +58,29 @@ HttpRequest HttpParser::http_request_parse(const std::string& buffer) {
         }
     }
     return request;
+}
+
+ssize_t HttpResponse::send_response(int client_fd, HttpResponse& response) {
+    std::ostringstream oss;
+
+    oss << HTTP_VERSION << " " << response.status_code_ << " "
+        << response.message_ << "\r\n";
+    // if (response.date_.to_string().size()) // NOLINT
+    //     oss << "Date: " << response.date_.to_string() << "\r\n";
+    // if (response.header_.content_type_.size()) // NOLINT
+    //     oss << "Content-Type: " << response.header_.content_type_ << "\r\n";
+
+    oss << "Content-Length: " << response.body_.size() << "\r\n";
+
+    // if (!response.location_.empty())
+    //     oss << "Location: " << response.location_ << "\r\n";
+
+    oss << "\r\n";
+
+    oss << response.body_;
+
+    std::string response_str = oss.str();
+
+    ssize_t sent = write(client_fd, response_str.c_str(), response_str.size());
+    return sent;
 }

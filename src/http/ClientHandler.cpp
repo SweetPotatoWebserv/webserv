@@ -70,7 +70,7 @@ void ClientHandler::on_readable() {  // NOLINT
 
 void ClientHandler::on_writable() {  // NOLINT
     response_ = router_.create_response(request_);
-    ssize_t ret = ::write(fd_, response_.body_.c_str(), response_.body_.size());
+    ssize_t ret = HttpResponse::send_response(fd_, response_);
     if (ret == -1) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) return;
     }

@@ -1,5 +1,7 @@
 #include "Router.h"
 
+#include <fcntl.h>
+
 #include <vector>
 
 #include "../core/Common.h"
@@ -46,16 +48,13 @@ HttpResponse Router::create_response(const HttpRequest& request) {
             break;
         }
     }
-#include <fcntl.h>
 
     match->common_config_.root_ = "docs/html/";
     char buf[1024];  // NOLINT
     for (std::vector<std::string>::const_iterator it =
              match->common_config_.index_files_.begin();
          it != match->common_config_.index_files_.end(); ++it) {
-        char* pwd = getcwd(NULL, 0);
-        std::string path_name =
-            std::string(pwd) + match->path_ + match->common_config_.root_ + *it;
+        std::string path_name = match->common_config_.root_ + *it;
         int fd = open(path_name.c_str(), O_RDONLY);
         if (fd == -1) {
             std::cerr << "open\n";
@@ -69,21 +68,7 @@ HttpResponse Router::create_response(const HttpRequest& request) {
             }
         }
     }
+    response.status_code_ = HttpStatus::OK;
+    response.message_ = HttpStatus::reason(HttpStatus::OK);
     return response;
 }
-
-// struct HttpCommonHeader {
-//     // Content-Length: 512
-//     std::size_t content_length_;
-//     // Transfer-Encoding: chunked
-//     std::vector<std::string> transfer_encoding_;
-//     // text/html; charset=UTF-8
-//     std::string content_type_;
-// };
-//  struct HttpResponse {
-//      HttpCommonHeader header_;
-//      int status_code_;
-//      std::string message_;
-//      HttpDate date_;
-//      std::string location_;
-//  };

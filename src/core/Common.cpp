@@ -9,7 +9,7 @@
 // 定数
 const char* const HTTP_VERSION = "HTTP/1.1";
 const uint16_t DEFAULT_PORT = 8080;
-const char* const DEFAULT_ADDRESS = "127.0.0.1";
+const char* const DEFAULT_ADDRESS = "0.0.0.0";
 const int SOCKET_DOMAIN = AF_INET;
 const int SOCKET_TYPE = SOCK_STREAM;
 const int SOCKET_PROTOCOL = 0;

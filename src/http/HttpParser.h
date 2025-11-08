@@ -45,6 +45,7 @@ struct HttpResponse {
     HttpDate date_;
     std::string location_;
     std::string body_;
+    static ssize_t send_response(int client_fd, HttpResponse& response);
 };
 
 class HttpParser {
