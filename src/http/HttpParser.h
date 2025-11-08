@@ -7,22 +7,21 @@
 
 #include "../core/Common.h"
 
-class UriPath {
-   private:
+struct UriPath {
     std::string path_;
     std::string query_string_;
 };
 
 class HttpDate {
    public:
-    static HttpDate from_string(const std::string& s);
+    HttpDate from_string(const std::string& s) const;
     std::string to_string() const;
 
    private:
     std::time_t timestamp_;
 };
 
-class HttpCommonHeader {
+struct HttpCommonHeader {
     // Content-Length: 512
     std::size_t content_length_;
     // Transfer-Encoding: chunked
@@ -31,23 +30,25 @@ class HttpCommonHeader {
     std::string content_type_;
 };
 
-class HttpRequest : public HttpCommonHeader {
+struct HttpRequest {
+    HttpCommonHeader header_;
     Method method_;
     HostHeader host_;
     UriPath request_target_;
+    std::string body_;
 };
 
-class HttpResponse : public HttpCommonHeader {
+struct HttpResponse {
+    HttpCommonHeader header_;
     int status_code_;
     std::string message_;
     HttpDate date_;
     std::string location_;
+    std::string body_;
+    static ssize_t send_response(int client_fd, HttpResponse& response);
 };
 
 class HttpParser {
    public:
-    void http_request_parse();
-
-   private:
-    HttpRequest request_;
+    static HttpRequest http_request_parse(const std::string& buffer);
 };
