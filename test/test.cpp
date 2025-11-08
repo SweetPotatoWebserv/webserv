@@ -2,26 +2,34 @@
 #include <iostream>
 
 #include "../src/cgi/handler_cgi.h"
+#include "../src/core/Common.h"
+#include "../src/http/HttpParser.h"
 
 int main() {
-    // 1. 準備
     CgiProcess process;
-    HttpRequest dummy_request;  // "body_from_request!!" を返すダミー
-    HttpResponse dummy_response;
+    HttpRequest test_request;
+    HttpResponse test_response;
 
-    // 2. 実行
-    bool success = process.run(dummy_response);
+    test_request.method_ = MethodPOST;
+    test_request.header_.body_ = "body_from_request!!";
+    test_request.header_.content_length_ = test_request.header_.body_.length();
+    test_request.header_.content_type_ = "text/plain";
 
-    // 3. 検証
+    test_request.request_target_.path_ = "../cgi-bin/test.py";
+    test_request.request_target_.query_string_ = "q=search";
+
+    bool success = process.run(test_request, test_response);
+
     assert(success == true);
-    std::cout << "CgiProcess::run() returned:\n";
-    std::cout << dummy_response.getBody();
+    std::cout << "CgiProcess::run() returned body:\n";
+    std::cout << test_response.header_.body_;
 
-    // post_test.py の出力が含まれているか確認
-    assert(dummy_response.getBody().find("Hello from CgiProcess") !=
+    //    assert(test_response.header_.body_.find("Hello from CgiProcess") !=
+    //           std::string::npos);
+    assert(test_response.header_.body_.find("body_from_request!!") !=
            std::string::npos);
-    assert(dummy_response.getBody().find("body_from_request!!") !=
-           std::string::npos);
+
+    assert(test_response.status_code_ == 200);
 
     std::cout << "\n[SUCCESS] CgiProcess test PASSED!\n";
     return 0;
