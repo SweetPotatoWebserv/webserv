@@ -6,7 +6,7 @@
 #include <cstring>
 #include <stdexcept>
 
-ClientHandler::ClientHandler(int fd, Event& event, const Router& router)
+ClientHandler::ClientHandler(int fd, Event& event, Router& router)
     : fd_(fd), event_(event), router_(router) {}
 
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
@@ -43,7 +43,8 @@ bool is_request_complete(std::string& buffer) {
         content_length = std::strtoul(
             header_part.substr(pos, end - pos).c_str(), NULL, 10);  // NOLINT
     }
-    size_t total_len = header_end + 2 + content_length;
+    // ヘッダ境界は CRLFCRLF (=4 bytes)
+    size_t total_len = header_end + 4 + content_length;
     return buffer.size() >= total_len;
 }
 
@@ -69,18 +70,9 @@ void ClientHandler::on_readable() {  // NOLINT
 
 void ClientHandler::on_writable() {  // NOLINT
     response_ = router_.create_response(request_);
-    // ssize_t ret;
-    // ret = ::write(fd_, buf_ + written_, len_ - written_);
-    // if (ret == -1) {
-    //     if (errno == EAGAIN || errno == EWOULDBLOCK) return;  // try again
-    //     later throw std::runtime_error("write failed: " +
-    //                              std::string(strerror(errno)));
-    // }
-    // written_ += ret;
-    // if (written_ == len_) {
-    //     len_ = 0;
-    //     written_ = 0;
-    //     std::memset(buf_, 0, sizeof(buf_));
-    //     event_.mod(fd_, EPOLLIN);
-    // }
+    ssize_t ret = ::write(fd_, response_.body_.c_str(), response_.body_.size());
+    if (ret == -1) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return;
+    }
+    event_.mod(fd_, EPOLLIN);
 }

@@ -2,6 +2,7 @@
 
 #include <fcntl.h>
 #include <netdb.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -64,6 +65,8 @@ class HostHeader {
     HostHeader() : port_(DEFAULT_PORT) {}
     HostHeader(const std::string& address, uint16_t port)
         : address_(address), port_(port) {}
+    const std::string& getAddress() const;
+    uint16_t getPort() const;
 
    private:
     std::string address_;

@@ -5,7 +5,7 @@
 
 class ClientHandler {
    public:
-    ClientHandler(int fd, Event& event, const Router& router);
+    ClientHandler(int fd, Event& event, Router& router);
     static void on_event(int fd, uint32_t event, void* self);
     void on_close();
     void on_readable();
@@ -15,7 +15,7 @@ class ClientHandler {
     int fd_;
     std::string buffer_;
     Event& event_;
-    const Router& router_;
+    Router& router_;
     HttpRequest request_;
     HttpResponse response_;
 };

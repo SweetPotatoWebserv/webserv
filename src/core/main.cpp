@@ -37,7 +37,7 @@ static HttpConfig createTestHttpConfig() {
         s1.server_names_.push_back("example.local");
 
         // server単位の上書き
-        s1.common_config_.root_ = "www/site1";
+        s1.common_config_.root_ = "docs/html/";
         s1.common_config_.autoindex_ = true;
 
         // location /

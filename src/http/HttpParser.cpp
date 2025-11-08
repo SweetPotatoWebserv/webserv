@@ -21,7 +21,7 @@ HttpRequest HttpParser::http_request_parse(const std::string& buffer) {
     HttpRequest request;
 
     // ステータスラインのパース
-    size_t status_line_end = buffer.find("\r\n");
+    std::string::size_type status_line_end = buffer.find("\r\n");
     std::string status_line_str = buffer.substr(0, status_line_end + 2);
     std::vector<std::string> status_line_vec = ::split(status_line_str);
     request.method_ = string_to_method(status_line_vec[0]);
@@ -44,6 +44,7 @@ HttpRequest HttpParser::http_request_parse(const std::string& buffer) {
         // 全て小文字に変換する
         // 定数に置き換える
         std::vector<std::string> header = split(*it, ": ");
+        // TODO localhost は 127.0.0.1 に統一する
         if (header[0] == "Host") {
             std::vector<std::string> host_and_port = split(header[1], ":");
             HostHeader host(host_and_port[0], static_cast<uint16_t>(std::strtol(

@@ -35,6 +35,7 @@ struct HttpRequest {
     Method method_;
     HostHeader host_;
     UriPath request_target_;
+    std::string body_;
 };
 
 struct HttpResponse {
@@ -43,6 +44,7 @@ struct HttpResponse {
     std::string message_;
     HttpDate date_;
     std::string location_;
+    std::string body_;
 };
 
 class HttpParser {

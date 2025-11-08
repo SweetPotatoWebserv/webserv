@@ -7,7 +7,8 @@
 class Router {
    public:
     explicit Router(const HttpConfig& config);
-    HttpResponse create_response(const HttpRequest& request) const;
+    HttpResponse create_response(const HttpRequest& request);
+    ServerConfig* find_server(const HttpRequest& request);
 
    private:
     HttpConfig config_;
