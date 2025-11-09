@@ -7,6 +7,8 @@
 
 #include "../core/Common.h"
 
+const int BUFFER_SIZE = 100000;
+
 class CgiExecutionException : public std::exception {
    public:
     CgiExecutionException(const std::string &message,
@@ -38,4 +40,5 @@ class CgiExecutor {
                              char *const envp[]);
     std::string readParentProcess(const std::string &requestBody);
     static std::string getScriptDirectory(const std::string &scriptPath);
+    static std::string getScriptBasename(const std::string &scriptPath);
 };
