@@ -1,79 +1,51 @@
 #include "handler_cgi.h"
 
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <string>
 
 #include "../http/HttpParser.h"
+#include "executor_cgi.h"
+#include "request_cgi.h"
+#include "response_cgi.h"
 
-char** createDummyArgv(const std::string& script_path) {
-    char** argv = new char*[2];
-    argv[0] = strdup(script_path.c_str());
-    argv[1] = NULL;
-    return argv;
-}
+CgiProcess::CgiProcess() { executor_ = new CgiExecutor(); }
 
-/*char** createDummyEnvp() {
-    char** envp = new char*[1];
-    envp[0] = NULL;
-    return envp;
-}*/
+CgiProcess::~CgiProcess() { delete executor_; }
 
-void freeArray(char** arr) {
-    if (!arr) return;
-    for (int i = 0; arr[i] != NULL; ++i) {
-        free(arr[i]);
-    }
-    delete[] arr;
-}
+bool CgiProcess::run(const HttpRequest& request, HttpResponse& response) {
+    // CgiEnvBuilderなどに移行したい(envpにしてexecveの時に渡せば他の環境変数は引き継がれないので削除する必要がない)
+    std::string script_path = request.request_target_.path_;
+    char** argv = createArgv(script_path);
+    char** envp = createEnvp(request);
 
-CgiProcess::CgiProcess() {
-    // _reqeuest = new CgiRequestParser();
-    executor_ = new CgiExecutor();
-    // _envBuilder = new CgiEnvBuilder();
-    // _response = new CgiResponseParser();
-}
+    // HttpRequestからstdin(リクエストボディ)の内容を取得
+    const std::string& request_body = request.body_;
 
-CgiProcess::~CgiProcess() {
-    // delete _reqeuest;
-    delete executor_;
-    // delete _envBuilder;
-    // delete _response;
-}
-
-bool CgiProcess::run(HttpResponse& response) {
-    // ( envBuilder->build(request, ...) )
-
-    // --- 現時点でのダミー設定 ---
-    std::string script_path =
-        "../cgi-bin/test.py";  // stdinをエコーするスクリプト
-    char** argv = createDummyArgv(script_path);
-    char** envp = createDummyEnvp();
-    std::string request_body = HttpRequest::body();
-    // --- ダミーここまで ---
-
+    std::string raw_output;
     try {
-        // 2. CgiExecutor で実行
-        std::string raw_output =
-            executor_->execute(script_path, argv, envp, request_body);
-
-        // ( parser->parse(raw_output, response) )
-
-        // --- 現時点でのダミー処理 ---
-
-        response.setBody(raw_output);
-        // --- ダミーここまで ---
-
+        // CgiExecutorでスクリプトを実行
+        raw_output = executor_->execute(script_path, argv, envp, request_body);
     } catch (const CgiExecutionException& e) {
-        std::cerr
-            << "CGI failed: " << e.what()
-            << " (Status: 実装してないよ\n";  //<< e.getStatusCode() << ")\n";
-        // ( response->setError(e.getStatusCode()) )
+        // CgiExecutor(fork, pipe, execve, waitpid)でエラーが発生した場合
+        std::cerr << "CGI Execution failed: " << e.what() << "\n";
+
+        // エラーレスポンスを生成
+        response.status_code_ = e.getStatusCode();
+        response.body_ = e.what();
+
         freeArray(argv);
         freeArray(envp);
         return false;
     }
 
-    // 4. クリーンアップ
+    // CGIの生出力(stdoutから親proccessが読み取ったもの)をパースしてHttpResponseに格納
+    parseCgiResponse(response, raw_output);
+
     freeArray(argv);
     freeArray(envp);
     return true;
