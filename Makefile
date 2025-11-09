@@ -12,16 +12,16 @@ HEADERS = # you can add *.h files here
 
 OBJ = $(SRC:.cpp=.o)
 
-TEST_NAME = test_runner
+CGI_TEST_NAME = test_runner
 
-TEST_SRC = test/test.cpp \
+CGI_TEST_SRC = test/test.cpp \
            src/cgi/handler_cgi.cpp \
            src/cgi/request_cgi.cpp \
            src/cgi/response_cgi.cpp \
            src/cgi/executor_cgi.cpp \
            src/core/Common.cpp \
 
-TEST_OBJ = $(TEST_SRC:.cpp=.o)
+CGI_TEST_OBJ = $(TEST_SRC:.cpp=.o)
 
 all: $(NAME)
 
@@ -39,12 +39,12 @@ fclean: clean
 
 re: fclean all
 
-test: $(TEST_NAME)
+test_cgi: $(CGI_TEST_NAME)
 	@echo "---Run CGI TEST---" # c++ -std=c++17 test_sample.cpp sample.cpp -L/usr/local/lib -lgtest -lgtest_main -pthread
-	./$(TEST_NAME)
+	./$(CGI_TEST_NAME)
 
-$(TEST_NAME): $(TEST_OBJ)
-	$(CXX) $(CXXFLAGS) -o $(TEST_NAME) $(TEST_OBJ)
+$(CGI_TEST_NAME): $(CGI_TEST_OBJ)
+	$(CXX) $(CXXFLAGS) -o $(CGI_TEST_NAME) $(CGI_TEST_OBJ)
 build:
 	docker build -t $(DEV_IMAGE_NAME) .
 
