@@ -59,8 +59,11 @@ class HostHeader {
    public:
     static bool resolve_ipv4(const std::string& host, uint16_t port,
                              struct sockaddr_in& out_addr);
-
     HostHeader() : port_(DEFAULT_PORT) {}
+    HostHeader(const std::string& address, uint16_t port)
+        : address_(address), port_(port) {}
+    const std::string& getAddress() const;
+    uint16_t getPort() const;
 
    private:
     std::string address_;
