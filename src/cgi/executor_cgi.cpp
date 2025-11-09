@@ -10,7 +10,7 @@
 
 #include "../core/Common.h"
 
-CgiExecutor::CgiExecutor() {
+CgiExecutor::CgiExecutor() : pid_(-1) {
     pipeIn_[0] = -1;
     pipeIn_[1] = -1;
     pipeOut_[0] = -1;
@@ -40,6 +40,8 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
     }
 
     pid_ = fork();
+    // volatile pid_t pid = fork();
+    // pid_ = pid;
     if (pid_ == -1) {
         close(pipeIn_[0]);
         close(pipeIn_[1]);
@@ -53,7 +55,23 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
         executeChildProcess(scriptPath, argv, envp);
         exit(EXIT_FAILURE);
     } else {
-        return readParentProcess(requestBody);
+        std::string cgi_output;
+        try {
+            cgi_output = readParentProcess(requestBody);
+        } catch (const std::exception &e) {
+            std::cerr << "CGI warning: parent process exception: " << e.what()
+                      << "\n";
+        }
+
+        int status;
+        waitpid(pid_, &status, 0);
+
+        if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+            std::cerr << "CGI warning: child process failed to exit correctly "
+                         "(Status: "
+                      << WEXITSTATUS(status) << ")\n";
+        }
+        return cgi_output;
     }
 }
 
@@ -72,7 +90,7 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
     close(pipeIn_[1]);
 
     std::string cgi_output;
-    char buffer[BUFSIZ];  // あとで直す
+    char buffer[BUFFER_SIZE];  // あとで直す
     ssize_t bytes_read;
     while ((bytes_read = read(pipeOut_[0], buffer, sizeof(buffer))) > 0) {
         cgi_output.append(buffer, bytes_read);
@@ -84,13 +102,6 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
         std::cerr << "CGI warning: failed to read from cgi stdout\n";
     }
 
-    int status;
-    waitpid(pid_, &status, 0);
-
-    if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-        // ToDo error handlihng
-        std::cerr << "CGI warning: failed to exit correctly\n";
-    }
     return cgi_output;
 }
 
@@ -122,8 +133,11 @@ void CgiExecutor::executeChildProcess(const std::string &scriptPath,
         return;
     }
 
-    if (execve(scriptPath.c_str(), argv, envp) == -1) {
-        std::cerr << "CGI Error: execve failed for " << scriptPath << "\n";
+    std::string basename = getScriptBasename(scriptPath);
+
+    if (execve(basename.c_str(), argv, envp) == -1) {
+        std::cerr << "CGI Error: execve failed for " << basename
+                  << ". errno: " << strerror(errno) << "\n";
     }
 }
 
@@ -138,4 +152,12 @@ std::string CgiExecutor::getScriptDirectory(const std::string &scriptPath) {
     std::string dir_str(dir);
     free(path_c_str);
     return dir_str;
+}
+
+std::string CgiExecutor::getScriptBasename(const std::string &scriptPath) {
+    std::string::size_type pos = scriptPath.rfind('/');
+    if (pos == std::string::npos) {
+        return scriptPath;
+    }
+    return scriptPath.substr(pos + 1);
 }
