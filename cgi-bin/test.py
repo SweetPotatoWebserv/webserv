@@ -1,17 +1,27 @@
 #!/usr/bin/env python3
 
-import sys
+# CgiProcessの関数が動いているかのみを確かめるテスト
+# stdinから読み込みが出来てるかを確かめる
 
-# 1. stdin からリクエストボディを読み込む
+import sys
+import os
+
 body = sys.stdin.read()
 
-# 2. レスポンスヘッダーを出力
+# 実際にはresponse_cgi.cppがパースしてstatus_code_などに設定する
 print("Content-Type: text/plain")
 print("Status: 200 OK")
-print() # 空行
+print()
 
-# 3. レスポンスボディを出力
-print("--- Hello from CgiProcess ---")
-print("I received this body via stdin:")
+# --- CgiExecutor が stdin/stdout を正しく処理したかのテスト ---
+print("Hello from CgiProcess") 
 print(body)
-print("-----------------------------")
+
+# --- CgiEnvBuilder (createEnvp) が envp を正しく構築したかのテスト ---
+method = os.environ.get("REQUEST_METHOD", "NOT_FOUND")
+query = os.environ.get("QUERY_STRING", "NOT_FOUND")
+content_type = os.environ.get("CONTENT_TYPE", "NOT_FOUND")
+
+print(f"Method: {method}")
+print(f"Query String: {query}")
+print(f"Content-Type: {content_type}")
