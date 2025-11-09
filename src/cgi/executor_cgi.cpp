@@ -10,7 +10,7 @@
 
 #include "../core/Common.h"
 
-CgiExecutor::CgiExecutor() : pid_(-1) {
+CgiExecutor::CgiExecutor() {
     pipeIn_[0] = -1;
     pipeIn_[1] = -1;
     pipeOut_[0] = -1;
@@ -40,8 +40,6 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
     }
 
     pid_ = fork();
-    // volatile pid_t pid = fork();
-    // pid_ = pid;
     if (pid_ == -1) {
         close(pipeIn_[0]);
         close(pipeIn_[1]);
