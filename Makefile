@@ -34,7 +34,7 @@ fclean: clean
 re: fclean all
 
 run-test:
-	c++ -std=c++17 -I./src $(TEST_SRC) $(SRC_NO_MAIN) -L/usr/local/lib -lgtest -lgtest_main -pthread -o $(TEST_DIR)/all_tests \
+	c++ -std=c++17 -I./src $(TEST_SRC) $(SRC_NO_MAIN) -L/usr/local/lib -lgtest -pthread -o $(TEST_DIR)/all_tests \
 	&& $(TEST_DIR)/all_tests
 
 test:
