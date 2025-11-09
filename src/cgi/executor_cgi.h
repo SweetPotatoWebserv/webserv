@@ -5,24 +5,20 @@
 #include <exception>
 #include <string>
 
-enum class StatusCode : u_int16_t {
-    Ok = 200,
-    Redirect = 300,
-    ClientError = 400,
-    ServerError = 500
-};
+#include "../core/Common.h"
 
 class CgiExecutionException : public std::exception {
    public:
-    CgiExecutionException(const std::string &message, StatusCode statusCode)
+    CgiExecutionException(const std::string &message,
+                          HttpStatus::Code statusCode)
         : message_(message), statusCode_(statusCode) {}
     virtual ~CgiExecutionException() throw() {}
     virtual const char *what() const throw() { return message_.c_str(); }
-    StatusCode getStatusCode() const { return statusCode_; }
+    HttpStatus::Code getStatusCode() const { return statusCode_; }
 
    private:
     std::string message_;
-    StatusCode statusCode_;
+    HttpStatus::Code statusCode_;
 };
 
 class CgiExecutor {

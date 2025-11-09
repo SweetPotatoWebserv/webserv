@@ -8,6 +8,8 @@
 #include <iostream>
 #include <string>
 
+#include "../core/Common.h"
+
 CgiExecutor::CgiExecutor() {
     pipeIn_[0] = -1;
     pipeIn_[1] = -1;
@@ -27,14 +29,14 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
                                  const std::string &requestBody) {
     if (pipe(pipeIn_) == -1) {
         throw CgiExecutionException("Failed to create stdin pipe",
-                                    StatusCode::ServerError);
+                                    HttpStatus::InternalServerError);
     }
 
     if (pipe(pipeOut_) == -1) {
         close(pipeIn_[0]);
         close(pipeIn_[1]);
         throw CgiExecutionException("Failed to create stdout pipe",
-                                    StatusCode::ServerError);
+                                    HttpStatus::InternalServerError);
     }
 
     pid_ = fork();
@@ -43,7 +45,8 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
         close(pipeIn_[1]);
         close(pipeOut_[0]);
         close(pipeOut_[1]);
-        throw CgiExecutionException("Failed to fork", StatusCode::ServerError);
+        throw CgiExecutionException("Failed to fork",
+                                    HttpStatus::InternalServerError);
     }
 
     if (pid_ == 0) {
