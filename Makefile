@@ -7,6 +7,10 @@ CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -pedantic -g
 
 SRC_DIR = src
 SRC = $(wildcard $(SRC_DIR)/*/*.cpp)
+SRC_NO_MAIN = $(filter-out src/core/main.cpp,$(SRC))
+
+TEST_DIR = test
+TEST_SRC = $(TEST_DIR)/test_main.cpp
 
 HEADERS = # you can add *.h files here
 
@@ -28,8 +32,12 @@ fclean: clean
 
 re: fclean all
 
+run-test:
+	c++ -std=c++17 -I./src $(TEST_SRC) $(SRC_NO_MAIN) -L/usr/local/lib -lgtest -lgtest_main -pthread -o $(TEST_DIR)/all_tests \
+	&& $(TEST_DIR)/all_tests
+
 test:
-	@echo "No test defined" # c++ -std=c++17 test_sample.cpp sample.cpp -L/usr/local/lib -lgtest -lgtest_main -pthread
+	docker run -it --rm --mount type=bind,src="$(CURDIR)",target=/src $(DEV_IMAGE_NAME) make -C /src run-test
 
 build:
 	docker build -t $(DEV_IMAGE_NAME) .
@@ -39,5 +47,4 @@ run:
 
 up: build run
 
-.PHONY: all clean fclean re test build run up
-
+.PHONY: all clean fclean re test run-test build run up
