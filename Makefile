@@ -10,7 +10,7 @@ SRC = $(wildcard $(SRC_DIR)/*/*.cpp)
 SRC_NO_MAIN = $(filter-out src/core/main.cpp,$(SRC))
 
 TEST_DIR = test
-TEST_SRC = $(TEST_DIR)/test_main.cpp
+TEST_SRC = $(addprefix $(TEST_DIR)/, test_main.cpp test_is_request_ready.cpp test_is_complete_transfer.cpp test_is_complete_content_length.cpp)
 
 HEADERS = # you can add *.h files here
 
