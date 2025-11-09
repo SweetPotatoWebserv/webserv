@@ -14,7 +14,7 @@ struct UriPath {
 
 class HttpDate {
    public:
-    static HttpDate from_string(const std::string& s);
+    HttpDate from_string(const std::string& s) const;
     std::string to_string() const;
 
    private:
@@ -35,6 +35,7 @@ struct HttpRequest {
     Method method_;
     HostHeader host_;
     UriPath request_target_;
+    std::string body_;
 };
 
 struct HttpResponse {
@@ -43,6 +44,8 @@ struct HttpResponse {
     std::string message_;
     HttpDate date_;
     std::string location_;
+    std::string body_;
+    static ssize_t send_response(int client_fd, HttpResponse& response);
 };
 
 class HttpParser {

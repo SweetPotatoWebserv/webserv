@@ -74,6 +74,10 @@ bool HostHeader::resolve_ipv4(const std::string& host, uint16_t port,
     return true;
 }
 
+const std::string& HostHeader::getAddress() const { return address_; }
+
+uint16_t HostHeader::getPort() const { return port_; }
+
 Socket::Socket() {
     fd_ = ::socket(SOCKET_DOMAIN, SOCKET_TYPE, SOCKET_PROTOCOL);
     if (fd_ < 0) {
