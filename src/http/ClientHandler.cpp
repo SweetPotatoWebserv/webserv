@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <stdexcept>
@@ -23,45 +24,82 @@ void ClientHandler::on_close() {
     delete this;
 }
 
-// TODO transfer-encoding にも対応
-bool is_request_complete(std::string& buffer) {
-    size_t header_end = buffer.find("\r\n\r\n");
-    if (header_end == std::string::npos) {
-        return false;
-    }
+bool ClientHandler::is_request_ready(const std::string& buffer) {
+    std::string::size_type message_head_end = buffer.find(HTTP_HEADER_END);
+    if (message_head_end == std::string::npos) return false;
+    std::string message_head = buffer.substr(0, message_head_end);
+    std::transform(message_head.begin(), message_head.end(),
+                   message_head.begin(), ::tolower);
 
-    std::string header_part = buffer.substr(0, header_end + 4);
+    std::string::size_type transfer_encoding_pos =
+        message_head.find(TRANSFER_ENCODING);
+    if (transfer_encoding_pos != std::string::npos)
+        return is_complete_transfer(message_head, transfer_encoding_pos);
+    std::string::size_type content_length_pos =
+        message_head.find(CONTENT_LENGTH);
+    if (content_length_pos != std::string::npos)
+        return is_complete_content_length(buffer, message_head,
+                                          content_length_pos);
+    return true;
+}
 
-    size_t content_length = 0;
-    std::string::size_type pos = header_part.find("Content-Length:");
-    if (pos != std::string::npos) {
-        pos += strlen("Content-Length:");
-        while (pos < header_part.size() && std::isspace(header_part[pos]))
-            pos++;
-        size_t end = pos;
-        while (end < header_part.size() && isdigit(header_part[end])) end++;
-        content_length = std::strtoul(
-            header_part.substr(pos, end - pos).c_str(), NULL, 10);  // NOLINT
-    }
-    size_t total_len = header_end + 2 + content_length;
+bool ClientHandler::is_complete_transfer(
+    const std::string& message_head,
+    std::string::size_type transfer_encoding_pos) {
+    transfer_encoding_pos += TRANSFER_ENCODING_LEN;
+    while (transfer_encoding_pos < message_head.size() &&
+           std::isspace(message_head[transfer_encoding_pos]))
+        transfer_encoding_pos++;
+    std::string::size_type transfer_encoding_end =
+        message_head.find(HTTP_LINE_END, transfer_encoding_pos);
+    std::string transfer_encoding_value = message_head.substr(
+        transfer_encoding_pos, transfer_encoding_end - transfer_encoding_pos);
+    return transfer_encoding_value.find(CHUNKED) != std::string::npos;
+}
+
+bool ClientHandler::is_complete_content_length(
+    const std::string& buffer, const std::string& message_head,
+    std::string::size_type content_length_pos) {
+    size_t content_length_value = 0;
+    content_length_pos += CONTENT_LENGTH_LEN;
+    std::string::size_type message_head_size = message_head.size();
+    while (content_length_pos < message_head_size &&
+           std::isspace(message_head[content_length_pos]))
+        content_length_pos++;
+    std::string::size_type content_length_header_end = content_length_pos;
+    while (content_length_header_end < message_head_size &&
+           isdigit(message_head[content_length_header_end]))
+        content_length_header_end++;
+    content_length_value =
+        std::strtoul(message_head
+                         .substr(content_length_pos,
+                                 content_length_header_end - content_length_pos)
+                         .c_str(),
+                     NULL, DECIMAL);
+
+    // リクエストが完全に届いたのか判定する
+    size_t total_len =
+        message_head_size + HTTP_HEADER_END_LEN + content_length_value;
     return buffer.size() >= total_len;
 }
 
 void ClientHandler::on_readable() {  // NOLINT
-    char buf[4096];                  // NOLINT
+    char buf[BUFFER_SIZE];
     ssize_t len = 0;
-    len = ::recv(fd_, buf, sizeof(buf), 0);
+    len = ::recv(fd_, buf, sizeof(buf), RECV_FLG);
+    // recv の失敗
     if (len < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) return;  // no data now
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return;
         on_close();
         return;
     }
+    // メッセージを全て受け取った
     if (len == 0) {  // EOF
         on_close();
         return;
     }
     buffer_.append(buf, len);
-    if (is_request_complete(buffer_)) {
+    if (ClientHandler::is_request_ready(buffer_)) {
         request_ = HttpParser::http_request_parse(buffer_);
         event_.mod(fd_, EPOLLOUT);
     }

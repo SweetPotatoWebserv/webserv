@@ -21,8 +21,9 @@ HttpRequest HttpParser::http_request_parse(const std::string& buffer) {
     HttpRequest request;
 
     // ステータスラインのパース
-    size_t status_line_end = buffer.find("\r\n");
-    std::string status_line_str = buffer.substr(0, status_line_end + 2);
+    size_t status_line_end = buffer.find(HTTP_LINE_END);
+    std::string status_line_str =
+        buffer.substr(0, status_line_end + HTTP_LINE_END_LEN);
     std::vector<std::string> status_line_vec = ::split(status_line_str);
     request.method_ = string_to_method(status_line_vec[0]);
 
@@ -35,8 +36,10 @@ HttpRequest HttpParser::http_request_parse(const std::string& buffer) {
     }
 
     // ヘッダーのパース
-    size_t header_end = buffer.find("\r\n\r\n", status_line_end + 2);
-    std::string header_str = buffer.substr(status_line_end + 2, header_end + 2);
+    size_t header_end =
+        buffer.find(HTTP_HEADER_END, status_line_end + HTTP_LINE_END_LEN);
+    std::string header_str = buffer.substr(status_line_end + HTTP_LINE_END_LEN,
+                                           header_end + HTTP_LINE_END_LEN);
     std::vector<std::string> header_vec = split(header_str, "\r\n");
     for (std::vector<std::string>::iterator it = header_vec.begin();
          it != header_vec.end(); ++it) {
