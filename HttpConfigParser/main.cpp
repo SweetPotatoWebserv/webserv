@@ -40,7 +40,9 @@
 //     return 0;
 // }
 
-#include "HttpConfigParser.hpp"
+// main.cpp
+#include "HttpConfigParser.hpp" // レシピ本をインクルード
+#include "HttpConfig.h"       // 完成品のお盆もインクルード
 #include <iostream>
 #include <stdexcept>
 
@@ -51,16 +53,25 @@ int main(int argc, char **argv) {
     }
 
     try {
-        HttpConfigParser parser(argv[1]);
+        // --- ↓↓↓ ここが決定的に変わる ↓↓↓ ---
+        //
+        // [旧] HttpConfigParser parser(argv[1]);
+        // [旧] HttpConfig config = parser.getConfig();
+        //
+        // [新] HttpConfigParser クラスから、直接 ::parse() を呼び出す
         
-        std::cout << "--- Tokens ---" << std::endl;
-        parser.printTokens(); // デバッグ関数を呼ぶ
-        std::cout << "--------------" << std::endl;
+        HttpConfig config = HttpConfigParser::parse(argv[1]); 
+        
+        // --- ↑↑↑ ここまで ---
+
+        // Day 2 の完了確認
+        std::cout << "Config file parsed successfully!" << std::endl;
+
+        // (デバッグ用：config に何が入ったか確認するコードを将来追加できる)
 
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;
     }
-
     return 0;
 }

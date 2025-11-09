@@ -5,31 +5,42 @@
 #include <fstream>//file read
 #include <sstream>//file read
 #include <stdexcept>//exception
-#include "HttpConfig.h"
+#include "HttpConfig.h"//データ保持クラス
+
+//設定ファイル(.conf)のパース(解析)静的解析クラス
 
 class HttpConfigParser {
+
+	
 	public:
-		HttpConfigParser(const std::string& filename);//constructor
-		~HttpConfigParser();//destructor
-
-		HttpConfig getConfig();//完成したHttpConfigを返す
-
-		const std::vector<std::string>& getTokens() const { return tokens_; }//トークン列を返すtest用
-	#include <iostream> // デバッグ用
-	void printTokens() {
-		for (size_t i = 0; i < tokens_.size(); ++i) {
-			std::cout << "[" << tokens_[i] << "]" << std::endl;
-		}
-	}
+		//@brief パースを実行する唯一の public インターフェース
+    	//@param filename 設定ファイルパス
+    	//@return 完成した HttpConfig オブジェクト
+		static HttpConfig parse(const std::string& filename);
 
 	private:
-		HttpConfig config_;//パース結果を格納する
-		std::vector<std::string> tokens_;//トークン列を格納する
-		size_t current_token_index_;//現在のトークン位置を示すインデックス
+		HttpConfigParser();
+		~HttpConfigParser();//instance制限のためprivate
 
-		void loadAndTokenize();//ファイルを読み込み、トークンに分割する
+		//@brief ファイルを読み込み、トークン化する
+    	// @param filename ファイルパス
+    	//@return トークンのリスト
+		static std::vector<std::string> tokenize(const std::string& filename);
 
-		void tokenize(const std::string& line);//1行をトークンに分割する
+		//@brief 終端に来たかどうか
+		// @param tokens トークンリスト
+		// @param index 現在の位置
+		// @return 終端なら true
+		static bool isEof(const std::vector<std::string>& tokens, size_t index);
 
-		void parseConfig();//トークン列をパースしてHttpConfigを構築する
+		//@brief 次のトークンを取得し、インデックスを1つ進める
+		//  @param tokens トークンリスト
+		//  @param index 現在の位置 (参照渡しで、この値が内部で +1 される)
+		//  @return 次のトークン
+		static std::string getNextToken(const std::vector<std::string>& tokens, size_t& index);
+
+
+		static void parserServer(HttpConfig& config, const std::vector<std::string>& tokens, size_t& index);
+		static void parserLocation(ServerConfig& server_config, const std::vector<std::string>& tokens, size_t& index);
+
 };

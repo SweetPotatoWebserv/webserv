@@ -1,86 +1,127 @@
 #include "HttpConfigParser.hpp"
 #include <cctype> // std::isspace
 
-// コンストラクタ
-HttpConfigParser::HttpConfigParser(const std::string& filename) : current_token_index_(0) {
-    //1.file open
+// --- コンストラクタとデストラクタを削除 (または private 実装) ---
+HttpConfigParser::HttpConfigParser() {}
+HttpConfigParser::~HttpConfigParser() {}
+
+
+//終端に来たかどうか
+bool HttpConfigParser::isEof(const std::vector<std::string>& tokens, size_t index) {
+	return index >= tokens.size();
+}
+
+//次のトークンを取得し、インデックスを1つ進める
+std::string HttpConfigParser::getNextToken(const std::vector<std::string>& tokens, size_t& index) {
+	if (isEof(tokens, index)) {
+		throw std::runtime_error("Error: Unexpected end of EOF");
+	}
+	return tokens[index++];
+}
+
+//failを読み込み、トークン化する
+std::vector<std::string> HttpConfigParser::tokenize(const std::string& filename){
 	std::ifstream ifs(filename.c_str());
 	if (!ifs.is_open()) {
-		throw std::runtime_error("Failed to open config file: " + filename);
+		throw std::runtime_error("Error: Could not open file " + filename);
 	}
-	//2.file全体をstringstreamnに読み込む
-	std::stringstream ss;
-	ss << ifs.rdbuf();
-	//3. stringstreamをstringに変換
-	std::string content = ss.str();
-	//4. トークナイズを呼び出す
-	this ->tokenize(content);
 
-    // ここで filename を使ってファイルを読み込み、
-    // tokenize() を呼び出す処理を後で書きます。
-    (void)filename; // とりあえず「使ってない」警告を消す
+	std::vector<std::string> tokens;
+	std::string line;
+	std::string special_chars = "{};";
+
+	while (std::getline(ifs, line)) {
+		for (size_t i = 0; i < line.size(); ++i) {
+			// 空欄スキップ
+			if (std::isspace(line[i])) {continue;}
+			// コメント行スキップ
+			if (line[i] == '#') {break;}
+			// トークン抽出
+			if (special_chars.find(line[i]) != std::string::npos) {
+                tokens.push_back(line.substr(i, 1));
+                continue;
+            }
+			size_t start = i;
+			while(i < line.size() && 
+                  !std::isspace(line[i]) &&
+                  line[i] != '#' &&
+                  special_chars.find(line[i]) == std::string::npos)
+            {
+                ++i;
+            }
+            tokens.push_back(line.substr(start, i - start));
+            --i;
+        }
+	}
+	return tokens;	
 }
 
-// デストラクタ
-HttpConfigParser::~HttpConfigParser() {
-    // 今は何もすることがない
-}
+///@brief パースを実行する唯一の public インターフェース
+///@param filename 設定ファイルパス
+///@return 完成した HttpConfig オブジェクト
 
-// 完成した HttpConfig を返す関数
-HttpConfig HttpConfigParser::getConfig() {
-    // 後で parse() を呼び出すように変更する
-    return this->config_;
-}
+HttpConfig HttpConfigParser::parse(const std::string& filename){
+	// トークン化 全トークンを取得
+	std::vector<std::string> tokens = HttpConfigParser::tokenize(filename);
 
-// --- private メンバ関数 ---
+	//parse処理に必要な道具をローカルに準備
+	HttpConfig config;//完成させるHttpConfigオブジェクト
+	size_t index = 0;//現在のトークン位置
 
-// ファイルを読み込み、トークン化する (Day 1 の核心)
-void HttpConfigParser::loadAndTokenize() {
-    //ファイルを読み込み、トークンに分割する
-}
+	//メインの解析ループ
+	// indexが終端(tokens.size())に達するまでループ
+	while(!HttpConfigParser::isEof(tokens, index)) {
+		//tokensを一つ取り出して、indexを進める
+		std::string token = HttpConfigParser::getNextToken(tokens, index);
 
-// トークナイザーの本体
-void HttpConfigParser::tokenize(const std::string& content) {
-	std::string special_chars = "{};"; //一文字でトークンになる文字
-
-	for (size_t i = 0; i < content.size(); ++i) {
-		//1. 空白文字のスキップ
-		if(std::isspace(content[i])) {
-			continue; //空白文字はスキップ
+		//serverブロック以外はエラー
+		if (token == "server") {
+			HttpConfigParser::parserServer(config, tokens, index);
+		} else {
+			throw std::runtime_error("Error: Unknown directive outside server block:" + token);
 		}
-		//2. コメント行のスキップ
-		if (content[i] == '#') {
-			//コメント行をスキップ
-			while (i < content.size() && content[i] != '\n') {
-				++i;
+	}
+	
+	return config;
+
+}
+
+
+///@brief server ブロックをパースする
+///@param config HttpConfig オブジェクト (参照渡し)
+///@param tokens トークンリスト
+///@param index 現在の位置 (参照渡しで、この値が内部で進められる)
+
+void HttpConfigParser::parserServer(HttpConfig& config, const std::vector<std::string>& tokens, size_t& index) {
+	//server の後は '{' が来るはず
+	if(HttpConfigParser::getNextToken(tokens, index) != "{") {
+		throw std::runtime_error("Error: Expected '{' after server directive");
+	}
+
+	//このサーバーの設定を保持する ServerConfig server_config;
+	ServerConfig server_config;
+
+	//"}" が来るまでループ
+	while(!HttpConfigParser::isEof(tokens, index)) {
+		std::string token = HttpConfigParser::getNextToken(tokens, index);
+		if (token == "}") {
+			//server ブロック終了
+			break;
+		}
+
+		//ここに"listen"や"root"などのパース処理を追加していく
+		else {
+			//知らないディレクティブはセミコロンまでスキップ
+			while (HttpConfigParser::getNextToken(tokens, index) != ";") {
+				//;を見つけるまで進める
+				if (HttpConfigParser::isEof(tokens, index)) {
+					throw std::runtime_error("Error: Expected ';' to terminate directive");
+				}
+				
 			}
-			continue;
 		}
-		//3. 特殊文字 ( { } ; # ) は1文字でトークン
-		if (special_chars.find(content[i]) != std::string::npos) {
-			this->tokens_.push_back(content.substr(i, 1));
-			continue;
-		}
-
-		// 4. 上記以外 (単語: "server", "8080", "/var/www" など)
-		size_t start = i;
-		while(i < content.size() && //最後の文字まで到達しておらず、かつ
-				!std::isspace(content[i]) && //空白文字でなく、かつ
-				content[i] != '#' && //コメント文字でなく、かつ
-				special_chars.find(content[i]) == std::string::npos)//特殊文字でない間
-		{
-			++i;
-		}
-
-		// トークンを抽出して保存
-		// [start] から [i-1] までの部分文字列を切り出す
-		this->tokens_.push_back(content.substr(start, i - start));
-		--i; //外側の for ループの i++ を相殺
 	}
 
-}
-
-// (Day 2 で追加) パースを実行するメイン関数
-void HttpConfigParser::parseConfig() {
-    //トークン列をパースしてHttpConfigを構築する
+	//完成した server_config を config に追加//// (※ HttpConfig.h に public な addServer(ServerConfig s) セッターが必要)
+	config.addServerConfig(server_config);
 }
