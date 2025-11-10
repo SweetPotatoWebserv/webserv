@@ -26,7 +26,7 @@ struct HttpCommonHeader {
     // Content-Length: 512
     std::size_t content_length_;
     // Transfer-Encoding: chunked
-    std::vector<std::string> transfer_encoding_;
+    std::string transfer_encoding_;
     // text/html; charset=UTF-8
     std::string content_type_;
 };
@@ -60,7 +60,7 @@ class HttpParser {
         const std::string& buffer, HttpRequest& request,
         std::string::size_type request_line_end);
     static void header_section_host_parse(
-        std::vector<std::string>& header_field, HttpRequest& request);
+        const std::vector<std::string>& header_field, HttpRequest& request);
 
    private:
     static const int HOST_AND_PORT_PARTS = 2;

@@ -31,7 +31,7 @@ std::string::size_type HttpParser::request_line_parse(const std::string& buffer,
 }
 
 void HttpParser::header_section_host_parse(
-    std::vector<std::string>& header_field, HttpRequest& request) {
+    const std::vector<std::string>& header_field, HttpRequest& request) {
     HostHeader host;
     std::vector<std::string> host_parts = split(trim(header_field[1]), COLON);
     if (host_parts.size() == HOST_AND_PORT_PARTS) {
@@ -67,17 +67,28 @@ std::string::size_type HttpParser::header_section_parse(
             HttpParser::header_section_host_parse(header_field, request);
         }
         if (header_field[0] == CONTENT_TYPE) {
+            request.header_.content_type_ = trim(header_field[1]);
         }
-
         if (header_field[0] == CONTENT_LENGTH) {
+            request.header_.content_length_ =
+                strtoul(trim(header_field[1]).c_str(), NULL, DECIMAL);
         }
-
         if (header_field[0] == TRANSFER_ENCODING) {
+            request.header_.transfer_encoding_ = trim(header_field[1]);
         }
     }
     return header_end + HTTP_HEADER_END_LEN;
 }
 
+static void body_section_parse(const std::string& buffer, HttpRequest& request,
+                               std::string::size_type header_section_end) {
+    if (request.header_.transfer_encoding_ == CHUNKED) {
+    } else {
+        std::string::size_type body_end =
+            buffer.find(HTTP_LINE_END, header_section_end);
+        request.body_ = buffer.substr(header_section_end, body_end);
+    }
+}
 HttpRequest HttpParser::http_request_parse(const std::string& buffer) {
     HttpRequest request;
 
@@ -90,6 +101,6 @@ HttpRequest HttpParser::http_request_parse(const std::string& buffer) {
         HttpParser::header_section_parse(buffer, request, request_line_end);
 
     // ボディのパース
-    // HttpParser::body_section_parse(buffer, request, header_section_end);
+    body_section_parse(buffer, request, header_section_end);
     return request;
 }
