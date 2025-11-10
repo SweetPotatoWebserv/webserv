@@ -27,7 +27,6 @@ class ClientHandler {
     HttpResponse response_;
     static const int BUFFER_SIZE = 4096;
     static const int RECV_FLG = 0;
-    static const int DECIMAL = 10;
     static const int CONTENT_LENGTH_LEN = 15;
     static const int TRANSFER_ENCODING_LEN = 18;
 };

@@ -7,6 +7,8 @@
 #include <cstring>
 #include <stdexcept>
 
+#include "HttpException.h"
+
 ClientHandler::ClientHandler(int fd, Event& event, const Router& router)
     : fd_(fd), event_(event), router_(router) {}
 
@@ -100,7 +102,11 @@ void ClientHandler::on_readable() {  // NOLINT
     }
     buffer_.append(buf, len);
     if (ClientHandler::is_request_ready(buffer_)) {
-        request_ = HttpParser::http_request_parse(buffer_);
+        try {
+            request_ = HttpParser::http_request_parse(buffer_);
+        } catch (const HttpException& e) {
+            // sendErrorResponse(e.status_code());
+        }
         event_.mod(fd_, EPOLLOUT);
     }
 }

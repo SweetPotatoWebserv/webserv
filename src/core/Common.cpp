@@ -25,6 +25,8 @@ extern const char* const HTTP_HEADER_END = "\r\n\r\n";
 extern const int HTTP_LINE_END_LEN = 2;
 extern const int HTTP_HEADER_END_LEN = 4;
 extern const char* const QUESTION_MARK = "?";
+extern const int DECIMAL = 10;
+extern const char* const COLON = ":";
 
 std::map<int, std::string> HttpStatus::createReasonMap() {
     std::map<int, std::string> m;
@@ -86,7 +88,6 @@ bool HostHeader::resolve_ipv4(const std::string& host, uint16_t port,
 }
 
 const std::string& HostHeader::getAddress() const { return address_; }
-
 uint16_t HostHeader::getPort() const { return port_; }
 
 Socket::Socket() {

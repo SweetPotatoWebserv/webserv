@@ -37,6 +37,8 @@ extern const char* const HTTP_HEADER_END;
 extern const int HTTP_LINE_END_LEN;
 extern const int HTTP_HEADER_END_LEN;
 extern const char* const QUESTION_MARK;
+extern const int DECIMAL;
+extern const char* const COLON;
 
 class HttpStatus {
    public:
