@@ -49,4 +49,19 @@ re: fclean all
 run: $(NAME)
 	@./$(NAME) test.conf
 
+run1: $(NAME)
+	@./$(NAME) test1.conf
+
+run2: $(NAME)
+	@./$(NAME) test2.conf
+
+run3: $(NAME)
+	@./$(NAME) test3.conf
+
+run4: $(NAME)
+	@./$(NAME) test4.conf
+
+run5: $(NAME)
+	@./$(NAME) test5.conf
+
 .PHONY: all clean fclean re run

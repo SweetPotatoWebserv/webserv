@@ -43,4 +43,25 @@ class HttpConfigParser {
 		static void parserServer(HttpConfig& config, const std::vector<std::string>& tokens, size_t& index);
 		static void parserLocation(ServerConfig& server_config, const std::vector<std::string>& tokens, size_t& index);
 
+		///@brief listen ディレクティブをパースする
+		///@return 完成した ListenDirective オブジェクト
+		static ListenDirective parseListen(const std::vector<std::string>& tokens, size_t& index);
+
+		//@brief root ディレクティブをパースする
+		//@return root のパス　"/var/www/html"など
+		static std::string parseRoot(const std::vector<std::string>& tokens, size_t& index);
+
+		//@brief index ディレクティブをパースする (複数形対応)
+		//@return index ファイル名のリスト""index.html"など
+		static std::vector<std::string> parseIndex(const std::vector<std::string>& tokens, size_t& index);
+
+		//@brief autoindex ディレクティブをパースする
+		//@return autoindex のオンオフ(true/false)
+		static bool parseAutoindex(const std::vector<std::string>& tokens, size_t& index);
+
+		///@brief client_max_body_size ディレクティブをパースする
+		///@return ボディサイズの上限値
+		static off_t parseClientMaxBodySize(const std::vector<std::string>& tokens, size_t& index);
+
+
 };

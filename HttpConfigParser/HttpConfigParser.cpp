@@ -1,5 +1,7 @@
 #include "HttpConfigParser.hpp"
 #include <cctype> // std::isspace
+#include <sstream>//parseListen用
+#include <limits> // std::numeric_limits を使うために必要
 
 // --- コンストラクタとデストラクタを削除 (または private 実装) ---
 HttpConfigParser::HttpConfigParser() {}
@@ -56,6 +58,10 @@ std::vector<std::string> HttpConfigParser::tokenize(const std::string& filename)
 	return tokens;	
 }
 
+
+//-----------------------------------------------------------
+//------------------parser本体-------------------------------
+//-----------------------------------------------------------
 ///@brief パースを実行する唯一の public インターフェース
 ///@param filename 設定ファイルパス
 ///@return 完成した HttpConfig オブジェクト
@@ -86,6 +92,9 @@ HttpConfig HttpConfigParser::parse(const std::string& filename){
 
 }
 
+//-----------------------------------------------------------
+//------------------サーバーブロックパーサー-------------------
+//-----------------------------------------------------------
 
 ///@brief server ブロックをパースする
 ///@param config HttpConfig オブジェクト (参照渡し)
@@ -100,28 +109,310 @@ void HttpConfigParser::parserServer(HttpConfig& config, const std::vector<std::s
 
 	//このサーバーの設定を保持する ServerConfig server_config;
 	ServerConfig server_config;
-
+	bool found_closing_brace = false; // ★★★ フラグを追加 ★★★
 	//"}" が来るまでループ
 	while(!HttpConfigParser::isEof(tokens, index)) {
 		std::string token = HttpConfigParser::getNextToken(tokens, index);
 		if (token == "}") {
 			//server ブロック終了
+			found_closing_brace = true; // ★★★ フラグを立てる ★★★
 			break;
 		}
-
-		//ここに"listen"や"root"などのパース処理を追加していく
-		else {
-			//知らないディレクティブはセミコロンまでスキップ
-			while (HttpConfigParser::getNextToken(tokens, index) != ";") {
-				//;を見つけるまで進める
-				if (HttpConfigParser::isEof(tokens, index)) {
-					throw std::runtime_error("Error: Expected ';' to terminate directive");
-				}
-				
+		
+		if(token == "location"){
+			//"location"を見つけたら、locationを呼び出す。
+			HttpConfigParser::parserLocation(server_config, tokens, index);
+		}
+		else if (token == "listen") {
+			// listen を呼び出し、結果をserver_configにセット
+			ListenDirective ld = HttpConfigParser::parseListen(tokens, index);
+			server_config.setListen(ld); //<- セッターが必要
+		}
+		else if (token == "root") {
+			// root を呼び出し、結果をserver_configにセット
+			std::string r = HttpConfigParser::parseRoot(tokens, index);
+			server_config.setRoot(r); //<- セッターが必要
+		}
+		else if (token == "index") {
+			// index を呼び出し、結果をserver_configにセット
+			std::vector<std::string> files = HttpConfigParser::parseIndex(tokens, index);
+			for (size_t i = 0; i < files.size(); ++i) {
+				server_config.addIndexFile(files[i]); //<- セッターが必要
 			}
 		}
+		else if (token == "autoindex") {
+			// parseAutoindex 呼び出し、結果をserver_configにセット
+			bool ai = HttpConfigParser::parseAutoindex(tokens, index);
+			server_config.setAutoindex(ai); //<- セッターが必要
+		}
+		else if (token == "client_max_body_size") {
+            off_t size = HttpConfigParser::parseClientMaxBodySize(tokens, index);
+            server_config.setClientMaxBodySize(size); // (CommonConfig::setClientMaxBodySize セッター)
+        }
+		// error_page, return,などのディレクティブのパース処理を追加予定???
+		else {
+			//知らないディレクティブはエラー
+			throw std::runtime_error("Error: Unknown directive in server block:" + token);
+		}
+	}
+	if (!found_closing_brace) {
+		throw std::runtime_error("Error: Expected '}' to close server block");
 	}
 
 	//完成した server_config を config に追加//// (※ HttpConfig.h に public な addServer(ServerConfig s) セッターが必要)
 	config.addServerConfig(server_config);
+}
+
+
+//-----------------------------------------------------------
+//------------------ロケーションブロックパーサー----------------
+//-----------------------------------------------------------
+
+///@brief location ブロックをパースする
+///@param server_config ServerConfig オブジェクト (参照渡し)
+///@param tokens トークンリスト
+///@param index 現在の位置 (参照渡しで、この値が内部で進められる)
+
+void HttpConfigParser::parserLocation(ServerConfig& server_config, const std::vector<std::string>& tokens, size_t& index){
+
+	//"location"の後にパスが来るはず
+	// 次は、"パス" (例: "/" や "/images")
+	std::string path = HttpConfigParser::getNextToken(tokens, index);
+	
+	//その次に '{' が来るはず
+	if(HttpConfigParser::getNextToken(tokens, index) != "{") {
+		throw std::runtime_error("Error: Expected '{' after location path" + path);
+	}
+
+	//このロケーションの設定を保持する LocationConfig location_config(path);
+	LocationConfig location_config;
+
+	// (※ LocationConfig.h に public な setPath(std::string s) セッターが必要です)
+	location_config.setPath(path);
+
+	//"}" が来るまでループ
+	while(!HttpConfigParser::isEof(tokens, index)) {
+		std::string token = HttpConfigParser::getNextToken(tokens, index);
+		if (token == "}") {
+			//location ブロック終了
+			break;
+		}
+		if (token == "root") {
+			// root 専門家を呼び出し、結果をlocation_configに
+			std::string r = HttpConfigParser::parseRoot(tokens, index);
+			location_config.setRoot(r); //<- セッターが必要
+		}
+		else if (token == "index") {
+			// index 専門家を呼び出し、結果をlocation_configに
+			std::vector<std::string> files = HttpConfigParser::parseIndex(tokens, index);
+			for (size_t i = 0; i < files.size(); ++i) {
+				location_config.addIndexFile(files[i]); //<- セッターが必要
+			}
+		}
+		else if (token == "autoindex") {
+			// autoindex 専門家を呼び出し、結果をlocation_configに
+			bool ai = HttpConfigParser::parseAutoindex(tokens, index);
+			location_config.setAutoindex(ai); //<- セッターが必要
+		}
+		else if (token == "client_max_body_size") {
+            off_t size = HttpConfigParser::parseClientMaxBodySize(tokens, index);
+            location_config.setClientMaxBodySize(size); // (CommonConfig::setClientMaxBodySize セッター)
+        }
+		// error_page, return,などのディレクティブのパース処理を追加予定???
+		else {
+			//知らないディレクティブはエラー
+			throw std::runtime_error("Error: Unknown directive in server block:" + token);
+		}
+	}
+		// 6. 完成した location_config を、引数の server_config に追加する
+    // (※ ServerConfig.h に public な addLocation(LocationConfig l) セッターが必要です)
+    server_config.addLocation(location_config);
+}
+
+
+//-----------------------------------------------------------------
+//------------------rootディレクティブパーサー---------------------
+//-----------------------------------------------------------------
+///@brief root ディレクティブをパースする
+//@return root のパス　"/var/www/html"など
+std::string HttpConfigParser::parseRoot(const std::vector<std::string>& tokens, size_t& index) {
+	//root の後にパスが来るはず
+	std::string path = HttpConfigParser::getNextToken(tokens, index);
+	//セミコロンを期待
+	if (HttpConfigParser::getNextToken(tokens, index) != ";") {
+		throw std::runtime_error("Error: Expected ';' after root directive");
+	}
+	return path;
+}
+
+//-----------------------------------------------------------------
+//------------------autoindexディレクティブパーサー-----------------
+//-----------------------------------------------------------------
+
+///@brief "autoindex" ディレクティブをパースする
+//@return autoindex のオンオフ(true/false)
+bool HttpConfigParser::parseAutoindex(const std::vector<std::string>& tokens, size_t& index) {
+	//autoindex の後に "on" か "off"が来るはず
+	std::string value = HttpConfigParser::getNextToken(tokens, index);
+	
+	if(HttpConfigParser::getNextToken(tokens, index) != ";") {
+		throw std::runtime_error("Error: Expected ';' after autoindex directive");
+	}
+
+	if(value == "on") {
+		return true;
+	} else if (value == "off") {
+		return false;
+	} else {
+		throw std::runtime_error("Error: autoindex value must be 'on' or 'off'");
+	}
+}
+
+//-----------------------------------------------------------------
+//------------------indexディレクティブパーサー---------------------
+//-----------------------------------------------------------------
+
+///@brief index ディレクティブをパースする (複数形対応)
+//@return index ファイル名のリスト""index.html"など
+std::vector<std::string> HttpConfigParser::parseIndex(const std::vector<std::string>& tokens, size_t& index) {
+	std::vector<std::string> index_files;
+
+	// ";" が来るまでループ
+	while(!HttpConfigParser::isEof(tokens, index)) {
+		std::string token = HttpConfigParser::getNextToken(tokens, index);
+		if (token == ";") {
+			//index ディレクティブ終了
+			break;
+		}
+		index_files.push_back(token);
+	}
+
+	//breakでループを抜けた場合、getNextTokenが";"を消費しているので問題なし
+	// もしEOFに達した場合はエラー
+
+	//１つもファイル名がない場合はエラー
+	if (index_files.empty()) {
+		throw std::runtime_error("Error: Expected at least one index file before ';'");
+	}
+
+	return index_files;
+}
+
+
+//-----------------------------------------------------------------
+//------------------listenディレクティブパーサー---------------------
+//-----------------------------------------------------------------
+
+///@brief listen ディレクティブをパースする
+///@return 完成した ListenDirective オブジェクト
+ListenDirective HttpConfigParser::parseListen(const std::vector<std::string>& tokens, size_t& index) {
+	ListenDirective ld; //返すための構造体
+
+	// listen の次のトークン取得
+	std::string value = HttpConfigParser::getNextToken(tokens, index);
+
+	//本当はlocalhostやドメイン名も解決したいが、とりあえずIPアドレスかポート番号だけ対応★
+
+	// 形式を簡易的にチェック(address:port か port)
+	std::string::size_type colon_pos = value.find(':');
+
+	if(colon_pos != std::string::npos) {
+		// address:port 形式
+		ld.address = value.substr(0, colon_pos);
+		std::string port_str = value.substr(colon_pos + 1);
+
+		//C++98で文字列を数値に変換(sstreamを使用)
+		std::stringstream ss(port_str);
+		if(!(ss >> ld.port) || !ss.eof()) {//変換失敗or あとにごみがある場合
+			throw std::runtime_error("Error: Invalid port number +" + port_str);
+		}
+	} else {
+		// port 形式のみ
+		ld.address = "0.0.0.0"; //デフォルトのアドレス
+
+		std::stringstream ss(value);
+		if(!(ss >> ld.port) || !ss.eof()) {
+			throw std::runtime_error("Error: Invalid port number +" + value);
+		}
+	}
+
+	// 次のトークンを確認して、"default_server" かどうかチェック
+	std::string next_token = HttpConfigParser::getNextToken(tokens, index);
+	if (next_token == "default_server") {
+		ld.is_default_server = true;
+		//さらにもう一つトークンをよみ、セミコロンを期待
+		next_token = HttpConfigParser::getNextToken(tokens, index);
+	}
+
+
+	//最後はセミコロンを期待
+	if (next_token != ";") {
+		throw std::runtime_error("Error: Expected ';' after listen directive");
+	}
+
+	return ld;
+}
+
+
+//-----------------------------------------------------------------
+//------------------ClientMaxBodySizeディレクティブパーサー----------
+//-----------------------------------------------------------------
+///@brief client_max_body_size ディレクティブをパースする
+///@return ボディサイズの上限値
+off_t HttpConfigParser::parseClientMaxBodySize(const std::vector<std::string>& tokens, size_t& index) {
+	//値のトークンを取得(10mなど)
+	std::string value = HttpConfigParser::getNextToken(tokens, index);
+
+	//セミコロンを期待
+	if (HttpConfigParser::getNextToken(tokens, index) != ";") {
+		throw std::runtime_error("Error: Expected ';' after client_max_body_size directive");
+	}
+
+	//値を解析(数値部分と単位部分に分けるk, m, g)
+	off_t size = 0;
+	std::string num_part;
+	char suffix = 0;
+
+	//数値部分とサフィックス部分に分ける
+	size_t i = 0;
+	while (i < value.size() && std::isdigit(value[i])) {
+		i++;
+	}
+	num_part = value.substr(0, i);
+
+	if (i < value.size()) {
+		suffix = std::tolower(value[i]); //k, m, g のいずれか
+		if (i + 1 != value.size() || (suffix != 'k' && suffix != 'm' && suffix != 'g')) {
+			throw std::runtime_error("Error: Invalid client_max_body_size value: " + value);
+		}
+	}
+
+	//数値部分をoff_tに変換
+	std::stringstream ss(num_part);
+    if (!(ss >> size) || !ss.eof() || size < 0) {
+        throw std::runtime_error("Error: Invalid number in client_max_body_size: " + num_part);
+    }
+
+	// 5. サフィックスに基づいて乗算
+    //    (オーバーフローチェック。off_t の最大値 / 1024 より大きい数に乗算すると危険)
+    const off_t max_off_t = std::numeric_limits<off_t>::max();
+
+	if (suffix == 'k') {
+        if (size > max_off_t / 1024) { // オーバーフローチェック
+            throw std::runtime_error("Error: client_max_body_size (k) overflows");
+        }
+        size *= 1024;
+    } else if (suffix == 'm') {
+        if (size > max_off_t / 1024 / 1024) { // オーバーフローチェック
+            throw std::runtime_error("Error: client_max_body_size (m) overflows");
+        }
+        size *= 1024 * 1024;
+    } else if (suffix == 'g') {
+         if (size > max_off_t / 1024 / 1024 / 1024) { // オーバーフローチェック
+            throw std::runtime_error("Error: client_max_body_size (g) overflows");
+        }
+        size *= 1024 * 1024 * 1024;
+    }
+
+	return size;
 }
