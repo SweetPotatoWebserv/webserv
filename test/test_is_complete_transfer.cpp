@@ -1,24 +1,29 @@
 #include <gtest/gtest.h>
 #include "../src/http/ClientHandler.h"
 
-TEST(IsCompleteTransfer, SimpleChunkedTrue) {
+// chunked: 終端 0\r\n\r\n が無ければ未完(false)
+TEST(IsCompleteTransfer, ChunkedWithoutTerminalIsFalse) {
     std::string head = std::string("host: a") + HTTP_LINE_END +
                        "transfer-encoding: chunked";
+    std::string buffer = head + HTTP_HEADER_END + "4\r\nWiki\r\n"; // 中途
     std::string::size_type pos = head.find(ClientHandler::TRANSFER_ENCODING_WITH_COLON);
-    EXPECT_TRUE(ClientHandler::is_complete_transfer(head, pos));
+    EXPECT_FALSE(ClientHandler::is_complete_transfer(buffer, head, pos));
 }
 
-TEST(IsCompleteTransfer, IncludesChunkedTrue) {
+// chunked: 終端 0\r\n\r\n があれば完了(true)
+TEST(IsCompleteTransfer, ChunkedWithTerminalIsTrue) {
     std::string head = std::string("host: a") + HTTP_LINE_END +
-                       "transfer-encoding: gzip, chunked";
+                       "transfer-encoding: chunked";
+    std::string buffer = head + HTTP_HEADER_END + "0\r\n\r\n";
     std::string::size_type pos = head.find(ClientHandler::TRANSFER_ENCODING_WITH_COLON);
-    EXPECT_TRUE(ClientHandler::is_complete_transfer(head, pos));
+    EXPECT_TRUE(ClientHandler::is_complete_transfer(buffer, head, pos));
 }
 
-TEST(IsCompleteTransfer, NoChunkedFalse) {
+// 非chunkedのTEは本文不要で即完了(true)
+TEST(IsCompleteTransfer, NonChunkedIsTrue) {
     std::string head = std::string("host: a") + HTTP_LINE_END +
                        "transfer-encoding: gzip";
+    std::string buffer = head + HTTP_HEADER_END;
     std::string::size_type pos = head.find(ClientHandler::TRANSFER_ENCODING_WITH_COLON);
-    EXPECT_FALSE(ClientHandler::is_complete_transfer(head, pos));
+    EXPECT_TRUE(ClientHandler::is_complete_transfer(buffer, head, pos));
 }
-

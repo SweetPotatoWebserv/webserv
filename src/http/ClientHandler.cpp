@@ -40,7 +40,8 @@ bool ClientHandler::is_request_ready(const std::string& buffer) {
     std::string::size_type transfer_encoding_pos =
         message_head.find(TRANSFER_ENCODING_WITH_COLON);
     if (transfer_encoding_pos != std::string::npos)
-        return is_complete_transfer(message_head, transfer_encoding_pos);
+        return is_complete_transfer(buffer, message_head,
+                                    transfer_encoding_pos);
     std::string::size_type content_length_pos =
         message_head.find(CONTENT_LENGTH_WITH_COLON);
     if (content_length_pos != std::string::npos)
@@ -50,7 +51,7 @@ bool ClientHandler::is_request_ready(const std::string& buffer) {
 }
 
 bool ClientHandler::is_complete_transfer(
-    const std::string& message_head,
+    const std::string& buffer, const std::string& message_head,  // NOLINT
     std::string::size_type transfer_encoding_pos) {
     transfer_encoding_pos += TRANSFER_ENCODING_WITH_COLON_LEN;
     while (transfer_encoding_pos < message_head.size() &&
@@ -60,7 +61,13 @@ bool ClientHandler::is_complete_transfer(
         message_head.find(HTTP_LINE_END, transfer_encoding_pos);
     std::string transfer_encoding_value = message_head.substr(
         transfer_encoding_pos, transfer_encoding_end - transfer_encoding_pos);
-    return transfer_encoding_value.find(CHUNKED) != std::string::npos;
+    if (transfer_encoding_value.find(CHUNKED) == std::string::npos) {
+        return true;
+    }
+    std::string::size_type header_end_in_buffer =
+        message_head.size() + HTTP_HEADER_END_LEN;
+    return buffer.find(std::string("0") + HTTP_HEADER_END,
+                       header_end_in_buffer) != std::string::npos;
 }
 
 bool ClientHandler::is_complete_content_length(

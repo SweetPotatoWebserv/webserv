@@ -15,7 +15,7 @@ class ClientHandler {
         const std::string& buffer, const std::string& message_head,
         std::string::size_type content_length_pos);
     static bool is_complete_transfer(
-        const std::string& message_head,
+        const std::string& buffer, const std::string& message_head,
         std::string::size_type transfer_encoding_pos);
     static const int TRANSFER_ENCODING_WITH_COLON_LEN = 18;
     static const char* const TRANSFER_ENCODING_WITH_COLON;

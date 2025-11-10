@@ -23,19 +23,18 @@ TEST(IsRequestReady, ContentLengthFullBodyReady) {
     EXPECT_TRUE(ClientHandler::is_request_ready(req));
 }
 
-TEST(IsRequestReady, TransferEncodingChunkedSupportedOnly) {
+TEST(IsRequestReady, TransferEncodingChunkedWithoutTerminalNotReady) {
     std::string req = std::string("POST / HTTP/1.1") + HTTP_LINE_END +
                       "Host: localhost" + HTTP_LINE_END +
                       "Transfer-Encoding: chunked" + HTTP_LINE_END +
                       HTTP_LINE_END;  // NOLINT
-    EXPECT_TRUE(ClientHandler::is_request_ready(req));
+    EXPECT_FALSE(ClientHandler::is_request_ready(req));
 }
 
-TEST(IsRequestReady, TransferEncodingNonChunkedNotReady) {
+TEST(IsRequestReady, TransferEncodingNonChunkedIsReady) {
     std::string req = std::string("POST / HTTP/1.1") + HTTP_LINE_END +
                       "Host: localhost" + HTTP_LINE_END +
                       "Transfer-Encoding: gzip" + HTTP_LINE_END +
                       HTTP_LINE_END;  // NOLINT
-    EXPECT_FALSE(ClientHandler::is_request_ready(req));
+    EXPECT_TRUE(ClientHandler::is_request_ready(req));
 }
-
