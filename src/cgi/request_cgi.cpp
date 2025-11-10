@@ -39,7 +39,8 @@ char** createEnvp(const HttpRequest& request) {
     env_map["CONTENT_LENGTH"] = numToString(request.header_.content_length_);
     env_map["CONTENT_TYPE"] = request.header_.content_type_;
     env_map["SCRIPT_NAME"] = request.request_target_.path_;
-    env_map["QUERY_STRING"] = request.request_target_.query_string_;
+    env_map["QUERY_STRING"] =
+        request.request_target_.query_string_;  // query stringのparseも必要
 
     env_map["SERVER_NAME"] = request.host_.getAddress();
     env_map["SERVER_PORT"] = numToString(request.host_.getPort());
