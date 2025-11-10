@@ -2,4 +2,4 @@
 *.history
 *.out
 webserv
-test_runner
+cgi_test_runner
