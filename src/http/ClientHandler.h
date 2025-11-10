@@ -19,6 +19,7 @@ class ClientHandler {
         std::string::size_type transfer_encoding_pos);
     static const int TRANSFER_ENCODING_WITH_COLON_LEN = 18;
     static const char* const TRANSFER_ENCODING_WITH_COLON;
+    static const char* const TRANSFER_ENCODING_CHUNKED_END;
     static const int CONTENT_LENGTH_WITH_COLON_LEN = 15;
     static const char* const CONTENT_LENGTH_WITH_COLON;
 

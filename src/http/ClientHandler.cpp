@@ -12,6 +12,7 @@
 const char* const ClientHandler::CONTENT_LENGTH_WITH_COLON = "content-length:";
 const char* const ClientHandler::TRANSFER_ENCODING_WITH_COLON =
     "transfer-encoding:";
+const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
 
 ClientHandler::ClientHandler(int fd, Event& event, const Router& router)
     : fd_(fd), event_(event), router_(router) {}
@@ -66,8 +67,8 @@ bool ClientHandler::is_complete_transfer(
     }
     std::string::size_type header_end_in_buffer =
         message_head.size() + HTTP_HEADER_END_LEN;
-    return buffer.find(std::string("0") + HTTP_HEADER_END,
-                       header_end_in_buffer) != std::string::npos;
+    return buffer.find(TRANSFER_ENCODING_CHUNKED_END, header_end_in_buffer) !=
+           std::string::npos;
 }
 
 bool ClientHandler::is_complete_content_length(
