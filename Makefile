@@ -11,7 +11,7 @@ SRC_NO_MAIN = $(filter-out src/core/main.cpp,$(SRC))
 
 TEST_DIR = test
 # test 追加時は TEST_SRC に追加
-TEST_SRC = $(addprefix $(TEST_DIR)/, test_main.cpp test_is_request_ready.cpp test_is_complete_transfer.cpp test_is_complete_content_length.cpp test_split.cpp test_split.cpp)
+TEST_SRC = $(addprefix $(TEST_DIR)/, test_main.cpp test_is_request_ready.cpp test_is_complete_transfer.cpp test_is_complete_content_length.cpp test_split.cpp test_http_request_parse.cpp)
 
 HEADERS = # you can add *.h files here
 
@@ -34,11 +34,7 @@ fclean: clean
 re: fclean all
 
 run-test:
-<<<<<<< HEAD
-	c++ -std=c++17 -I./src $(TEST_SRC) $(SRC_NO_MAIN) -L/usr/local/lib -lgtest -lgtest_main -pthread -o $(TEST_DIR)/all_tests \
-=======
 	$(CXX) -std=c++17 -I./src $(TEST_SRC) $(SRC_NO_MAIN) -L/usr/local/lib -lgtest -pthread -o $(TEST_DIR)/all_tests \
->>>>>>> feature/split
 	&& $(TEST_DIR)/all_tests
 
 test:

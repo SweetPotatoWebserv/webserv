@@ -19,11 +19,12 @@ const char* const CONTENT_LENGTH = "content-length:";
 const char* const TRANSFER_ENCODING = "transfer-encoding:";
 const char* const CHUNKED = "chunked";
 // const char* const CONTENT_TYPE = "content-type";
-// const char* const HOST = "host";
+const char* const HOST = "host";
 extern const char* const HTTP_LINE_END = "\r\n";
 extern const char* const HTTP_HEADER_END = "\r\n\r\n";
 extern const int HTTP_LINE_END_LEN = 2;
 extern const int HTTP_HEADER_END_LEN = 4;
+extern const char* const QUESTION_MARK = "?";
 
 std::map<int, std::string> HttpStatus::createReasonMap() {
     std::map<int, std::string> m;
@@ -160,5 +161,5 @@ Method string_to_method(const std::string& method_str) {
     if (method_str == "HEAD") return MethodHEAD;
     if (method_str == "POST") return MethodPOST;
     if (method_str == "DELETE") return MethodDELETE;
-    throw std::invalid_argument("Unknown HTTP Method: " + method_str);
+    return MethodUNKNOWN;
 }

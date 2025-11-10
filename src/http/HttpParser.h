@@ -37,6 +37,7 @@ struct HttpRequest {
     HostHeader host_;
     UriPath request_target_;
     std::string body_;
+    std::string version_;
 };
 
 struct HttpResponse {
@@ -46,6 +47,7 @@ struct HttpResponse {
     HttpDate date_;
     std::string location_;
     std::string body_;
+    std::string version_;
     static ssize_t send_response(int client_fd, HttpResponse& response);
 };
 

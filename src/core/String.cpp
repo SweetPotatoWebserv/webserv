@@ -1,5 +1,9 @@
 #include "String.h"
 
+#include <ctype.h>
+
+#include <cctype>
+
 std::vector<std::string> split(const std::string& buffer,
                                const std::string& sep) {
     std::vector<std::string> res;
@@ -19,4 +23,19 @@ std::vector<std::string> split(const std::string& buffer,
         offset = pos + sep_len;
     }
     return res;
+}
+
+std::string trim(const std::string& s) {
+    if (s.empty()) return s;
+    std::string::const_iterator start = s.begin();
+    while (start != s.end() &&
+           std::isspace(static_cast<unsigned char>(*start))) {  // NOLINT
+        ++start;
+    }
+    std::string::const_iterator end = s.end();
+    while (end != start &&
+           std::isspace(static_cast<unsigned char>(*(end - 1)))) {  // NOLINT
+        --end;
+    }
+    return std::string(start, end);
 }
