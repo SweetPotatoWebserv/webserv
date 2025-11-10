@@ -42,29 +42,29 @@ TEST(HttpRequestParse, ParseContentLengthAndTypeAndBody) {
     EXPECT_EQ(r.header_.content_length_, static_cast<std::size_t>(13)); // NOLINT
     EXPECT_EQ(r.body_, body);
 }
-//
-// // Transfer-Encoding: chunked (only chunked is supported). Expect decoded body and flag.
-// TEST(HttpRequestParse, ParseTransferEncodingChunked) {
-//     // "Wikipedia" in two chunks: 4+5
-//     std::string req = std::string("POST /chunk HTTP/1.1") + HTTP_LINE_END +
-//                       "Host: example.com" + HTTP_LINE_END +
-//                       "Transfer-Encoding: chunked" + HTTP_LINE_END +
-//                       HTTP_HEADER_END +
-//                       "4\r\nWiki\r\n5\r\npedia\r\n0\r\n\r\n"; // NOLINT
-//
-//     ASSERT_TRUE(ClientHandler::is_request_ready(req));
-//     HttpRequest r = HttpParser::http_request_parse(req);
-//
-//     // method + target
-//     EXPECT_EQ(r.method_, MethodPOST);
-//     EXPECT_EQ(r.request_target_.path_, "/chunk");
-//     // transfer-encoding should include "chunked"
-//     ASSERT_FALSE(r.header_.transfer_encoding_.empty());
-//     bool has_chunked = false;
-//     for (std::size_t i = 0; i < r.header_.transfer_encoding_.size(); ++i) {
-//         if (r.header_.transfer_encoding_[i] == "chunked") has_chunked = true;
-//     }
-//     EXPECT_TRUE(has_chunked);
-//     // decoded body
-//     EXPECT_EQ(r.body_, std::string("Wikipedia"));
-// }
+
+// Transfer-Encoding: chunked (only chunked is supported). Expect decoded body and flag.
+TEST(HttpRequestParse, ParseTransferEncodingChunked) {
+    // "Wikipedia" in two chunks: 4+5
+    std::string req = std::string("POST /chunk HTTP/1.1") + HTTP_LINE_END +
+                      "Host: example.com" + HTTP_LINE_END +
+                      "Transfer-Encoding: chunked" + HTTP_LINE_END +
+                      HTTP_HEADER_END +
+                      "4\r\nWiki\r\n5\r\npedia\r\n0\r\n\r\n"; // NOLINT
+
+    ASSERT_TRUE(ClientHandler::is_request_ready(req));
+    HttpRequest r = HttpParser::http_request_parse(req);
+
+    // method + target
+    EXPECT_EQ(r.method_, MethodPOST);
+    EXPECT_EQ(r.request_target_.path_, "/chunk");
+    // transfer-encoding should include "chunked"
+    ASSERT_FALSE(r.header_.transfer_encoding_.empty());
+    bool has_chunked = false;
+    for (std::size_t i = 0; i < r.header_.transfer_encoding_.size(); ++i) {
+        if (r.header_.transfer_encoding_ == "chunked") has_chunked = true;
+    }
+    EXPECT_TRUE(has_chunked);
+    // decoded body
+    EXPECT_EQ(r.body_, std::string("Wikipedia"));
+}

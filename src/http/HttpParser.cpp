@@ -1,5 +1,7 @@
 #include "HttpParser.h"
 
+#include <sstream>
+
 #include "HttpException.h"
 
 std::string::size_type HttpParser::request_line_parse(const std::string& buffer,
@@ -80,14 +82,52 @@ std::string::size_type HttpParser::header_section_parse(
     return header_end + HTTP_HEADER_END_LEN;
 }
 
-static void body_section_parse(const std::string& buffer, HttpRequest& request,
-                               std::string::size_type header_section_end) {
+std::string HttpParser::parse_chunked(const std::string& data) {
+    std::string body;
+    size_t pos = 0;
+
+    while (true) {
+        std::string::size_type line_end = data.find(HTTP_LINE_END, pos);
+        if (line_end == std::string::npos) break;
+
+        std::string size_str = data.substr(pos, line_end - pos);
+        std::istringstream iss(size_str);
+        size_t chunk_size = 0;
+        iss >> std::hex >> chunk_size;
+
+        if (chunk_size == 0) {
+            break;
+        }
+
+        pos = line_end + HTTP_LINE_END_LEN;
+
+        if (pos + chunk_size > data.size()) break;
+        body.append(data, pos, chunk_size);
+        pos += chunk_size;
+
+        if (pos + HTTP_LINE_END_LEN <= data.size() &&
+            data.substr(pos, HTTP_LINE_END_LEN) == HTTP_LINE_END) {
+            pos += HTTP_LINE_END_LEN;
+        } else {
+            break;
+        }
+    }
+    return body;
+}
+
+void HttpParser::body_section_parse(const std::string& buffer,
+                                    HttpRequest& request,
+                                    std::string::size_type header_section_end) {
     if (request.header_.transfer_encoding_ == CHUNKED) {
+        std::string body = buffer.substr(header_section_end + HTTP_LINE_END_LEN,
+                                         buffer.size());
+        request.body_ = parse_chunked(body);
     } else {
         request.body_ =
             buffer.substr(header_section_end, request.header_.content_length_);
     }
 }
+
 HttpRequest HttpParser::http_request_parse(const std::string& buffer) {
     HttpRequest request;
 
