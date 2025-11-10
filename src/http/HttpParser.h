@@ -54,4 +54,14 @@ struct HttpResponse {
 class HttpParser {
    public:
     static HttpRequest http_request_parse(const std::string& buffer);
+    static std::string::size_type request_line_parse(const std::string& buffer,
+                                                     HttpRequest& request);
+    static std::string::size_type header_section_parse(
+        const std::string& buffer, HttpRequest& request,
+        std::string::size_type request_line_end);
+    static void header_section_host_parse(
+        std::vector<std::string>& header_field, HttpRequest& request);
+
+   private:
+    static const int HOST_AND_PORT_PARTS = 2;
 };
