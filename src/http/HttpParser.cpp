@@ -84,9 +84,8 @@ static void body_section_parse(const std::string& buffer, HttpRequest& request,
                                std::string::size_type header_section_end) {
     if (request.header_.transfer_encoding_ == CHUNKED) {
     } else {
-        std::string::size_type body_end =
-            buffer.find(HTTP_LINE_END, header_section_end);
-        request.body_ = buffer.substr(header_section_end, body_end);
+        request.body_ =
+            buffer.substr(header_section_end, request.header_.content_length_);
     }
 }
 HttpRequest HttpParser::http_request_parse(const std::string& buffer) {

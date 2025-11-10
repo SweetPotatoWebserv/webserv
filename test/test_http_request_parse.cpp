@@ -22,26 +22,26 @@ TEST(HttpRequestParse, ParseRequestLineAndHostNoPort) {
 }
 
 // POST + Content-Length + Content-Type + explicit host:port
-// TEST(HttpRequestParse, ParseContentLengthAndTypeAndBody) {
-//     std::string body = "Hello, world!"; // 13 bytes // NOLINT
-//     std::string req = std::string("POST /submit HTTP/1.1") + HTTP_LINE_END +
-//                       "Host: localhost:8080" + HTTP_LINE_END +
-//                       "Content-Type: application/json" + HTTP_LINE_END +
-//                       "Content-Length: 13" + HTTP_LINE_END + // NOLINT
-//                       HTTP_HEADER_END +
-//                       body;
-//
-//     ASSERT_TRUE(ClientHandler::is_request_ready(req));
-//     HttpRequest r = HttpParser::http_request_parse(req);
-//
-//     EXPECT_EQ(r.method_, MethodPOST);
-//     EXPECT_EQ(r.request_target_.path_, "/submit");
-//     EXPECT_EQ(r.host_.getAddress(), std::string("localhost"));
-//     EXPECT_EQ(r.host_.getPort(), static_cast<uint16_t>(8080)); // NOLINT
-//     EXPECT_EQ(r.header_.content_type_, std::string("application/json"));
-//     EXPECT_EQ(r.header_.content_length_, static_cast<std::size_t>(13)); // NOLINT
-//     EXPECT_EQ(r.body_, body);
-// }
+TEST(HttpRequestParse, ParseContentLengthAndTypeAndBody) {
+    std::string body = "Hello, world!"; // 13 bytes // NOLINT
+    std::string req = std::string("POST /submit HTTP/1.1") + HTTP_LINE_END +
+                      "Host: localhost:8080" + HTTP_LINE_END +
+                      "Content-Type: application/json" + HTTP_LINE_END +
+                      "Content-Length: 13" + HTTP_LINE_END + // NOLINT
+                      HTTP_LINE_END +
+                      body;
+
+    ASSERT_TRUE(ClientHandler::is_request_ready(req));
+    HttpRequest r = HttpParser::http_request_parse(req);
+
+    EXPECT_EQ(r.method_, MethodPOST);
+    EXPECT_EQ(r.request_target_.path_, "/submit");
+    EXPECT_EQ(r.host_.getAddress(), std::string("localhost"));
+    EXPECT_EQ(r.host_.getPort(), static_cast<uint16_t>(8080)); // NOLINT
+    EXPECT_EQ(r.header_.content_type_, std::string("application/json"));
+    EXPECT_EQ(r.header_.content_length_, static_cast<std::size_t>(13)); // NOLINT
+    EXPECT_EQ(r.body_, body);
+}
 //
 // // Transfer-Encoding: chunked (only chunked is supported). Expect decoded body and flag.
 // TEST(HttpRequestParse, ParseTransferEncodingChunked) {
