@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include "../core/Common.h"
+#include "../core/String.h"
 
 struct UriPath {
     std::string path_;
