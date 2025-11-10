@@ -33,12 +33,19 @@ $(NAME): $(OBJ)
 
 re: fclean all
 
-test_cgi: $(CGI_TEST_NAME)
-	@echo "---Run CGI TEST---" # c++ -std=c++17 test_sample.cpp sample.cpp -L/usr/local/lib -lgtest -lgtest_main -pthread
+test_cgi: build
+	docker run -it --rm \
+		--mount type=bind,src="$(CURDIR)",target=/src \
+		-w /src $(DEV_IMAGE_NAME) \
+		make internal_test_cgi
+
+internal_test_cgi: $(CGI_TEST_NAME)
+	@echo "---Run CGI TEST (inside container)---"
 	./$(CGI_TEST_NAME)
 
 $(CGI_TEST_NAME): $(CGI_TEST_OBJ)
 	$(CXX) $(CXXFLAGS) -o $(CGI_TEST_NAME) $(CGI_TEST_OBJ)
+
 build:
 	docker build -t $(DEV_IMAGE_NAME) .
 
