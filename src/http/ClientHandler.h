@@ -17,6 +17,10 @@ class ClientHandler {
     static bool is_complete_transfer(
         const std::string& message_head,
         std::string::size_type transfer_encoding_pos);
+    static const int TRANSFER_ENCODING_WITH_COLON_LEN = 18;
+    static const char* const TRANSFER_ENCODING_WITH_COLON;
+    static const int CONTENT_LENGTH_WITH_COLON_LEN = 15;
+    static const char* const CONTENT_LENGTH_WITH_COLON;
 
    private:
     int fd_;
@@ -27,6 +31,4 @@ class ClientHandler {
     HttpResponse response_;
     static const int BUFFER_SIZE = 4096;
     static const int RECV_FLG = 0;
-    static const int CONTENT_LENGTH_LEN = 15;
-    static const int TRANSFER_ENCODING_LEN = 18;
 };

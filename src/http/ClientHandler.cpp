@@ -9,6 +9,10 @@
 
 #include "HttpException.h"
 
+const char* const ClientHandler::CONTENT_LENGTH_WITH_COLON = "content-length:";
+const char* const ClientHandler::TRANSFER_ENCODING_WITH_COLON =
+    "transfer-encoding:";
+
 ClientHandler::ClientHandler(int fd, Event& event, const Router& router)
     : fd_(fd), event_(event), router_(router) {}
 
@@ -34,11 +38,11 @@ bool ClientHandler::is_request_ready(const std::string& buffer) {
                    message_head.begin(), ::tolower);
 
     std::string::size_type transfer_encoding_pos =
-        message_head.find(TRANSFER_ENCODING);
+        message_head.find(TRANSFER_ENCODING_WITH_COLON);
     if (transfer_encoding_pos != std::string::npos)
         return is_complete_transfer(message_head, transfer_encoding_pos);
     std::string::size_type content_length_pos =
-        message_head.find(CONTENT_LENGTH);
+        message_head.find(CONTENT_LENGTH_WITH_COLON);
     if (content_length_pos != std::string::npos)
         return is_complete_content_length(buffer, message_head,
                                           content_length_pos);
@@ -48,7 +52,7 @@ bool ClientHandler::is_request_ready(const std::string& buffer) {
 bool ClientHandler::is_complete_transfer(
     const std::string& message_head,
     std::string::size_type transfer_encoding_pos) {
-    transfer_encoding_pos += TRANSFER_ENCODING_LEN;
+    transfer_encoding_pos += TRANSFER_ENCODING_WITH_COLON_LEN;
     while (transfer_encoding_pos < message_head.size() &&
            std::isspace(message_head[transfer_encoding_pos]))
         transfer_encoding_pos++;
@@ -63,7 +67,7 @@ bool ClientHandler::is_complete_content_length(
     const std::string& buffer, const std::string& message_head,
     std::string::size_type content_length_pos) {
     size_t content_length_value = 0;
-    content_length_pos += CONTENT_LENGTH_LEN;
+    content_length_pos += CONTENT_LENGTH_WITH_COLON_LEN;
     std::string::size_type message_head_size = message_head.size();
     while (content_length_pos < message_head_size &&
            std::isspace(message_head[content_length_pos]))
@@ -102,11 +106,11 @@ void ClientHandler::on_readable() {  // NOLINT
     }
     buffer_.append(buf, len);
     if (ClientHandler::is_request_ready(buffer_)) {
-        try {
-            request_ = HttpParser::http_request_parse(buffer_);
-        } catch (const HttpException& e) {
-            // sendErrorResponse(e.status_code());
-        }
+        request_ = HttpParser::http_request_parse(buffer_);
+        // try {
+        // } catch (const HttpException& e) {
+        //     sendErrorResponse(e.status_code());
+        // }
         event_.mod(fd_, EPOLLOUT);
     }
 }

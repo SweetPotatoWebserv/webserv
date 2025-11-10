@@ -30,7 +30,7 @@ extern const int SOCKET_BACKLOG;
 extern const char* const CONTENT_LENGTH;
 extern const char* const TRANSFER_ENCODING;
 extern const char* const CHUNKED;
-// extern const char* const CONTENT_TYPE;
+extern const char* const CONTENT_TYPE;
 extern const char* const HOST;
 extern const char* const HTTP_LINE_END;
 extern const char* const HTTP_HEADER_END;
