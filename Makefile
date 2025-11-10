@@ -11,7 +11,7 @@ SRC_NO_MAIN = $(filter-out src/core/main.cpp,$(SRC))
 
 TEST_DIR = test
 # test 追加時は TEST_SRC に追加
-TEST_SRC = $(addprefix $(TEST_DIR)/, test_main.cpp)
+TEST_SRC = $(addprefix $(TEST_DIR)/, test_main.cpp test_split.cpp)
 
 HEADERS = # you can add *.h files here
 
