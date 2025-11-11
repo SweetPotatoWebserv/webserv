@@ -1,6 +1,9 @@
 #include "executor_cgi.h"
 
+#include <errno.h>
 #include <libgen.h>
+#include <signal.h>
+#include <sys/epoll.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -9,6 +12,12 @@
 #include <string>
 
 #include "../core/Common.h"
+
+namespace {
+const int cgiTimeoutMs_ = 5000;
+const int maxEpollEvents_ = 1;
+const int buffer_size_ = 100000;
+}  // namespace
 
 CgiExecutor::CgiExecutor() {
     pipeIn_[0] = -1;
@@ -52,52 +61,106 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
     if (pid_ == 0) {
         executeChildProcess(scriptPath, argv, envp);
         exit(EXIT_FAILURE);
-    } else {
-        std::string cgi_output;
-        try {
-            cgi_output = readParentProcess(requestBody);
-        } catch (const std::exception &e) {
-            std::cerr << "CGI warning: parent process exception: " << e.what()
-                      << "\n";
-        }
+    }
 
-        int status;
-        waitpid(pid_, &status, 0);
-
-        if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-            std::cerr << "CGI warning: child process failed to exit correctly "
-                         "(Status: "
-                      << WEXITSTATUS(status) << ")\n";
-        }
-        return cgi_output;
+    close(pipeIn_[0]);
+    close(pipeOut_[1]);
+    try {
+        return readParentProcess(requestBody);
+    } catch (const std::exception &e) {
+        waitpid(
+            pid_, NULL,
+            0);  // epoll_createなどで失敗した場合にも子プロセスをきちんと削除するため
+        throw;   // 例外をそのまま再スロー
     }
 }
 
 std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
-    close(pipeIn_[0]);
-    close(pipeOut_[1]);
-
     if (!requestBody.empty()) {
         ssize_t written =
             write(pipeIn_[1], requestBody.c_str(), requestBody.size());
         if (written < 0) {
-            // ToDo error handling
             std::cerr << "CGI warning: failed to write cgi stdin\n";
         }
     }
     close(pipeIn_[1]);
 
-    std::string cgi_output;
-    char buffer[BUFFER_SIZE];  // あとで直す
-    ssize_t bytes_read;
-    while ((bytes_read = read(pipeOut_[0], buffer, sizeof(buffer))) > 0) {
-        cgi_output.append(buffer, bytes_read);
+    int epoll_fd = epoll_create(1);
+    if (epoll_fd == -1) {
+        close(pipeOut_[0]);
+        throw CgiExecutionException("epoll_create failed",
+                                    HttpStatus::InternalServerError);
     }
+
+    struct epoll_event ev;
+    ev.events = EPOLLIN;
+    ev.data.fd = pipeOut_[0];
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, pipeOut_[0], &ev) == -1) {
+        close(pipeOut_[0]);
+        close(epoll_fd);
+        throw CgiExecutionException("epoll_ctl failed",
+                                    HttpStatus::InternalServerError);
+    }
+
+    std::string cgi_output;
+    struct epoll_event events[maxEpollEvents_];
+    bool timeout_occured = false;
+
+    while (true) {
+        int num_events =
+            epoll_wait(epoll_fd, events, maxEpollEvents_, cgiTimeoutMs_);
+
+        if (num_events == -1) {
+            if (errno == EINTR) {
+                continue;
+            }
+            std::cerr << "CGI Error: epoll_wait failed\n";
+            break;
+        }
+
+        if (num_events == 0) {
+            timeout_occured = true;
+            kill(pid_, SIGKILL);
+            std::cerr << "CGI Error: script timed out\n";
+            break;
+        }
+
+        if (events[0].events & EPOLLIN) {
+            char buffer[buffer_size_];
+            ssize_t bytes_read = read(pipeOut_[0], buffer, sizeof(buffer));
+
+            if (bytes_read > 0) {
+                cgi_output.append(buffer, bytes_read);
+            } else if (bytes_read == 0) {
+                break;
+            } else {
+                std::cerr << "CGI warning: failed to read from cgi stdout\n";
+                break;
+            }
+        }
+        // EPOLLIN が無かった場合のみ、HUP や ERR をチェックする
+        else if (events[0].events & (EPOLLHUP | EPOLLERR)) {
+            std::cerr << "CGI warning: EPOLLHUP/EPOLLERR without EPOLLIN.\n";
+            break;
+        }
+    }
+
+    close(epoll_fd);
     close(pipeOut_[0]);
 
-    if (bytes_read == -1) {
-        // ToDo error handling
-        std::cerr << "CGI warning: failed to read from cgi stdout\n";
+    int status;
+    waitpid(pid_, &status, 0);
+
+    if (timeout_occured) {
+        throw CgiExecutionException("CGI script timed out",
+                                    HttpStatus::RequestTimeout);
+    }
+
+    if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+        std::cerr << "CGI warning: child process failed (Status: "
+                  << WEXITSTATUS(status) << ")\n";
+        throw CgiExecutionException("CGI script execution failed",
+                                    HttpStatus::InternalServerError);
     }
 
     return cgi_output;
@@ -154,8 +217,11 @@ std::string CgiExecutor::getScriptDirectory(const std::string &scriptPath) {
 
 std::string CgiExecutor::getScriptBasename(const std::string &scriptPath) {
     std::string::size_type pos = scriptPath.rfind('/');
+    std::string basename;
     if (pos == std::string::npos) {
-        return scriptPath;
+        basename = scriptPath;
+    } else {
+        basename = scriptPath.substr(pos + 1);
     }
-    return scriptPath.substr(pos + 1);
+    return "./" + basename;
 }
