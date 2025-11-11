@@ -49,7 +49,7 @@ TEST(HttpRequestParse, ParseTransferEncodingChunked) {
     std::string req = std::string("POST /chunk HTTP/1.1") + HTTP_LINE_END +
                       "Host: example.com" + HTTP_LINE_END +
                       "Transfer-Encoding: chunked" + HTTP_LINE_END +
-                      HTTP_HEADER_END +
+                      HTTP_LINE_END +
                       "4\r\nWiki\r\n5\r\npedia\r\n0\r\n\r\n"; // NOLINT
 
     ASSERT_TRUE(ClientHandler::is_request_ready(req));

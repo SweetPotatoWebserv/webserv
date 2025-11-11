@@ -29,7 +29,7 @@ std::string::size_type HttpParser::request_line_parse(const std::string& buffer,
         throw HttpException(HttpStatus::NotImplemented,
                             HttpStatus::reason(HttpStatus::NotImplemented));
     }
-    return request_line_end + HTTP_LINE_END_LEN;
+    return (request_line_end + HTTP_LINE_END_LEN);
 }
 
 void HttpParser::header_section_host_parse(
@@ -82,7 +82,7 @@ std::string::size_type HttpParser::header_section_parse(
             request.header_.transfer_encoding_ = trim(header_field[1]);
         }
     }
-    return header_end + HTTP_HEADER_END_LEN;
+    return (header_end + HTTP_HEADER_END_LEN);
 }
 
 std::string HttpParser::parse_chunked(const std::string& data) {
@@ -122,8 +122,7 @@ void HttpParser::body_section_parse(const std::string& buffer,
                                     HttpRequest& request,
                                     std::string::size_type header_section_end) {
     if (request.header_.transfer_encoding_ == CHUNKED) {
-        std::string body = buffer.substr(header_section_end + HTTP_LINE_END_LEN,
-                                         buffer.size());
+        std::string body = buffer.substr(header_section_end);
         request.body_ = parse_chunked(body);
     } else {
         request.body_ =
