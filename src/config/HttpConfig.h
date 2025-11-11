@@ -2,7 +2,7 @@
 
 #include <cstddef>
 // #include <cstdint>//-std=c++98ではサポートされていない可能性があるため使用できない？？変更
-#include "common.h"
+#include "../core/Common.h" // DEFAULT_PORT
 
 // GET・HEAD 以外は GET に変換される
 typedef struct ErrorPageDirective {
@@ -72,6 +72,10 @@ class LocationConfig {
     void setPath(const std::string& p) {
         path = p;
     }
+        void setRoot(const std::string& r) { common_config.setRoot(r); }
+		void addIndexFile(const std::string& file) { common_config.addIndexFile(file); }
+		void setAutoindex(bool on) { common_config.setAutoindex(on); }
+        void setClientMaxBodySize(off_t size) { common_config.setClientMaxBodySize(size); }
 
     void addAllowedMethod(const Method& m) { allowed_methods.push_back(m); }
     void setCgiPath(const std::string& p) { cgi_path = p; }
@@ -87,7 +91,7 @@ class LocationConfig {
         std::string path;
 };
 
-class ServerConfig : {
+class ServerConfig {
 
     public:
     // --- ↓↓ セッターを追加 ↓↓ ---
@@ -99,6 +103,11 @@ class ServerConfig : {
     void setListen(const ListenDirective& l) { listens = l; }
     void addServerName(const std::string& name) { server_names.push_back(name); }
     // --- ↑↑ ここまで 変更---
+
+    void setRoot(const std::string& r) { common_config.setRoot(r); }
+	void addIndexFile(const std::string& file) { common_config.addIndexFile(file); }
+	void setAutoindex(bool on) { common_config.setAutoindex(on); }
+    void setClientMaxBodySize(off_t size) { common_config.setClientMaxBodySize(size); }
 
     private:
         std::vector<LocationConfig> locations;
@@ -118,7 +127,7 @@ class HttpConfig {
     }
 
     // --- セッターを追加 ↓↓ ---
-    void setDefaults(const CommonConfig& c) { defaults = c; }
+    void setDefaults(const CommonConfig& c) { common_config = c; }
     // --- ↑↑ ここまで変更---
 
     private:

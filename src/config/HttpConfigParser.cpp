@@ -21,7 +21,7 @@ std::string HttpConfigParser::getNextToken(const std::vector<std::string>& token
 	return tokens[index++];
 }
 
-//failを読み込み、トークン化する
+//fail読み込みとトークン化
 std::vector<std::string> HttpConfigParser::tokenize(const std::string& filename){
 	std::ifstream ifs(filename.c_str());
 	if (!ifs.is_open()) {
@@ -157,6 +157,7 @@ void HttpConfigParser::parserServer(HttpConfig& config, const std::vector<std::s
 	}
 	if (!found_closing_brace) {
 		throw std::runtime_error("Error: Expected '}' to close server block");
+		
 	}
 
 	//完成した server_config を config に追加//// (※ HttpConfig.h に public な addServer(ServerConfig s) セッターが必要)
@@ -190,6 +191,7 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config, const std::ve
 	// (※ LocationConfig.h に public な setPath(std::string s) セッターが必要です)
 	location_config.setPath(path);
 
+	bool found_closing_brace = false; // ⇐追加copilot
 	//"}" が来るまでループ
 	while(!HttpConfigParser::isEof(tokens, index)) {
 		std::string token = HttpConfigParser::getNextToken(tokens, index);
@@ -221,7 +223,7 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config, const std::ve
 		// error_page, return,などのディレクティブのパース処理を追加予定???
 		else {
 			//知らないディレクティブはエラー
-			throw std::runtime_error("Error: Unknown directive in server block:" + token);
+			throw std::runtime_error("Error: unknown directive in location block:" + token);
 		}
 	}
 		// 6. 完成した location_config を、引数の server_config に追加する
@@ -324,7 +326,7 @@ ListenDirective HttpConfigParser::parseListen(const std::vector<std::string>& to
 		//C++98で文字列を数値に変換(sstreamを使用)
 		std::stringstream ss(port_str);
 		if(!(ss >> ld.port) || !ss.eof()) {//変換失敗or あとにごみがある場合
-			throw std::runtime_error("Error: Invalid port number +" + port_str);
+			throw std::runtime_error("Error: Invalid port number in" + port_str);
 		}
 	} else {
 		// port 形式のみ
