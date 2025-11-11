@@ -18,9 +18,3 @@ class CgiProcess {
     CgiProcess(const CgiProcess&);
     CgiProcess& operator=(const CgiProcess&);
 };
-
-class CgiEnvBuilder {
-   public:
-    // void setEnv();
-    // void deleteEnv();
-};
