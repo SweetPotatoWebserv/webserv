@@ -107,8 +107,8 @@ void ClientHandler::on_readable() {  // NOLINT
         on_close();
         return;
     }
-    // メッセージを全て受け取った
-    if (len == 0) {  // EOF
+    // 接続が閉じられた
+    if (len == 0) {
         on_close();
         return;
     }
