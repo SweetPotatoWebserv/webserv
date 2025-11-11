@@ -19,6 +19,5 @@ const char* HttpException::what() const throw() {
     if (!message_.empty()) {
         return message_.c_str();
     }
-    static const std::string default_message = "HTTP Exception";
-    return default_message.c_str();
+    return "HTTP Exception";
 }
