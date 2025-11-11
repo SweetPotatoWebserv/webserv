@@ -15,7 +15,7 @@ class CgiExecutionException : public std::exception {
     CgiExecutionException(const CgiExecutionException &other) throw()
         : std::exception(other),
           message_(other.message_),
-          statusCode_(other.statusCode_) {};
+          statusCode_(other.statusCode_) {}
     virtual ~CgiExecutionException() throw() {}
 
     virtual const char *what() const throw() { return message_.c_str(); }
