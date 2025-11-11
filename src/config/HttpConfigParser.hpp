@@ -1,0 +1,67 @@
+#pragma once
+
+#include <string>
+#include <vector>
+#include <fstream>//file read
+#include <sstream>//file read
+#include <stdexcept>//exception
+#include "HttpConfig.h"//データ保持クラス
+
+//設定ファイル(.conf)のパース(解析)静的解析クラス
+
+class HttpConfigParser {
+
+	
+	public:
+		//@brief パースを実行する唯一の public インターフェース
+    	//@param filename 設定ファイルパス
+    	//@return 完成した HttpConfig オブジェクト
+		static HttpConfig parse(const std::string& filename);
+
+	private:
+		HttpConfigParser();
+		~HttpConfigParser();//instance制限のためprivate
+
+		//@brief ファイルを読み込み、トークン化する
+    	// @param filename ファイルパス
+    	//@return トークンのリスト
+		static std::vector<std::string> tokenize(const std::string& filename);
+
+		//@brief 終端に来たかどうか
+		// @param tokens トークンリスト
+		// @param index 現在の位置
+		// @return 終端なら true
+		static bool isEof(const std::vector<std::string>& tokens, size_t index);
+
+		//@brief 次のトークンを取得し、インデックスを1つ進める
+		//  @param tokens トークンリスト
+		//  @param index 現在の位置 (参照渡しで、この値が内部で +1 される)
+		//  @return 次のトークン
+		static std::string getNextToken(const std::vector<std::string>& tokens, size_t& index);
+
+
+		static void parserServer(HttpConfig& config, const std::vector<std::string>& tokens, size_t& index);
+		static void parserLocation(ServerConfig& server_config, const std::vector<std::string>& tokens, size_t& index);
+
+		///@brief listen ディレクティブをパースする
+		///@return 完成した ListenDirective オブジェクト
+		static ListenDirective parseListen(const std::vector<std::string>& tokens, size_t& index);
+
+		//@brief root ディレクティブをパースする
+		//@return root のパス　"/var/www/html"など
+		static std::string parseRoot(const std::vector<std::string>& tokens, size_t& index);
+
+		//@brief index ディレクティブをパースする (複数形対応)
+		//@return index ファイル名のリスト""index.html"など
+		static std::vector<std::string> parseIndex(const std::vector<std::string>& tokens, size_t& index);
+
+		//@brief autoindex ディレクティブをパースする
+		//@return autoindex のオンオフ(true/false)
+		static bool parseAutoindex(const std::vector<std::string>& tokens, size_t& index);
+
+		///@brief client_max_body_size ディレクティブをパースする
+		///@return ボディサイズの上限値
+		static off_t parseClientMaxBodySize(const std::vector<std::string>& tokens, size_t& index);
+
+
+};
