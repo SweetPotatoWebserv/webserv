@@ -1,8 +1,7 @@
 #include "handler_cgi.h"
 
-#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
-#include <unistd.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -22,17 +21,27 @@ CgiProcess::~CgiProcess() { delete executor_; }
 bool CgiProcess::run(const HttpRequest& request, HttpResponse& response) {
     try {
         std::string script_path = request.request_target_.path_;
-        if (access(script_path.c_str(), F_OK) == -1) {
+        struct stat st;
+
+        if (stat(script_path.c_str(), &st) == -1) {
             response.status_code_ = HttpStatus::NotFound;
             response.body_ = "CGI script not found.";
             return true;
         }
 
-        if (access(script_path.c_str(), X_OK) == -1) {
+        if (!S_ISREG(st.st_mode)) {
             response.status_code_ = HttpStatus::Forbidden;
-            response.body_ = "CGI script is not executable.";
+            response.body_ = "CGI target is not a regular file.";
             return true;
         }
+
+        // ファイルのread権限とx権限をstatでチェック
+        if (!(st.st_mode & S_IXUSR) || !(st.st_mode & S_IRUSR)) {
+            response.status_code_ = HttpStatus::Forbidden;
+            response.body_ = "CGI script is not readable/executable.";
+            return true;
+        }
+
         // CgiEnvBuilderなどに移行したい(envpにしてexecveの時に渡せば他の環境変数は引き継がれないので削除する必要がない)
         char** argv = createArgv(script_path);
         char** envp = createEnvp(request);
