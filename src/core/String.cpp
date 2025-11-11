@@ -22,7 +22,7 @@ std::vector<std::string> split(const std::string& buffer,
 }
 
 std::string trim(const std::string& s) {
-    if (s.empty()) return s;
+    if (s.empty()) return "";
     std::string::const_iterator start = s.begin();
     while (start != s.end() &&
            std::isspace(static_cast<unsigned char>(*start))) {  // NOLINT
