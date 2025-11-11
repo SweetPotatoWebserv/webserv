@@ -7,7 +7,7 @@ CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -pedantic -g
 
 SRC_DIR = src
 SRC = $(wildcard $(SRC_DIR)/*/*.cpp)
-SRC_NO_MAIN = $(filter-out src/core/main.cpp,$(SRC))
+SRC_WITHOUT_MAIN = $(filter-out src/core/main.cpp,$(SRC))
 
 TEST_DIR = test
 # test 追加時は TEST_SRC に追加
@@ -34,7 +34,7 @@ fclean: clean
 re: fclean all
 
 run-test:
-	$(CXX) -std=c++17 -I./src $(TEST_SRC) $(SRC_NO_MAIN) -L/usr/local/lib -lgtest -pthread -o $(TEST_DIR)/all_tests \
+	$(CXX) -std=c++17 -I./src $(TEST_SRC) $(SRC_WITHOUT_MAIN) -L/usr/local/lib -lgtest -pthread -o $(TEST_DIR)/all_tests \
 	&& $(TEST_DIR)/all_tests
 
 test:
