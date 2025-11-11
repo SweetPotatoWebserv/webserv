@@ -65,7 +65,7 @@ class CommonConfig {
 
 };
 
-class LocationConfig : public CommonConfig {
+class LocationConfig {
     
     public:
     // --- ↓↓セッターを追加 ↓↓ ---
@@ -79,6 +79,7 @@ class LocationConfig : public CommonConfig {
     //=-- 変更 ---↑↑
 
     private:
+    CommonConfig common_config; // 共通設定
         // 許可するメソッドが入るだけ（例：GET HEAD POST DELETE）
         std::vector<Method> allowed_methods;
         std::string cgi_path;
@@ -86,7 +87,7 @@ class LocationConfig : public CommonConfig {
         std::string path;
 };
 
-class ServerConfig : public CommonConfig {
+class ServerConfig : {
 
     public:
     // --- ↓↓ セッターを追加 ↓↓ ---
@@ -103,6 +104,7 @@ class ServerConfig : public CommonConfig {
         std::vector<LocationConfig> locations;
         ListenDirective listens;
         std::vector<std::string> server_names;
+        CommonConfig common_config; // 共通設定
 };
 
 
@@ -121,5 +123,5 @@ class HttpConfig {
 
     private:
         std::vector<ServerConfig> servers;
-        CommonConfig defaults;
+        CommonConfig common_config; // 共通設定
 };
