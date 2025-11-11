@@ -20,8 +20,8 @@ std::string::size_type HttpParser::request_line_parse(const std::string& buffer,
     } else {
         std::vector<std::string> path =
             ::split(request_line_vec[1], QUESTION_MARK);
-        request.request_target_.path_ = (path[0]);
-        request.request_target_.query_string_ = (path[1]);
+        request.request_target_.path_ = path[0];
+        request.request_target_.query_string_ = path[1];
     }
 
     request.version_ = request_line_vec[2];
