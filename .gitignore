@@ -2,4 +2,7 @@
 *.history
 *.out
 webserv
+
 cgi_test_runner
+**/all_tests
+googletest

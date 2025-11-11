@@ -30,5 +30,4 @@ jobs:
           echo "Running C++ linter..."
           # Find all .cpp files
           find . -type f -name "*.cpp" ! -path "*test*" -print0 | xargs -r -0 -I {} clang-tidy {} -- -std=c++98
-
           echo "Linter check passed!"
