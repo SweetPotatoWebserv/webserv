@@ -38,7 +38,8 @@ void parseCgiResponse(HttpResponse& response, const std::string& raw_output) {
     } else {
         // CGIスクリプトがプロトコル違反の応答をした
         response.status_code_ =
-            HttpStatus::InternalServerError;  // BadGateway is better 502
+            HttpStatus::InternalServerError;  // BadGateway is better which is
+                                              // 502
         response.body_ = "CGI script returned malformed response";
         return;
     }
@@ -92,5 +93,15 @@ void parseCgiResponse(HttpResponse& response, const std::string& raw_output) {
         } else if (header_name == LocationHeaderLower) {
             response.location_ = header_value;
         }
+    }
+    if ((response.status_code_ == HttpStatus::OK ||
+         response.status_code_ == HttpStatus::Created) &&
+        response.location_.empty() &&  // リダイレクトでもない
+        response.header_.content_type_.empty())  // Content-Typeが空
+    {
+        // レスポンスが不正なので 500に上書きする
+        response.status_code_ = HttpStatus::InternalServerError;
+        response.body_ =
+            "CGI script returned malformed response (missing Content-Type)";
     }
 }
