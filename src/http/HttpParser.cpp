@@ -133,7 +133,7 @@ void HttpParser::body_section_parse(const std::string& buffer,
 HttpRequest HttpParser::http_request_parse(const std::string& buffer) {
     HttpRequest request;
 
-    // ステータスラインのパース
+    // リクエストラインのパース
     std::string::size_type request_line_end =
         HttpParser::request_line_parse(buffer, request);
 
