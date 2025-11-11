@@ -14,9 +14,9 @@
 #include "../core/Common.h"
 
 namespace {
-const int cgiTimeoutMs_ = 5000;
-const int maxEpollEvents_ = 1;
-const int buffer_size_ = 100000;
+const int CGI_TIMEOUT_MS = 5000;
+const int MAX_EPOLL_EVENTS = 1;
+const int BUFFER_SIZE = 100000;
 }  // namespace
 
 CgiExecutor::CgiExecutor() {
@@ -103,12 +103,12 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
     }
 
     std::string cgi_output;
-    struct epoll_event events[maxEpollEvents_];
+    struct epoll_event events[MAX_EPOLL_EVENTS];
     bool timeout_occured = false;
 
     while (true) {
         int num_events =
-            epoll_wait(epoll_fd, events, maxEpollEvents_, cgiTimeoutMs_);
+            epoll_wait(epoll_fd, events, MAX_EPOLL_EVENTS, CGI_TIMEOUT_MS);
 
         if (num_events == -1) {
             if (errno == EINTR) {
@@ -126,7 +126,7 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
         }
 
         if (events[0].events & EPOLLIN) {
-            char buffer[buffer_size_];
+            char buffer[BUFFER_SIZE];
             ssize_t bytes_read = read(pipeOut_[0], buffer, sizeof(buffer));
 
             if (bytes_read > 0) {

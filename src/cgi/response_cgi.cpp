@@ -14,26 +14,26 @@
 #include "../http/HttpParser.h"
 
 namespace {
-const char* const LfLf = "\n\n";
-const size_t LfLfLength = 2;
+const char* const LF_LF = "\n\n";
+const size_t LF_LF_LENGTH = 2;
 
-const char* const StatusHeaderLower = "status";
-const char* const ContentTypeHeaderLower = "content-type";
-const char* const LocationHeaderLower = "location";
+const char* const STATUS_HEADER_LOWER = "status";
+const char* const CONTETNT_TYPE_HEADER = "content-type";
+const char* const LOCATION_HEADER_LOWER = "location";
 
-const int min_status = 100;
-const int max_status = 599;
+const int MIN_STATUS = 100;
+const int MAX_STATUS = 599;
 }  // namespace
 
 void parseCgiResponse(HttpResponse& response, const std::string& raw_output) {
-    std::string::size_type pos = raw_output.find(LfLf);
+    std::string::size_type pos = raw_output.find(LF_LF);
 
     std::string header_str;
     std::string::size_type body_start_pos;
 
     if (pos != std::string::npos) {
         header_str = raw_output.substr(0, pos);
-        body_start_pos = pos + LfLfLength;
+        body_start_pos = pos + LF_LF_LENGTH;
         response.body_ = raw_output.substr(body_start_pos);
     } else {
         // CGIスクリプトがプロトコル違反の応答をした
@@ -75,22 +75,22 @@ void parseCgiResponse(HttpResponse& response, const std::string& raw_output) {
             header_name.begin(), header_name.end(), header_name.begin(),
             ::tolower);  // 大文字小文字の両方に対応するため(区別される)
 
-        if (header_name == StatusHeaderLower) {
+        if (header_name == STATUS_HEADER_LOWER) {
             std::stringstream ss_status(header_value);
             int parsed_status = 0;
 
             if (ss_status >> parsed_status) {
-                if (parsed_status >= min_status &&
-                    parsed_status <= max_status) {
+                if (parsed_status >= MIN_STATUS &&
+                    parsed_status <= MAX_STATUS) {
                     response.status_code_ = parsed_status;
                 }
             }
             // else: 変換出来無い場合はデフォルト(200)のまま
 
-        } else if (header_name == ContentTypeHeaderLower) {
+        } else if (header_name == CONTETNT_TYPE_HEADER) {
             response.header_.content_type_ = header_value;
 
-        } else if (header_name == LocationHeaderLower) {
+        } else if (header_name == LOCATION_HEADER_LOWER) {
             response.location_ = header_value;
         }
     }
