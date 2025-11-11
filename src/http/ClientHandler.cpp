@@ -83,7 +83,7 @@ bool ClientHandler::is_complete_content_length(
         content_length_pos++;
     std::string::size_type content_length_header_end = content_length_pos;
     while (content_length_header_end < message_head_size &&
-           isdigit(message_head[content_length_header_end]))
+           std::isdigit(message_head[content_length_header_end]))
         content_length_header_end++;
     content_length_value =
         std::strtoul(message_head
