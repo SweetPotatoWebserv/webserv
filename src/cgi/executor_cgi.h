@@ -12,7 +12,12 @@ class CgiExecutionException : public std::exception {
     CgiExecutionException(const std::string &message,
                           HttpStatus::Code statusCode)
         : message_(message), statusCode_(statusCode) {}
+    CgiExecutionException(const CgiExecutionException &other) throw()
+        : std::exception(other),
+          message_(other.message_),
+          statusCode_(other.statusCode_) {};
     virtual ~CgiExecutionException() throw() {}
+
     virtual const char *what() const throw() { return message_.c_str(); }
     HttpStatus::Code getStatusCode() const { return statusCode_; }
 
