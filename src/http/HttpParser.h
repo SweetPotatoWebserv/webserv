@@ -69,4 +69,5 @@ class HttpParser {
 
    private:
     static const int HOST_AND_PORT_PARTS = 2;
+    static const int HEADER_FIELD_NUM = 2;
 };

@@ -57,14 +57,17 @@ std::string::size_type HttpParser::header_section_parse(
     std::size_t header_start = request_line_end;
     std::string::size_type header_end =
         buffer.find(HTTP_HEADER_END, header_start);
-    std::string header =
-        buffer.substr(header_start, header_end + HTTP_LINE_END_LEN);
+    std::string header = buffer.substr(header_start, header_end - header_start);
     std::transform(header.begin(), header.end(), header.begin(), ::tolower);
 
     std::vector<std::string> header_fields = split(header, HTTP_LINE_END);
     for (std::vector<std::string>::iterator header_line = header_fields.begin();
          header_line != header_fields.end(); ++header_line) {
         std::vector<std::string> header_field = split(*header_line, COLON);
+        if (header_field.size() < HEADER_FIELD_NUM) {
+            throw HttpException(HttpStatus::BadRequest,
+                                HttpStatus::reason(HttpStatus::BadRequest));
+        }
         if (header_field[0] == HOST) {
             HttpParser::header_section_host_parse(header_field, request);
         }
