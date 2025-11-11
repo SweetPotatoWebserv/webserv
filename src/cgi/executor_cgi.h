@@ -7,8 +7,6 @@
 
 #include "../core/Common.h"
 
-const int BUFFER_SIZE = 100000;
-
 class CgiExecutionException : public std::exception {
    public:
     CgiExecutionException(const std::string &message,
