@@ -53,9 +53,9 @@ bool search_header_field(const std::string& request_message,
     std::string founded_field = request_message.substr(
         search_header_start, search_header_end - search_header_start);
     founded_field_vec = split(founded_field, COLON);
-    if (founded_field_vec.size() == HEADER_FIELD_NUM) {
-        if (founded_field_vec[1].empty()) return false;
-        founded_field_vec[1] = trim(founded_field_vec[1]);
-    }
+    if (founded_field_vec.size() != HEADER_FIELD_NUM) return false;
+    if (founded_field_vec[1].empty()) return false;
+
+    founded_field_vec[1] = trim(founded_field_vec[1]);
     return true;
 }

@@ -40,3 +40,10 @@ TEST(SearchHeaderField, EmptyValueKeepsEmpty) {
     ASSERT_FALSE(ok);
 }
 
+TEST(SearchHeaderField, InvalidValue) {
+    std::string head = std::string("host: localhost") + HTTP_LINE_END +
+                       "content-length: 120:30" + HTTP_LINE_END;
+    std::vector<std::string> found;
+    bool ok = search_header_field(head, CONTENT_LENGTH, found);
+    ASSERT_FALSE(ok);
+}
