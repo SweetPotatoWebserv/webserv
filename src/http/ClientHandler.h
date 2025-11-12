@@ -17,11 +17,7 @@ class ClientHandler {
     static bool is_complete_transfer(
         const std::string& buffer, const std::string& message_head,
         const std::vector<std::string>& transfer_encoding);
-    static const int TRANSFER_ENCODING_WITH_COLON_LEN = 18;
-    static const char* const TRANSFER_ENCODING_WITH_COLON;
     static const char* const TRANSFER_ENCODING_CHUNKED_END;
-    static const int CONTENT_LENGTH_WITH_COLON_LEN = 15;
-    static const char* const CONTENT_LENGTH_WITH_COLON;
 
    private:
     int fd_;

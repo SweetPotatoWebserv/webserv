@@ -12,9 +12,6 @@
 #include "../core/String.h"
 #include "HttpException.h"
 
-const char* const ClientHandler::CONTENT_LENGTH_WITH_COLON = "content-length:";
-const char* const ClientHandler::TRANSFER_ENCODING_WITH_COLON =
-    "transfer-encoding:";
 const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
 
 ClientHandler::ClientHandler(int fd, Event& event, const Router& router)
