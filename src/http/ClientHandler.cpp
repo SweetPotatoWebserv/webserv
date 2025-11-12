@@ -57,8 +57,7 @@ bool ClientHandler::is_complete_transfer(
     if (transfer_encoding[1].find(CHUNKED) == std::string::npos) {
         return true;
     }
-    return buffer.find(TRANSFER_ENCODING_CHUNKED_END,
-                       message_head.size() + HTTP_HEADER_END_LEN) !=
+    return buffer.find(TRANSFER_ENCODING_CHUNKED_END, message_head.size()) !=
            std::string::npos;
 }
 
