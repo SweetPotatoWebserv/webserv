@@ -14,19 +14,19 @@ const int SOCKET_DOMAIN = AF_INET;
 const int SOCKET_TYPE = SOCK_STREAM;
 const int SOCKET_PROTOCOL = 0;
 const int SOCKET_BACKLOG = 128;
-
+const char* const HTTP_LINE_END = "\r\n";
+const char* const COLON = ":";
+const int HEADER_FIELD_NUM = 2;
 const char* const CONTENT_LENGTH = "content-length";
 const char* const TRANSFER_ENCODING = "transfer-encoding";
 const char* const CONTENT_TYPE = "content-type";
 const char* const HOST = "host";
 const char* const CHUNKED = "chunked";
-const char* const HTTP_LINE_END = "\r\n";
 const char* const HTTP_HEADER_END = "\r\n\r\n";
 const int HTTP_LINE_END_LEN = 2;
 const int HTTP_HEADER_END_LEN = 4;
 const char* const QUESTION_MARK = "?";
 const int DECIMAL = 10;
-const char* const COLON = ":";
 
 std::map<int, std::string> HttpStatus::createReasonMap() {
     std::map<int, std::string> m;
