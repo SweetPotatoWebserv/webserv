@@ -42,11 +42,11 @@ bool ClientHandler::is_request_ready(const std::string& buffer) {
     std::transform(message_head.begin(), message_head.end(),
                    message_head.begin(), ::tolower);
 
-    std::vector<std::string> founded_field;
-    if (search_header_field(message_head, TRANSFER_ENCODING, founded_field))
-        return is_complete_transfer(buffer, message_head, founded_field);
-    if (search_header_field(message_head, CONTENT_LENGTH, founded_field)) {
-        return is_complete_content_length(buffer, message_head, founded_field);
+    std::vector<std::string> found_field;
+    if (search_header_field(message_head, TRANSFER_ENCODING, found_field))
+        return is_complete_transfer(buffer, message_head, found_field);
+    if (search_header_field(message_head, CONTENT_LENGTH, found_field)) {
+        return is_complete_content_length(buffer, message_head, found_field);
     }
     return true;
 }

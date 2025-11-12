@@ -11,4 +11,4 @@ std::vector<std::string> split(const std::string& buffer,
 std::string trim(const std::string& s);
 bool search_header_field(const std::string& request_message,
                          const std::string& search_field,
-                         std::vector<std::string>& founded_field_vec);
+                         std::vector<std::string>& found_field_vec);
