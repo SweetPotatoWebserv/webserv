@@ -4,6 +4,16 @@
 
 #include "HttpException.h"
 
+std::vector<std::string> HttpParser::split_path(
+    const std::string& target_path) {
+    std::vector<std::string> path;
+    std::string::size_type path_end = target_path.find(QUESTION_MARK);
+    path.push_back(target_path.substr(0, path_end));
+    // question を飛ばすために +1 する
+    path.push_back((target_path.substr(path_end + 1)));
+    return path;
+}
+
 std::string::size_type HttpParser::request_line_parse(const std::string& buffer,
                                                       HttpRequest& request) {
     std::string::size_type request_line_end = buffer.find(HTTP_LINE_END);
@@ -23,8 +33,7 @@ std::string::size_type HttpParser::request_line_parse(const std::string& buffer,
     if (request_line_vec[1].find(QUESTION_MARK) == std::string::npos) {
         request.request_target_.path_ = (request_line_vec[1]);
     } else {
-        std::vector<std::string> path =
-            ::split(request_line_vec[1], QUESTION_MARK);
+        std::vector<std::string> path = split_path(request_line_vec[1]);
         request.request_target_.path_ = path[0];
         request.request_target_.query_string_ = path[1];
     }
