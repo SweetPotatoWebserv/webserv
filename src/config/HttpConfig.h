@@ -39,7 +39,14 @@ typedef struct ListenDirective {
 class CommonConfig {
 
     public:
-    CommonConfig() : client_max_body_size(0), autoindex(false) {}//<- 変更privateからpublicへ
+    CommonConfig()
+        : client_max_body_size(-1),  // ０は制限なしを意味するので-1に初期化
+          autoindex(false),          // デフォルトは off
+          autoindex_is_set(false),  // autoindex が設定されたかどうかのフラグ
+          root_is_set(false),   // root が設定されたかどうかのフラグ
+          upload_store_is_set(false), // upload_store が設定されたかどうかのフラグ
+          redirect_is_set(false) // return が設定されたかどうかのフラグ
+    {}
 
     // --- ↓↓　セッターを追加 ↓↓ ---
     void setClientMaxBodySize(off_t size) { client_max_body_size = size; }
@@ -50,6 +57,8 @@ class CommonConfig {
     void addIndexFile(const std::string& file) { index_files.push_back(file); }
     void setUploadStore(const std::string& store_path) { upload_store = store_path; }
     // --- 変更 ---
+
+    
 
     private:
         // 値が 0 の場合制限なしを意味する
