@@ -96,7 +96,7 @@ HttpConfig HttpConfigParser::parse(const std::string& filename){
 		if (token == KEYWORD_SERVER) {
 			HttpConfigParser::parserServer(config, tokens, index);
 		} else {
-			throw std::runtime_error("Error: Unknown directive outside server block:" + token);
+			throw std::runtime_error("Error: Unknown directive outside server block: " + token);
 		}
 	}
 	
@@ -194,7 +194,7 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config, const std::ve
 	
 	//その次に '{' が来るはず
 	if(HttpConfigParser::getNextToken(tokens, index) != BRACE_OPEN) {
-		throw std::runtime_error("Error: Expected '{' after location path" + path);
+		throw std::runtime_error("Error: Expected '{' after location path: " + path);
 	}
 
 	//このロケーションの設定を保持する LocationConfig location_config(path);
@@ -209,6 +209,7 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config, const std::ve
 		std::string token = HttpConfigParser::getNextToken(tokens, index);
 		if (token == BRACE_CLOSE) {
 			//location ブロック終了
+			found_closing_brace = true;
 			break;
 		}
 		if (token == DIRECTIVE_ROOT) {
@@ -235,8 +236,12 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config, const std::ve
 		// error_page, return,などのディレクティブのパース処理を追加予定???
 		else {
 			//知らないディレクティブはエラー
-			throw std::runtime_error("Error: unknown directive in location block:" + token);
+			throw std::runtime_error("Error: unknown directive in location block: " + token);
 		}
+	}
+	if (!found_closing_brace) {
+		// ループを抜けたのに閉じ括弧が見つからなかった場合
+		throw std::runtime_error("Error: location block missing closing brace '}'");
 	}
 		// 6. 完成した location_config を、引数の server_config に追加する
     // (※ ServerConfig.h に public な addLocation(LocationConfig l) セッターが必要です)
