@@ -42,7 +42,7 @@ std::string trim(const std::string& s) {
 
 bool search_header_field(const std::string& request_message,
                          const std::string& search_field,
-                         std::vector<std::string>& founded_field_vec) {
+                         std::vector<std::string>& found_field_vec) {
     std::string::size_type search_header_start =
         request_message.find(search_field);
     if (search_header_start == std::string::npos) {
@@ -54,12 +54,12 @@ bool search_header_field(const std::string& request_message,
         return false;
     }
 
-    std::string founded_field = request_message.substr(
+    std::string found_field = request_message.substr(
         search_header_start, search_header_end - search_header_start);
-    founded_field_vec = split(founded_field, COLON);
-    if (founded_field_vec.size() != HEADER_FIELD_NUM) return false;
-    if (founded_field_vec[1].empty()) return false;
+    found_field_vec = split(found_field, COLON);
+    if (found_field_vec.size() != HEADER_FIELD_NUM) return false;
+    if (found_field_vec[1].empty()) return false;
 
-    founded_field_vec[1] = trim(founded_field_vec[1]);
+    found_field_vec[1] = trim(found_field_vec[1]);
     return true;
 }
