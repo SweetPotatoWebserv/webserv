@@ -33,7 +33,7 @@ typedef struct ListenDirective {
 
     uint16_t port;//<-修正
     bool is_default_server;
-    ListenDirective() : port(DEFAULT_PORT), is_default_server(false) {}
+    ListenDirective();
 } ListenDirective;
 
 class CommonConfig {
