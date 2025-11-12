@@ -58,7 +58,7 @@ class HttpParser {
                                                      HttpRequest& request);
     static std::string::size_type header_section_parse(
         const std::string& buffer, HttpRequest& request,
-        std::string::size_type request_line_end);
+        std::string::size_type header_section_start);
     static void header_section_host_parse(
         const std::vector<std::string>& header_field, HttpRequest& request);
     static void body_section_parse(const std::string& buffer,
@@ -68,6 +68,8 @@ class HttpParser {
     static std::string parse_chunked(const std::string& data);
 
    private:
-    static const int HOST_AND_PORT_PARTS = 2;
+    static const int HOST_ONLY = 2;
+    static const int MAX_HOST_FIELD_NUM = 3;
+    static const int REQUEST_LINE_NUM = 3;
     static const int HEADER_FIELD_NUM = 2;
 };

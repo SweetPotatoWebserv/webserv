@@ -9,12 +9,17 @@ std::string::size_type HttpParser::request_line_parse(const std::string& buffer,
     std::string::size_type request_line_end = buffer.find(HTTP_LINE_END);
     std::string request_line = buffer.substr(0, request_line_end);
     std::vector<std::string> request_line_vec = ::split(request_line);
+    if (request_line_vec.size() != REQUEST_LINE_NUM) {
+        throw HttpException(HttpStatus::BadRequest,
+                            HttpStatus::reason(HttpStatus::BadRequest));
+    }
     request.method_ = string_to_method(request_line_vec[0]);
     if (request.method_ == MethodUNKNOWN) {
         throw HttpException(HttpStatus::NotImplemented,
                             HttpStatus::reason(HttpStatus::NotImplemented));
     }
 
+    // TODO パスの長さ制限をかける
     if (request_line_vec[1].find(QUESTION_MARK) == std::string::npos) {
         request.request_target_.path_ = (request_line_vec[1]);
     } else {
@@ -35,29 +40,27 @@ std::string::size_type HttpParser::request_line_parse(const std::string& buffer,
 void HttpParser::header_section_host_parse(
     const std::vector<std::string>& header_field, HttpRequest& request) {
     HostHeader host;
-    std::vector<std::string> host_parts = split(trim(header_field[1]), COLON);
-    if (host_parts.size() == HOST_AND_PORT_PARTS) {
-        // example.com: は不正なので例外を投げる
-        if (host_parts[1].empty()) {
-            throw HttpException(HttpStatus::BadRequest,
-                                HttpStatus::reason(HttpStatus::BadRequest));
-        }
-        host = HostHeader(host_parts[0],
-                          static_cast<uint16_t>(std::strtol(
-                              host_parts[1].c_str(), NULL, DECIMAL)));
-    } else {
-        host = HostHeader(host_parts[0]);
+    if (header_field.size() > MAX_HOST_FIELD_NUM) {
+        throw HttpException(HttpStatus::BadRequest,
+                            HttpStatus::reason(HttpStatus::BadRequest));
     }
-    request.host_ = host;
+    // 3であれば host, localhost, 8080
+    // 2であれば host, localhost
+    if (header_field.size() == HOST_ONLY) {
+        request.host_ = HostHeader(header_field[1]);
+    } else {
+        request.host_ = HostHeader(
+            header_field[1], strtoul(header_field[2].c_str(), NULL, DECIMAL));
+    }
 }
 
 std::string::size_type HttpParser::header_section_parse(
     const std::string& buffer, HttpRequest& request,
-    std::string::size_type request_line_end) {
-    std::size_t header_start = request_line_end;
-    std::string::size_type header_end =
-        buffer.find(HTTP_HEADER_END, header_start);
-    std::string header = buffer.substr(header_start, header_end - header_start);
+    std::string::size_type header_section_start) {
+    std::string::size_type header_section_end =
+        buffer.find(HTTP_HEADER_END, header_section_start);
+    std::string header = buffer.substr(
+        header_section_start, header_section_end - header_section_start);
     std::transform(header.begin(), header.end(), header.begin(), ::tolower);
 
     std::vector<std::string> header_fields = split(header, HTTP_LINE_END);
@@ -68,21 +71,22 @@ std::string::size_type HttpParser::header_section_parse(
             throw HttpException(HttpStatus::BadRequest,
                                 HttpStatus::reason(HttpStatus::BadRequest));
         }
+        header_field[1] = trim(header_field[1]);
         if (header_field[0] == HOST) {
             HttpParser::header_section_host_parse(header_field, request);
         }
         if (header_field[0] == CONTENT_TYPE) {
-            request.header_.content_type_ = trim(header_field[1]);
+            request.header_.content_type_ = header_field[1];
         }
         if (header_field[0] == CONTENT_LENGTH) {
             request.header_.content_length_ =
-                strtoul(trim(header_field[1]).c_str(), NULL, DECIMAL);
+                strtoul(header_field[1].c_str(), NULL, DECIMAL);
         }
         if (header_field[0] == TRANSFER_ENCODING) {
-            request.header_.transfer_encoding_ = trim(header_field[1]);
+            request.header_.transfer_encoding_ = header_field[1];
         }
     }
-    return (header_end + HTTP_HEADER_END_LEN);
+    return (header_section_end + HTTP_HEADER_END_LEN);
 }
 
 std::string HttpParser::parse_chunked(const std::string& data) {
@@ -134,12 +138,12 @@ HttpRequest HttpParser::http_request_parse(const std::string& buffer) {
     HttpRequest request;
 
     // ステータスラインのパース
-    std::string::size_type request_line_end =
+    std::string::size_type header_section_start =
         HttpParser::request_line_parse(buffer, request);
 
     // ヘッダーのパース
     std::string::size_type header_section_end =
-        HttpParser::header_section_parse(buffer, request, request_line_end);
+        HttpParser::header_section_parse(buffer, request, header_section_start);
 
     // ボディのパース
     body_section_parse(buffer, request, header_section_end);

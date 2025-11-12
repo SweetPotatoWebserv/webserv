@@ -2,6 +2,7 @@
 #include "../src/http/HttpParser.h"
 #include "../src/core/Common.h"
 #include "../src/http/ClientHandler.h"
+#include "../src/http/HttpException.h"
 
 // GET: method, host(no port -> DEFAULT_PORT), request_target(path+query), no body
 TEST(HttpRequestParse, ParseRequestLineAndHostNoPort) {
@@ -64,4 +65,77 @@ TEST(HttpRequestParse, ParseTransferEncodingChunked) {
     EXPECT_TRUE(has_chunked);
     // decoded body
     EXPECT_EQ(r.body_, std::string("Wikipedia"));
+}
+
+TEST(HttpRequestParse, InvalidHostAddress) {
+    std::string req = std::string("GET /index.html HTTP/1.1") +
+                      HTTP_LINE_END +
+                      "Host: example.com:" + HTTP_LINE_END +
+                      HTTP_LINE_END;
+
+    ASSERT_TRUE(ClientHandler::is_request_ready(req));
+
+    HttpRequest r = HttpParser::http_request_parse(req);
+
+    EXPECT_EQ(r.method_, MethodGET);
+    EXPECT_EQ(r.request_target_.path_, "/index.html");
+    EXPECT_EQ(r.host_.getAddress(), std::string("example.com"));
+    EXPECT_EQ(r.host_.getPort(), 0);
+    EXPECT_TRUE(r.body_.empty());
+}
+
+TEST(HttpRequestParse, InvalidHostPort) {
+    std::string req = std::string("GET /index.html HTTP/1.1") +
+                      HTTP_LINE_END +
+                      "Host: :8080" + HTTP_LINE_END +
+                      HTTP_LINE_END;
+
+    ASSERT_TRUE(ClientHandler::is_request_ready(req));
+    HttpRequest r = HttpParser::http_request_parse(req);
+
+    EXPECT_EQ(r.method_, MethodGET);
+    EXPECT_EQ(r.request_target_.path_, "/index.html");
+    EXPECT_EQ(r.host_.getAddress(), std::string(""));
+    EXPECT_EQ(r.host_.getPort(), 8080);
+    EXPECT_TRUE(r.body_.empty());
+}
+
+TEST(HttpRequestParse, InvalidRequestLineNotVersion) {
+    std::string req = std::string("GET /index.html") +
+                      HTTP_LINE_END +
+                      "Host: example.com:8080" + HTTP_LINE_END +
+                      HTTP_LINE_END;
+
+    ASSERT_TRUE(ClientHandler::is_request_ready(req));
+    ASSERT_THROW(HttpParser::http_request_parse(req), HttpException);
+}
+
+TEST(HttpRequestParse, InvalidRequestLineNotMethod) {
+    std::string req = std::string("/index.html HTTP/1.1") +
+                      HTTP_LINE_END +
+                      "Host: example.com:8080" + HTTP_LINE_END +
+                      HTTP_LINE_END;
+
+    ASSERT_TRUE(ClientHandler::is_request_ready(req));
+    ASSERT_THROW(HttpParser::http_request_parse(req), HttpException);
+}
+
+TEST(HttpRequestParse, InvalidRequestLineNotPath) {
+    std::string req = std::string("GET HTTP/1.1") +
+                      HTTP_LINE_END +
+                      "Host: example.com:8080" + HTTP_LINE_END +
+                      HTTP_LINE_END;
+
+    ASSERT_TRUE(ClientHandler::is_request_ready(req));
+    ASSERT_THROW(HttpParser::http_request_parse(req), HttpException);
+}
+
+TEST(HttpRequestParse, InvalidRequestLineLowerMethod) {
+    std::string req = std::string("get / HTTP/1.1") +
+                      HTTP_LINE_END +
+                      "Host: example.com:8080" + HTTP_LINE_END +
+                      HTTP_LINE_END;
+
+    ASSERT_TRUE(ClientHandler::is_request_ready(req));
+    ASSERT_THROW(HttpParser::http_request_parse(req), HttpException);
 }
