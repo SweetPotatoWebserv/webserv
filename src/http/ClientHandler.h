@@ -13,10 +13,10 @@ class ClientHandler {
     static bool is_request_ready(const std::string& buffer);
     static bool is_complete_content_length(
         const std::string& buffer, const std::string& message_head,
-        std::string::size_type content_length_pos);
+        const std::vector<std::string>& content_length);
     static bool is_complete_transfer(
         const std::string& buffer, const std::string& message_head,
-        std::string::size_type transfer_encoding_pos);
+        const std::vector<std::string>& transfer_encoding);
     static const int TRANSFER_ENCODING_WITH_COLON_LEN = 18;
     static const char* const TRANSFER_ENCODING_WITH_COLON;
     static const char* const TRANSFER_ENCODING_CHUNKED_END;
