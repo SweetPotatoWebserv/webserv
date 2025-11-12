@@ -139,3 +139,38 @@ TEST(HttpRequestParse, InvalidRequestLineLowerMethod) {
     ASSERT_TRUE(ClientHandler::is_request_ready(req));
     ASSERT_THROW(HttpParser::http_request_parse(req), HttpException);
 }
+
+
+TEST(HttpRequestParse, QueryStringLastQuestion) {
+    std::string req = std::string("GET /? HTTP/1.1") +
+                      HTTP_LINE_END +
+                      "Host: example.com:8080" + HTTP_LINE_END +
+                      HTTP_LINE_END;
+
+    ASSERT_TRUE(ClientHandler::is_request_ready(req));
+    HttpRequest r = HttpParser::http_request_parse(req);
+
+    EXPECT_EQ(r.method_, MethodGET);
+    EXPECT_EQ(r.request_target_.path_, "/");
+    EXPECT_EQ(r.request_target_.query_string_, "");
+    EXPECT_EQ(r.host_.getAddress(), std::string("example.com"));
+    EXPECT_EQ(r.host_.getPort(), 8080);
+    EXPECT_TRUE(r.body_.empty());
+}
+
+TEST(HttpRequestParse, OnlyQuestionPath) {
+    std::string req = std::string("GET ? HTTP/1.1") +
+                      HTTP_LINE_END +
+                      "Host: example.com:8080" + HTTP_LINE_END +
+                      HTTP_LINE_END;
+
+    ASSERT_TRUE(ClientHandler::is_request_ready(req));
+    HttpRequest r = HttpParser::http_request_parse(req);
+
+    EXPECT_EQ(r.method_, MethodGET);
+    EXPECT_EQ(r.request_target_.path_, "");
+    EXPECT_EQ(r.request_target_.query_string_, "");
+    EXPECT_EQ(r.host_.getAddress(), std::string("example.com"));
+    EXPECT_EQ(r.host_.getPort(), 8080);
+    EXPECT_TRUE(r.body_.empty());
+}
