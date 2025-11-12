@@ -11,7 +11,7 @@ typedef struct ErrorPageDirective {
     std::vector<int> statuses;
     std::string target;
     int override_status;
-    ErrorPageDirective(): override_status(-1) {}
+    ErrorPageDirective();//<-修正
 } ErrorPageDirective;
 
 typedef struct ReturnDirective {
@@ -30,9 +30,8 @@ typedef struct ListenDirective {
     // listen 127.0.0.1:8080 default_server;
     // listen localhost:8080;
     std::string address;
-    // port range: 0 ~ 65535
-    // uint16_t port;↓変更
-    unsigned short port; //<- uint16_t が c++98 だと標準でサポートされるか怪しいため、unsigned short ポート番号(0-65535)を扱う型　変更
+
+    uint16_t port;//<-修正
     bool is_default_server;
     ListenDirective() : port(DEFAULT_PORT), is_default_server(false) {}
 } ListenDirective;

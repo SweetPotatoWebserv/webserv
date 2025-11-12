@@ -8,6 +8,7 @@
 
 #include "HttpConfig.h"  //データ保持クラス
 
+
 //設定ファイル(.conf)のパース(解析)静的解析クラス
 
 class HttpConfigParser {
@@ -68,6 +69,22 @@ class HttpConfigParser {
 
     ///@brief client_max_body_size ディレクティブをパースする
     ///@return ボディサイズの上限値
-    static off_t parseClientMaxBodySize(const std::vector<std::string>& tokens,
-                                        size_t& index);
+    static off_t parseClientMaxBodySize(const std::vector<std::string>& tokens,size_t& index);
+
+// 特殊文字リスト（トークン分割用）構文解析用
+    static const std::string SPECIAL_CHARS;
+    static const char HASH_CHAR;
+    static const std::string NUMBER_SIGN_CHARS;
+    static const std::string KEYWORD_HTTP;
+    static const std::string KEYWORD_SERVER;
+    static const std::string KEYWORD_LOCATION;
+    static const std::string BRACE_OPEN;
+    static const std::string BRACE_CLOSE;
+    static const std::string SEMICOLON;
+//Directive keywords
+    static const std::string DIRECTIVE_LISTEN;
+    static const std::string DIRECTIVE_ROOT;
+    static const std::string DIRECTIVE_INDEX;
+    static const std::string DIRECTIVE_AUTOINDEX;
+    static const std::string DIRECTIVE_CLIENT_MAX_BODY_SIZE;
 };
