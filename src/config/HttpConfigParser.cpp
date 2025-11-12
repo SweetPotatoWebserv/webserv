@@ -4,20 +4,20 @@
 #include <limits> // std::numeric_limits を使うために必要
 
 //構文解析用クラスkeyword
-const std::string HttpConfigParser::SPECIAL_CHARS = "{};";
+const char* const HttpConfigParser::SPECIAL_CHARS = "{};";
 const char HttpConfigParser::HASH_CHAR = '#';
-const std::string HttpConfigParser::KEYWORD_HTTP = "http";
-const std::string HttpConfigParser::KEYWORD_SERVER = "server";
-const std::string HttpConfigParser::KEYWORD_LOCATION = "location";
-const std::string HttpConfigParser::BRACE_OPEN = "{";
-const std::string HttpConfigParser::BRACE_CLOSE = "}";
-const std::string HttpConfigParser::SEMICOLON = ";";
+const char* const HttpConfigParser::KEYWORD_HTTP = "http";
+const char* const HttpConfigParser::KEYWORD_SERVER = "server";
+const char* const HttpConfigParser::KEYWORD_LOCATION = "location";
+const char* const HttpConfigParser::BRACE_OPEN = "{";
+const char* const HttpConfigParser::BRACE_CLOSE = "}";
+const char* const HttpConfigParser::SEMICOLON = ";";
 //Directive keywords
-const std::string HttpConfigParser::DIRECTIVE_LISTEN = "listen";
-const std::string HttpConfigParser::DIRECTIVE_ROOT = "root";
-const std::string HttpConfigParser::DIRECTIVE_INDEX = "index";
-const std::string HttpConfigParser::DIRECTIVE_AUTOINDEX = "autoindex";
-const std::string HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE = "client_max_body_size";
+const char* const HttpConfigParser::DIRECTIVE_LISTEN = "listen";
+const char* const HttpConfigParser::DIRECTIVE_ROOT = "root";
+const char* const HttpConfigParser::DIRECTIVE_INDEX = "index";
+const char* const HttpConfigParser::DIRECTIVE_AUTOINDEX = "autoindex";
+const char* const HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE = "client_max_body_size";
 
 
 //終端に来たかどうか

@@ -23,7 +23,7 @@ class HttpConfigParser {
     ~HttpConfigParser();  // instance制限のためprivate
 
     //@brief ファイルを読み込み、トークン化する
-    // @param filename ファイルパス
+    //@param filename ファイルパス
     //@return トークンのリスト
     static std::vector<std::string> tokenize(const std::string& filename);
 
@@ -69,22 +69,22 @@ class HttpConfigParser {
 
     ///@brief client_max_body_size ディレクティブをパースする
     ///@return ボディサイズの上限値
-    static off_t parseClientMaxBodySize(const std::vector<std::string>& tokens,size_t& index);
+    static off_t parseClientMaxBodySize(const std::vector<std::string>& tokens, size_t& index);
 
 // 特殊文字リスト（トークン分割用）構文解析用
-    static const std::string SPECIAL_CHARS;
+    static const char* const SPECIAL_CHARS; 
     static const char HASH_CHAR;
-    static const std::string NUMBER_SIGN_CHARS;
-    static const std::string KEYWORD_HTTP;
-    static const std::string KEYWORD_SERVER;
-    static const std::string KEYWORD_LOCATION;
-    static const std::string BRACE_OPEN;
-    static const std::string BRACE_CLOSE;
-    static const std::string SEMICOLON;
-//Directive keywords
-    static const std::string DIRECTIVE_LISTEN;
-    static const std::string DIRECTIVE_ROOT;
-    static const std::string DIRECTIVE_INDEX;
-    static const std::string DIRECTIVE_AUTOINDEX;
-    static const std::string DIRECTIVE_CLIENT_MAX_BODY_SIZE;
+    static const char* const KEYWORD_HTTP;   
+    static const char* const KEYWORD_SERVER; 
+    static const char* const KEYWORD_LOCATION; 
+    static const char* const BRACE_OPEN;   
+    static const char* const BRACE_CLOSE;  
+    static const char* const SEMICOLON;    
+
+    // Directive keywords
+    static const char* const DIRECTIVE_LISTEN; 
+    static const char* const DIRECTIVE_ROOT;   
+    static const char* const DIRECTIVE_INDEX;  
+    static const char* const DIRECTIVE_AUTOINDEX; 
+    static const char* const DIRECTIVE_CLIENT_MAX_BODY_SIZE;
 };
