@@ -1,5 +1,6 @@
 #include "ClientHandler.h"
 
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -72,8 +73,7 @@ bool ClientHandler::is_complete_content_length(
 
 void ClientHandler::on_readable() {  // NOLINT
     char buf[BUFFER_SIZE];
-    ssize_t len = 0;
-    len = ::recv(fd_, buf, sizeof(buf), RECV_FLG);
+    ssize_t len = ::recv(fd_, buf, sizeof(buf), RECV_FLG);
     // recv の失敗
     if (len < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) return;
