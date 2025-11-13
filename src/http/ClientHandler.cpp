@@ -83,11 +83,12 @@ void ClientHandler::on_readable() {  // NOLINT
     }
     buffer_.append(buf, len);
     if (ClientHandler::is_request_ready(buffer_)) {
-        request_ = HttpParser::http_request_parse(buffer_);
-        // try {
-        // } catch (const HttpException& e) {
-        //     sendErrorResponse(e.status_code());
-        // }
+        // TODO 例外処理する
+        try {
+            request_ = HttpParser::http_request_parse(buffer_);
+        } catch (const HttpException& e) {
+            std::cerr << e.what() << '\n';
+        }
         event_.mod(fd_, EPOLLOUT);
     }
 }
