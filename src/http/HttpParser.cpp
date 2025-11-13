@@ -4,7 +4,7 @@
 
 #include "HttpException.h"
 
-HttpCommonHeader::HttpCommonHeader() : content_length_(0){};
+HttpCommonHeader::HttpCommonHeader() : content_length_(0) {}
 
 std::vector<std::string> HttpParser::split_path(
     const std::string& target_path) {

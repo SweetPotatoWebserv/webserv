@@ -72,6 +72,5 @@ class HttpParser {
     static const int HOST_ONLY = 2;
     static const int MAX_HOST_FIELD_NUM = 3;
     static const int REQUEST_LINE_NUM = 3;
-    static const int HEADER_FIELD_NUM = 2;
     static std::vector<std::string> split_path(const std::string& target_path);
 };
