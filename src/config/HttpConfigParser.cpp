@@ -52,7 +52,7 @@ std::vector<std::string> HttpConfigParser::tokenize(const std::string& filename)
 			if (line[i] == HASH_CHAR) {break;}//HASH_CHAR==#
 			// トークン抽出
 			if (std::string(SPECIAL_CHARS).find(line[i]) != std::string::npos) {
-                tokens.push_back(line.substr(i, 1));// SPECIAL_CHARS=="{};"
+                tokens.push_back(line.substr(i, 1));// SPECIAL_CHARS=="{};"//1文字切り出す
                 continue;
             }
 			size_t start = i;
@@ -277,14 +277,13 @@ bool HttpConfigParser::parseAutoindex(const std::vector<std::string>& tokens, si
 	if(HttpConfigParser::getNextToken(tokens, index) != SEMICOLON) {//";"
 		throw std::runtime_error("Error: Expected ';' after autoindex directive");
 	}
-
 	if(value == "on") {
 		return true;
-	} else if (value == "off") {
-		return false;
-	} else {
-		throw std::runtime_error("Error: autoindex value must be 'on' or 'off'");
 	}
+	if (value == "off") {
+		return false;
+	}
+	throw std::runtime_error("Error: autoindex value must be 'on' or 'off'");
 }
 
 //-----------------------------------------------------------------
