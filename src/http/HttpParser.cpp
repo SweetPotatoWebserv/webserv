@@ -10,6 +10,10 @@ std::vector<std::string> HttpParser::split_path(
     const std::string& target_path) {
     std::vector<std::string> path;
     std::string::size_type path_end = target_path.find(QUESTION_MARK);
+    if (path_end == std::string::npos) {
+        path.push_back(target_path.substr(0));
+        return path;
+    }
     path.push_back(target_path.substr(0, path_end));
     // question を飛ばすために +1 する
     path.push_back((target_path.substr(path_end + 1)));
