@@ -84,29 +84,76 @@ std::vector<std::string> HttpConfigParser::tokenize(const std::string& filename)
 ///@return 完成した HttpConfig オブジェクト
 
 HttpConfig HttpConfigParser::parse(const std::string& filename){
-	// トークン化 全トークンを取得
 	std::vector<std::string> tokens = HttpConfigParser::tokenize(filename);
 
 	//parse処理に必要な道具をローカルに準備
 	HttpConfig config;//完成させるHttpConfigオブジェクト
 	size_t index = 0;//現在のトークン位置
 
-	//メインの解析ループ
-	// indexが終端(tokens.size())に達するまでループ
-	while(!HttpConfigParser::isEof(tokens, index)) {
-		//tokensを一つ取り出して、indexを進める
-		std::string token = HttpConfigParser::getNextToken(tokens, index);
+	//最初のトークンが "http" であることを確認
+	if (isEof(tokens, index) || getNextToken(tokens, index) != KEYWORD_HTTP) {
+        throw std::runtime_error("Error: Expected 'http' block at the beginning");
+    }
 
-		//serverブロック以外はエラー
-		if (token == KEYWORD_SERVER) {//KEYWORD_SERVER=="server"
-			HttpConfigParser::parserServer(config, tokens, index);
-		} else {
-			throw std::runtime_error("Error: Unknown directive outside server block: " + token);
-		}
-	}
-	
-	return config;
+	// 3. 次のトークンが "{" であることを確認
+    if (isEof(tokens, index) || getNextToken(tokens, index) != BRACE_OPEN) {
+        throw std::runtime_error("Error: Expected '{' after http directive");
+    }
 
+	// 4. http ブロックの中身をパース
+    CommonConfig http_common_config; // httpレベルの共通設定をここに溜める
+    bool found_closing_brace = false;
+
+    while (!isEof(tokens, index)) {
+        std::string token = getNextToken(tokens, index);
+
+        if (token == BRACE_CLOSE) {
+            // http ブロック終了
+            found_closing_brace = true;
+            break;
+        }
+
+        if (token == KEYWORD_SERVER) {
+            // "server" が来たら、parserServer に任せる
+            // (※ parserServerの中で config.addServerConfig される)
+            HttpConfigParser::parserServer(config, tokens, index);
+        }
+        else if (token == DIRECTIVE_ROOT) {        // --- ↓↓ http レベルのディレクティブ↓↓ ---
+            std::string r = parseRoot(tokens, index);
+            http_common_config.setRoot(r);
+        }
+        else if (token == DIRECTIVE_INDEX) {
+            std::vector<std::string> files = parseIndex(tokens, index);
+            for (size_t i = 0; i < files.size(); ++i) {
+                http_common_config.addIndexFile(files[i]);
+            }
+        }
+        else if (token == DIRECTIVE_AUTOINDEX) {
+            bool ai = parseAutoindex(tokens, index);
+            http_common_config.setAutoindex(ai);
+        }
+        else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
+            off_t size = parseClientMaxBodySize(tokens, index);
+            http_common_config.setClientMaxBodySize(size);
+        }
+        // ★ ステップ5でここに error_page, return のパース処理を追加します
+        else {
+            throw std::runtime_error("Error: Unknown directive in http block: " + token);
+        }
+    }
+
+    if (!found_closing_brace) {
+        throw std::runtime_error("Error: Expected '}' to close http block");
+    }
+
+    // 5. 読み取った http レベルの設定を、config 全体のデフォルトとして保存
+    config.setDefaults(http_common_config);
+
+
+    // ★★★ 次のステップ4（継承処理）でここにコードを追加します ★★★
+    // (今はまだ空でOKです)
+
+    return config;
 }
 
 //-----------------------------------------------------------
