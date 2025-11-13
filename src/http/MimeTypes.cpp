@@ -1,5 +1,7 @@
 #include "MimeTypes.h"
 
+#include <algorithm>
+
 std::string MimeTypes::extract_extension(const std::string& file_name) {
     std::string::size_type pos = file_name.rfind('.');
     if (pos == std::string::npos) return "";
@@ -37,7 +39,9 @@ std::map<std::string, std::string> MimeTypes::create_content_type_map() {
 }
 
 std::string MimeTypes::get_mime_type(const std::string& file_name) {
-    const std::string extension = extract_extension(file_name);
+    std::string extension = extract_extension(file_name);
+    std::transform(extension.begin(), extension.end(), extension.begin(),
+                   ::tolower);
     if (extension.empty()) return "application/octet-stream";
     static const std::map<std::string, std::string> ContentTypeMap =
         create_content_type_map();

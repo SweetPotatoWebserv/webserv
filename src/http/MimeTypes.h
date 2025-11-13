@@ -1,7 +1,7 @@
 #pragma once
 
+#include <algorithm>
 #include <map>
-
 #include <string>
 
 class MimeTypes {
