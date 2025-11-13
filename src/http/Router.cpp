@@ -7,6 +7,7 @@
 
 #include "../core/Common.h"
 #include "HttpException.h"
+#include "MimeTypes.h"
 
 Router::Router(const HttpConfig& config) : config_(config) {}
 
@@ -102,10 +103,11 @@ HttpResponse Router::create_response(const HttpRequest& request) {  // NOLINT
     }
     resolve_ = resolve_config(server, location);
 
+    std::string path_name;
     for (std::vector<std::string>::const_iterator index_files =
              resolve_.index_files_.begin();
          index_files != resolve_.index_files_.end(); ++index_files) {
-        std::string path_name = resolve_.root_ + *index_files;
+        path_name = resolve_.root_ + *index_files;
         int fd = open(path_name.c_str(), O_RDONLY);
         if (fd == -1) {
             throw std::runtime_error("open() failed");
@@ -124,7 +126,6 @@ HttpResponse Router::create_response(const HttpRequest& request) {  // NOLINT
     response.status_code_ = HttpStatus::OK;
     response.message_ = HttpStatus::reason(HttpStatus::OK);
     response.header_.content_length_ = response.body_.size();
-    // 拡張子をみてファイルタイプを判別する
-    // response.header_.content_type_ = "app";
+    response.header_.content_type_ = MimeTypes::get_mime_type(path_name);
     return response;
 }
