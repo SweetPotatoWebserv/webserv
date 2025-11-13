@@ -51,7 +51,7 @@ std::vector<std::string> HttpConfigParser::tokenize(const std::string& filename)
 			// コメント行スキップ
 			if (line[i] == HASH_CHAR) {break;}
 			// トークン抽出
-			if (SPECIAL_CHARS.find(line[i]) != std::string::npos) {
+			if (std::string(SPECIAL_CHARS).find(line[i]) != std::string::npos) {
                 tokens.push_back(line.substr(i, 1));
                 continue;
             }
@@ -59,7 +59,7 @@ std::vector<std::string> HttpConfigParser::tokenize(const std::string& filename)
 			while(i < line.size() && 
                   !std::isspace(line[i]) &&
                   line[i] != HASH_CHAR &&
-                  SPECIAL_CHARS.find(line[i]) == std::string::npos)
+                  std::string(SPECIAL_CHARS).find(line[i]) == std::string::npos)
             {
                 ++i;
             }
