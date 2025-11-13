@@ -189,7 +189,50 @@ class ServerConfig {
 	void addIndexFile(const std::string& file) { common_config.addIndexFile(file); }
 	void setAutoindex(bool on) { common_config.setAutoindex(on); }
     void setClientMaxBodySize(off_t size) { common_config.setClientMaxBodySize(size); }
+
+    void resolveDefaults(const CommonConfig& http_common) {//<-親の設定
+        // 1. まず、自分の未設定項目を http から埋める (ロジックは Location と同じ)
+        
+        if (!common_config.isRootSet() && http_common.isRootSet()) {
+            common_config.setRoot(http_common.getRoot());
+        }
+        if (!common_config.isAutoindexSet() && http_common.isAutoindexSet()) {
+            common_config.setAutoindex(http_common.getAutoindex());
+        }
+        if (common_config.getClientMaxBodySize() == -1) {
+            common_config.setClientMaxBodySize(http_common.getClientMaxBodySize());
+        }
+        if (!common_config.isUploadStoreSet() && http_common.isUploadStoreSet()) {
+            common_config.setUploadStore(http_common.getUploadStore());
+        }
+        
+        if (common_config.getIndexFiles().empty()) {
+            const std::vector<std::string>& parent_index = http_common.getIndexFiles();
+            for (size_t i = 0; i < parent_index.size(); ++i) {
+                common_config.addIndexFile(parent_index[i]);
+            }
+        }
+        
+        if (common_config.getErrorPages().empty()) {
+            std::map<int, ErrorPageDirective>::const_iterator it;
+            for (it = http_common.getErrorPages().begin(); it != http_common.getErrorPages().end(); ++it) {
+                common_config.addErrorPage(it->first, it->second);
+            }
+        }
+
+        // return は http ブロックには書けませんが、今回は書かない。Nginxの設定思想に準じていないため
+
+  
+        // 自分が完全体(httpの設定を含んだ設定)になったので、子分である location たちに設定を配る
+        for (size_t i = 0; i < locations.size(); ++i) {
+            locations[i].resolveDefaults(this->common_config);
+        }
+    }
     
+    // ★ Parserから呼ぶために、common_config のゲッターが必要なら追加
+    // (今回は内部で処理しているので不要、念のため)//testなどで使うかもしれない
+    const CommonConfig& getCommonConfig() const { return common_config; }
+
     private:
         std::vector<LocationConfig> locations;
         ListenDirective listens;
@@ -205,6 +248,9 @@ class HttpConfig {
     // (パーサーが addServerConfig と呼んでいるため名前を合わせる)
     void addServerConfig(const ServerConfig& s) { servers.push_back(s); }
     void setDefaults(const CommonConfig& c) { common_config = c; }
+    //parserが使うため追加
+    const CommonConfig& getCommonConfig() const { return common_config; }
+    std::vector<ServerConfig>& getServers() { return servers; } // non-const参照 (中身を書き換えるため)
 
     private:
         std::vector<ServerConfig> servers;
