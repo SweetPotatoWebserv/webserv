@@ -29,6 +29,7 @@ struct HttpCommonHeader {
     std::string transfer_encoding_;
     // text/html; charset=UTF-8
     std::string content_type_;
+    HttpCommonHeader();
 };
 
 struct HttpRequest {
@@ -63,7 +64,7 @@ class HttpParser {
         const std::vector<std::string>& header_field, HttpRequest& request);
     static void body_section_parse(const std::string& buffer,
                                    HttpRequest& request,
-                                   std::string::size_type header_section_end);
+                                   std::string::size_type body_section_start);
 
     static std::string parse_chunked(const std::string& data);
 

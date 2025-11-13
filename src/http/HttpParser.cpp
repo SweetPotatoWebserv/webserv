@@ -4,6 +4,8 @@
 
 #include "HttpException.h"
 
+HttpCommonHeader::HttpCommonHeader() : content_length_(0){};
+
 std::vector<std::string> HttpParser::split_path(
     const std::string& target_path) {
     std::vector<std::string> path;
@@ -133,13 +135,19 @@ std::string HttpParser::parse_chunked(const std::string& data) {
 
 void HttpParser::body_section_parse(const std::string& buffer,
                                     HttpRequest& request,
-                                    std::string::size_type header_section_end) {
+                                    std::string::size_type body_section_start) {
+    std::string body = buffer.substr(body_section_start);
     if (request.header_.transfer_encoding_ == CHUNKED) {
-        std::string body = buffer.substr(header_section_end);
         request.body_ = parse_chunked(body);
+    } else if (request.header_.content_length_ > 0) {
+        if (body.size() != request.header_.content_length_)
+            throw HttpException(HttpStatus::BadRequest,
+                                HttpStatus::reason(HttpStatus::BadRequest));
+        request.body_ = body;
     } else {
-        request.body_ =
-            buffer.substr(header_section_end, request.header_.content_length_);
+        if (!body.empty())
+            throw HttpException(HttpStatus::BadRequest,
+                                HttpStatus::reason(HttpStatus::BadRequest));
     }
 }
 
@@ -151,10 +159,10 @@ HttpRequest HttpParser::http_request_parse(const std::string& buffer) {
         HttpParser::request_line_parse(buffer, request);
 
     // ヘッダーのパース
-    std::string::size_type header_section_end =
+    std::string::size_type body_section_start =
         HttpParser::header_section_parse(buffer, request, header_section_start);
 
     // ボディのパース
-    body_section_parse(buffer, request, header_section_end);
+    body_section_parse(buffer, request, body_section_start);
     return request;
 }

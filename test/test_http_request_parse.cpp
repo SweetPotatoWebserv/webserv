@@ -191,3 +191,15 @@ TEST(HttpRequestParse, DuplicateQuestion) {
     EXPECT_EQ(r.host_.getPort(), 8080);
     EXPECT_TRUE(r.body_.empty());
 }
+
+TEST(HttpRequestParse, ParseNoContentLengthWithBody) {
+    std::string body = "Hello, world!"; // 13 bytes // NOLINT
+    std::string req = std::string("POST /submit HTTP/1.1") + HTTP_LINE_END +
+                      "Host: localhost:8080" + HTTP_LINE_END +
+                      "Content-Type: application/json" + HTTP_LINE_END +
+                      HTTP_LINE_END +
+                      body;
+
+    ASSERT_TRUE(ClientHandler::is_request_ready(req));
+    ASSERT_THROW(HttpParser::http_request_parse(req), HttpException);
+}
