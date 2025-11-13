@@ -14,6 +14,7 @@ TEST_DIR = test
 TEST_SRC = $(addprefix $(TEST_DIR)/, test_main.cpp \
 			test_is_request_ready.cpp \
 			test_split.cpp \
+			test_trim.cpp \
 			test_search_header_field.cpp \
 			test_http_request_parse.cpp \
 			)
