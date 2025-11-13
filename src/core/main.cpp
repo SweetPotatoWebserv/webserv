@@ -1,23 +1,10 @@
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wkeyword-macro"
-#endif
-#define private public
 #include "../config/HttpConfig.h"
-#undef private
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
-
 #include "../event/Event.h"
 #include "../http/Router.h"
 #include "Server.h"
 
-// C++98 で使える構文のみでテスト用の HttpConfig を生成
 static HttpConfig createTestHttpConfig() {
     HttpConfig config;
-
-    // デフォルト設定
     config.defaults_.client_max_body_size_ = 5 * 1024 * 1024;  // 5MB // NOLINT
     config.defaults_.autoindex_ = false;
     config.defaults_.root_ = "www";
@@ -44,10 +31,22 @@ static HttpConfig createTestHttpConfig() {
         {
             LocationConfig loc_root;
             loc_root.path_ = "/";
+            loc_root.common_config_.root_ = "docs/html/";
             loc_root.allowed_methods_.push_back(MethodGET);
             loc_root.allowed_methods_.push_back(MethodHEAD);
             loc_root.common_config_.index_files_.push_back("index.html");
             s1.locations_.push_back(loc_root);
+        }
+
+        // location /img
+        {
+            LocationConfig loc_img;
+            loc_img.path_ = "/img";
+            loc_img.common_config_.root_ = "docs/img/";
+            loc_img.allowed_methods_.push_back(MethodGET);
+            loc_img.allowed_methods_.push_back(MethodHEAD);
+            loc_img.common_config_.index_files_.push_back("icon.jpeg");
+            s1.locations_.push_back(loc_img);
         }
 
         // location /upload
@@ -71,34 +70,6 @@ static HttpConfig createTestHttpConfig() {
 
         config.servers_.push_back(s1);
     }
-
-    // server 2: 127.0.0.1:8081（リダイレクト例）
-    {
-        ServerConfig s2;
-        s2.listens_.address = "127.0.0.1";
-        s2.listens_.port = 8081;  // NOLINT
-        s2.listens_.is_default_server = false;
-        s2.server_names_.push_back("redirect.local");
-
-        // ルートへ来たら 301 /new-site へ
-        s2.common_config_.redirect_.status = HttpStatus::MovedPermanently;
-        s2.common_config_.redirect_.target = "/new-site";
-
-        s2.common_config_.index_files_.clear();
-        s2.common_config_.index_files_.push_back("home.html");
-
-        // location /new-site
-        {
-            LocationConfig loc_new;
-            loc_new.path_ = "/new-site";
-            loc_new.allowed_methods_.push_back(MethodGET);
-            loc_new.allowed_methods_.push_back(MethodHEAD);
-            s2.locations_.push_back(loc_new);
-        }
-
-        config.servers_.push_back(s2);
-    }
-
     return config;
 }
 
