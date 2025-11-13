@@ -25,6 +25,11 @@ extern const int SOCKET_DOMAIN;
 extern const int SOCKET_TYPE;
 extern const int SOCKET_PROTOCOL;
 extern const int SOCKET_BACKLOG;
+extern const char* const HTTP_LINE_END;
+extern const char* const COLON;
+extern const int HEADER_FIELD_NUM;
+extern const char* const CONTENT_LENGTH;
+extern const char* const TRANSFER_ENCODING;
 
 class HttpStatus {
    public:
