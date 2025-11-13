@@ -27,6 +27,9 @@ const off_t HttpConfigParser::BYTES_PER_MB = static_cast<off_t>(1024) * 1024;
 const off_t HttpConfigParser::BYTES_PER_GB =
     static_cast<off_t>(1024) * 1024 * 1024;  // linter修正
 
+//最大値のポート番号
+const int HttpConfigParser::MAX_PORT_NUMBER = 65535;
+
 //終端に来たかどうか
 bool HttpConfigParser::isEof(const std::vector<std::string>& tokens,
                              size_t index) {
@@ -53,6 +56,9 @@ std::vector<std::string> HttpConfigParser::tokenize(
     std::vector<std::string> tokens;
     std::string line;
 
+    // copilot
+    const std::string special_chars_str(SPECIAL_CHARS);
+
     while (std::getline(ifs, line)) {
         for (size_t i = 0; i < line.size(); ++i) {
             // 空欄スキップ
@@ -64,7 +70,7 @@ std::vector<std::string> HttpConfigParser::tokenize(
                 break;
             }  // HASH_CHAR==#
             // トークン抽出
-            if (std::string(SPECIAL_CHARS).find(line[i]) != std::string::npos) {
+            if (special_chars_str.find(line[i]) != std::string::npos) {
                 tokens.push_back(
                     line.substr(i, 1));  // SPECIAL_CHARS=="{};"//1文字切り出す
                 continue;
@@ -72,8 +78,7 @@ std::vector<std::string> HttpConfigParser::tokenize(
             size_t start = i;
             while (i < line.size() && std::isspace(line[i]) == 0 &&
                    line[i] != HASH_CHAR &&
-                   std::string(SPECIAL_CHARS).find(line[i]) ==
-                       std::string::npos) {
+                   special_chars_str.find(line[i]) == std::string::npos) {
                 ++i;
             }
             tokens.push_back(line.substr(start, i - start));
@@ -218,14 +223,12 @@ void HttpConfigParser::parserServer(HttpConfig& config,
             // parseAutoindex 呼び出し、結果をserver_configにセット
             bool ai = HttpConfigParser::parseAutoindex(tokens, index);
             server_config.setAutoindex(ai);  //<- セッターが必要
-        } else if (
-            token ==
-            DIRECTIVE_CLIENT_MAX_BODY_SIZE) {  // DIRECTIVE_CLIENT_MAX_BODY_SIZE
-                                               // == "autoindex"
+        } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
+            // ▼copilot
+            // DIRECTIVE_CLIENT_MAX_BODY_SIZE == "client_max_body_size"
             off_t size =
                 HttpConfigParser::parseClientMaxBodySize(tokens, index);
-            server_config.setClientMaxBodySize(
-                size);  // (CommonConfig::setClientMaxBodySize セッター)
+            server_config.setClientMaxBodySize(size);
         }
         // error_page, return,などのディレクティブのパース処理を追加予定???
         else {
@@ -397,47 +400,57 @@ std::vector<std::string> HttpConfigParser::parseIndex(
 ///@return 完成した ListenDirective オブジェクト
 ListenDirective HttpConfigParser::parseListen(
     const std::vector<std::string>& tokens, size_t& index) {
-    ListenDirective ld;  //返すための構造体
+    ListenDirective ld;
 
-    // listen の次のトークン取得
     std::string value = HttpConfigParser::getNextToken(tokens, index);
-
-    //本当はlocalhostやドメイン名も解決したいが、とりあえずIPアドレスかポート番号だけ対応★
-
-    // 形式を簡易的にチェック(address:port か port)
     std::string::size_type colon_pos = value.find(':');
+
+    // ▼修正1: unsigned long -> uint64_t に変更 (google-runtime-int対応)
+    // 環境依存の long ではなく、確実に大きなサイズを確保できる uint64_t を使用
+    // copilot&linter
+    uint64_t temp_port;
 
     if (colon_pos != std::string::npos) {
         // address:port 形式
         ld.address = value.substr(0, colon_pos);
         std::string port_str = value.substr(colon_pos + 1);
 
-        // C++98で文字列を数値に変換(sstreamを使用)
         std::stringstream ss(port_str);
-        if (!(ss >> ld.port) || !ss.eof()) {  //変換失敗or あとにごみがある場合
-            throw std::runtime_error("Error: Invalid port number in" +
+        if (!(ss >> temp_port) || !ss.eof()) {
+            // ▼修正8: エラーメッセージにコロンを追加copilot
+            throw std::runtime_error("Error: Invalid port number in: " +
                                      port_str);
         }
+        if (temp_port > MAX_PORT_NUMBER) {
+            throw std::runtime_error("Error: Port number out of range: " +
+                                     port_str);
+        }
+        ld.port = static_cast<uint16_t>(temp_port);
+
     } else {
         // port 形式のみ
-        ld.address = DEFAULT_ADDRESS;  //デフォルトのアドレス
-
+        ld.address = DEFAULT_ADDRESS;
         std::stringstream ss(value);
-        if (!(ss >> ld.port) || !ss.eof()) {
-            throw std::runtime_error("Error: Invalid port number +" + value);
+
+        if (!(ss >> temp_port) || !ss.eof()) {
+            // ▼修正4: エラーメッセージを "Invalid port number + " から "Invalid
+            // port number: " に変更copilot
+            throw std::runtime_error("Error: Invalid port number: " + value);
         }
+        if (temp_port > MAX_PORT_NUMBER) {
+            throw std::runtime_error("Error: Port number out of range: " +
+                                     value);
+        }
+        ld.port = static_cast<uint16_t>(temp_port);
     }
 
-    // 次のトークンを確認して、"default_server" かどうかチェック
     std::string next_token = HttpConfigParser::getNextToken(tokens, index);
     if (next_token == "default_server") {
         ld.is_default_server = true;
-        //さらにもう一つトークンをよみ、セミコロンを期待
         next_token = HttpConfigParser::getNextToken(tokens, index);
     }
 
-    //最後はセミコロンを期待
-    if (next_token != SEMICOLON) {  //";"
+    if (next_token != SEMICOLON) {
         throw std::runtime_error("Error: Expected ';' after listen directive");
     }
 

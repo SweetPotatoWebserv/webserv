@@ -1,5 +1,8 @@
 #pragma once
 
+#include <stdint.h>
+#include <sys/types.h>
+
 #include <fstream>    //file read
 #include <sstream>    //file read
 #include <stdexcept>  //exception
@@ -7,7 +10,6 @@
 #include <vector>
 
 #include "HttpConfig.h"  //データ保持クラス
-
 
 //設定ファイル(.conf)のパース(解析)静的解析クラス
 
@@ -40,9 +42,17 @@ class HttpConfigParser {
     static std::string getNextToken(const std::vector<std::string>& tokens,
                                     size_t& index);
 
+    //@brief serverブロックをパースする
+    //@param config HttpConfigオブジェクト（パース結果を格納）
+    //@param tokens トークンリスト
+    //@param index 現在の位置（参照渡しで進める）
     static void parserServer(HttpConfig& config,
                              const std::vector<std::string>& tokens,
                              size_t& index);
+    //@brief locationブロックをパースする
+    //@param server_config ServerConfigオブジェクト（パース結果を格納）
+    //@param tokens トークンリスト
+    //@param index 現在の位置（参照渡しで進める）
     static void parserLocation(ServerConfig& server_config,
                                const std::vector<std::string>& tokens,
                                size_t& index);
@@ -69,27 +79,31 @@ class HttpConfigParser {
 
     ///@brief client_max_body_size ディレクティブをパースする
     ///@return ボディサイズの上限値
-    static off_t parseClientMaxBodySize(const std::vector<std::string>& tokens, size_t& index);
+    static off_t parseClientMaxBodySize(const std::vector<std::string>& tokens,
+                                        size_t& index);
 
-// 特殊文字リスト（トークン分割用）構文解析用
-    static const char* const SPECIAL_CHARS; 
+    // 特殊文字リスト（トークン分割用）構文解析用
+    static const char* const SPECIAL_CHARS;
     static const char HASH_CHAR;
-    static const char* const KEYWORD_HTTP;   
-    static const char* const KEYWORD_SERVER; 
-    static const char* const KEYWORD_LOCATION; 
-    static const char* const BRACE_OPEN;   
-    static const char* const BRACE_CLOSE;  
-    static const char* const SEMICOLON;    
+    static const char* const KEYWORD_HTTP;
+    static const char* const KEYWORD_SERVER;
+    static const char* const KEYWORD_LOCATION;
+    static const char* const BRACE_OPEN;
+    static const char* const BRACE_CLOSE;
+    static const char* const SEMICOLON;
 
     // Directive keywords
-    static const char* const DIRECTIVE_LISTEN; 
-    static const char* const DIRECTIVE_ROOT;   
-    static const char* const DIRECTIVE_INDEX;  
-    static const char* const DIRECTIVE_AUTOINDEX; 
+    static const char* const DIRECTIVE_LISTEN;
+    static const char* const DIRECTIVE_ROOT;
+    static const char* const DIRECTIVE_INDEX;
+    static const char* const DIRECTIVE_AUTOINDEX;
     static const char* const DIRECTIVE_CLIENT_MAX_BODY_SIZE;
 
     //マジックナンバー定数に
     static const off_t BYTES_PER_KB;
     static const off_t BYTES_PER_MB;
     static const off_t BYTES_PER_GB;
+
+    //最大値のポート番号を定数化
+    static const int MAX_PORT_NUMBER;
 };
