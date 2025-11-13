@@ -87,4 +87,9 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_INDEX;  
     static const char* const DIRECTIVE_AUTOINDEX; 
     static const char* const DIRECTIVE_CLIENT_MAX_BODY_SIZE;
+
+    //マジックナンバー定数に
+    static const off_t BYTES_PER_KB;
+    static const off_t BYTES_PER_MB;
+    static const off_t BYTES_PER_GB;
 };

@@ -19,6 +19,11 @@ const char* const HttpConfigParser::DIRECTIVE_INDEX = "index";
 const char* const HttpConfigParser::DIRECTIVE_AUTOINDEX = "autoindex";
 const char* const HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE = "client_max_body_size";
 
+//マジックナンバー定数に
+const off_t HttpConfigParser::BYTES_PER_KB = 1024;
+const off_t HttpConfigParser::BYTES_PER_MB = 1024 * 1024;
+const off_t HttpConfigParser::BYTES_PER_GB = 1024 * 1024 * 1024;
+
 
 //終端に来たかどうか
 bool HttpConfigParser::isEof(const std::vector<std::string>& tokens, size_t index) {
@@ -33,7 +38,7 @@ std::string HttpConfigParser::getNextToken(const std::vector<std::string>& token
 	return tokens[index++];
 }
 
-//fail読み込みとトークン化
+//ファイル読み込みとトークン化
 std::vector<std::string> HttpConfigParser::tokenize(const std::string& filename){
 	std::ifstream ifs(filename.c_str());
 	if (!ifs.is_open()) {
@@ -213,19 +218,16 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config, const std::ve
 			break;
 		}
 		if (token == DIRECTIVE_ROOT) {
-			// root 専門家を呼び出し、結果をlocation_configに
 			std::string r = HttpConfigParser::parseRoot(tokens, index);
 			location_config.setRoot(r); //<- セッターが必要
 		}
 		else if (token == DIRECTIVE_INDEX) {
-			// index 専門家を呼び出し、結果をlocation_configに
 			std::vector<std::string> files = HttpConfigParser::parseIndex(tokens, index);
 			for (size_t i = 0; i < files.size(); ++i) {
 				location_config.addIndexFile(files[i]); //<- セッターが必要
 			}
 		}
 		else if (token == DIRECTIVE_AUTOINDEX) {
-			// autoindex 専門家を呼び出し、結果をlocation_configに
 			bool ai = HttpConfigParser::parseAutoindex(tokens, index);
 			location_config.setAutoindex(ai); //<- セッターが必要
 		}
@@ -416,20 +418,23 @@ off_t HttpConfigParser::parseClientMaxBodySize(const std::vector<std::string>& t
     const off_t max_off_t = std::numeric_limits<off_t>::max();
 
 	if (suffix == 'k') {
-        if (size > max_off_t / 1024) { // オーバーフローチェック
+        // オーバーフローチェック: size > MAX / 1024
+        if (size > max_off_t / BYTES_PER_KB) { 
             throw std::runtime_error("Error: client_max_body_size (k) overflows");
         }
-        size *= 1024;
+        size *= BYTES_PER_KB;
     } else if (suffix == 'm') {
-        if (size > max_off_t / 1024 / 1024) { // オーバーフローチェック
+        // オーバーフローチェック: size > MAX / (1024*1024)
+        if (size > max_off_t / BYTES_PER_MB) { 
             throw std::runtime_error("Error: client_max_body_size (m) overflows");
         }
-        size *= 1024 * 1024;
+        size *= BYTES_PER_MB;
     } else if (suffix == 'g') {
-         if (size > max_off_t / 1024 / 1024 / 1024) { // オーバーフローチェック
+         // オーバーフローチェック: size > MAX / (1024*1024*1024)
+         if (size > max_off_t / BYTES_PER_GB) { 
             throw std::runtime_error("Error: client_max_body_size (g) overflows");
         }
-        size *= 1024 * 1024 * 1024;
+        size *= BYTES_PER_GB;
     }
 
 	return size;
