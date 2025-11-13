@@ -14,6 +14,11 @@ const int SOCKET_DOMAIN = AF_INET;
 const int SOCKET_TYPE = SOCK_STREAM;
 const int SOCKET_PROTOCOL = 0;
 const int SOCKET_BACKLOG = 128;
+const char* const HTTP_LINE_END = "\r\n";
+const char* const COLON = ":";
+const int HEADER_FIELD_NUM = 2;
+const char* const CONTENT_LENGTH = "content-length";
+const char* const TRANSFER_ENCODING = "transfer-encoding";
 
 std::map<int, std::string> HttpStatus::createReasonMap() {
     std::map<int, std::string> m;
