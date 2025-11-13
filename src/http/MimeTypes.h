@@ -1,8 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <map>
-
-#include "string"
+#include <string>
 
 class MimeTypes {
    public:
