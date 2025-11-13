@@ -3,15 +3,15 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#include <fstream>    //file read
-#include <sstream>    //file read
-#include <stdexcept>  //exception
+#include <fstream>    // file read
+#include <sstream>    // file read
+#include <stdexcept>  // exception
 #include <string>
 #include <vector>
 
-#include "HttpConfig.h"  //データ保持クラス
+#include "HttpConfig.h"  // データ保持クラス
 
-//設定ファイル(.conf)のパース(解析)静的解析クラス
+// 設定ファイル(.conf)のパース(解析)静的解析クラス
 
 class HttpConfigParser {
    public:
@@ -99,11 +99,11 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_AUTOINDEX;
     static const char* const DIRECTIVE_CLIENT_MAX_BODY_SIZE;
 
-    //マジックナンバー定数に
+    // マジックナンバー定数に
     static const off_t BYTES_PER_KB;
     static const off_t BYTES_PER_MB;
     static const off_t BYTES_PER_GB;
 
-    //最大値のポート番号を定数化
+    // 最大値のポート番号を定数化
     static const int MAX_PORT_NUMBER;
 };
