@@ -96,7 +96,7 @@ HttpConfig HttpConfigParser::parse(const std::string& filename){
     }
 
 	// 3. 次のトークンが "{" であることを確認
-    if (isEof(tokens, index) || getNextToken(tokens, index) != BRACE_OPEN) {
+    if (isEof(tokens, index) || getNextToken(tokens, index) != BRACE_OPEN) {//{
         throw std::runtime_error("Error: Expected '{' after http directive");
     }
 
@@ -150,9 +150,13 @@ HttpConfig HttpConfigParser::parse(const std::string& filename){
     config.setDefaults(http_common_config);
 
 
-    // ★★★ 次のステップ4（継承処理）でここにコードを追加します ★★★
-    // (今はまだ空でOKです)
+    //継承処理）
+	std::vector<ServerConfig>& servers = config.getServers();
+    const CommonConfig& http_common = config.getCommonConfig();
 
+    for (size_t i = 0; i < servers.size(); ++i) {
+        servers[i].resolveDefaults(http_common);
+    }
     return config;
 }
 
