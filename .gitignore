@@ -1,2 +1,4 @@
 **/*.o
 webserv
+**/all_tests
+googletest

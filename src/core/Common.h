@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-enum Method { MethodGET, MethodHEAD, MethodPOST, MethodDELETE };
+enum Method { MethodGET, MethodHEAD, MethodPOST, MethodDELETE, MethodUNKNOWN };
 
 Method string_to_method(const std::string& method_str);
 
@@ -28,6 +28,19 @@ extern const int SOCKET_DOMAIN;
 extern const int SOCKET_TYPE;
 extern const int SOCKET_PROTOCOL;
 extern const int SOCKET_BACKLOG;
+extern const char* const CONTENT_LENGTH;
+extern const char* const TRANSFER_ENCODING;
+extern const char* const CHUNKED;
+extern const char* const CONTENT_TYPE;
+extern const char* const HOST;
+extern const char* const HTTP_LINE_END;
+extern const char* const HTTP_HEADER_END;
+extern const int HTTP_LINE_END_LEN;
+extern const int HTTP_HEADER_END_LEN;
+extern const char* const QUESTION_MARK;
+extern const int DECIMAL;
+extern const char* const COLON;
+extern const std::string::size_type HEADER_FIELD_NUM;
 
 class HttpStatus {
    public:
@@ -62,7 +75,9 @@ class HostHeader {
    public:
     static bool resolve_ipv4(const std::string& host, uint16_t port,
                              struct sockaddr_in& out_addr);
-    HostHeader() : port_(DEFAULT_PORT) {}
+    HostHeader() : address_(DEFAULT_ADDRESS), port_(DEFAULT_PORT) {}
+    explicit HostHeader(const std::string& address)
+        : address_(address), port_(DEFAULT_PORT) {}
     HostHeader(const std::string& address, uint16_t port)
         : address_(address), port_(port) {}
     const std::string& getAddress() const;

@@ -21,7 +21,7 @@ jobs:
         run: |
           echo "Checking C++ formatting..."
           # Find all .cpp and .h files
-          find . -type f \( -name "*.cpp" -o -name "*.h" \) -print0 | xargs -r -0 clang-format --dry-run -Werror
+          find . -type f \( -name "*.cpp" -o -name "*.h" \) ! -path "*test*" -print0 | xargs -r -0 clang-format --dry-run -Werror
           echo "Formatting check passed!"
 
       # Run the Linter (clang-tidy)
@@ -29,5 +29,5 @@ jobs:
         run: |
           echo "Running C++ linter..."
           # Find all .cpp files
-          find . -type f -name "*.cpp" -print0 | xargs -r -0 -I {} clang-tidy {} -- -std=c++98
+          find . -type f -name "*.cpp" ! -path "*test*" -print0 | xargs -r -0 -I {} clang-tidy {} -- -std=c++98
           echo "Linter check passed!"

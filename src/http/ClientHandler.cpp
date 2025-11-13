@@ -1,10 +1,18 @@
 #include "ClientHandler.h"
 
+#include <sys/socket.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <cctype>
 #include <cerrno>
 #include <cstring>
 #include <stdexcept>
+
+#include "../core/String.h"
+#include "HttpException.h"
+
+const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
 
 ClientHandler::ClientHandler(int fd, Event& event, Router& router)
     : fd_(fd), event_(event), router_(router) {}
@@ -23,47 +31,63 @@ void ClientHandler::on_close() {
     delete this;
 }
 
-// TODO transfer-encoding にも対応
-bool is_request_complete(std::string& buffer) {
-    size_t header_end = buffer.find("\r\n\r\n");
-    if (header_end == std::string::npos) {
-        return false;
-    }
+bool ClientHandler::is_request_ready(const std::string& buffer) {
+    std::string::size_type message_head_end = buffer.find(HTTP_HEADER_END);
+    if (message_head_end == std::string::npos) return false;
+    std::string message_head =
+        buffer.substr(0, message_head_end + HTTP_HEADER_END_LEN);
+    std::transform(message_head.begin(), message_head.end(),
+                   message_head.begin(), ::tolower);
 
-    std::string header_part = buffer.substr(0, header_end + 4);
-
-    size_t content_length = 0;
-    std::string::size_type pos = header_part.find("Content-Length:");
-    if (pos != std::string::npos) {
-        pos += strlen("Content-Length:");
-        while (pos < header_part.size() && std::isspace(header_part[pos]))
-            pos++;
-        size_t end = pos;
-        while (end < header_part.size() && isdigit(header_part[end])) end++;
-        content_length = std::strtoul(
-            header_part.substr(pos, end - pos).c_str(), NULL, 10);  // NOLINT
+    std::vector<std::string> found_field;
+    if (search_header_field(message_head, TRANSFER_ENCODING, found_field))
+        return is_complete_transfer(buffer, message_head, found_field);
+    if (search_header_field(message_head, CONTENT_LENGTH, found_field)) {
+        return is_complete_content_length(buffer, message_head, found_field);
     }
-    // ヘッダ境界は CRLFCRLF (=4 bytes)
-    size_t total_len = header_end + 4 + content_length;
+    return true;
+}
+
+bool ClientHandler::is_complete_transfer(
+    const std::string& buffer, const std::string& message_head,
+    const std::vector<std::string>& transfer_encoding) {
+    if (transfer_encoding[1].find(CHUNKED) == std::string::npos) {
+        return true;
+    }
+    return buffer.find(TRANSFER_ENCODING_CHUNKED_END, message_head.size()) !=
+           std::string::npos;
+}
+
+bool ClientHandler::is_complete_content_length(
+    const std::string& buffer, const std::string& message_head,
+    const std::vector<std::string>& content_length) {
+    // リクエストが完全に届いたのか判定する
+    size_t total_len =
+        message_head.size() + strtoul(content_length[1].c_str(), NULL, DECIMAL);
     return buffer.size() >= total_len;
 }
 
 void ClientHandler::on_readable() {  // NOLINT
-    char buf[4096];                  // NOLINT
-    ssize_t len = 0;
-    len = ::recv(fd_, buf, sizeof(buf), 0);
+    char buf[BUFFER_SIZE];
+    ssize_t len = ::recv(fd_, buf, sizeof(buf), RECV_FLG);
+    // recv の失敗
     if (len < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) return;  // no data now
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return;
         on_close();
         return;
     }
-    if (len == 0) {  // EOF
+    // 接続が閉じられた
+    if (len == 0) {
         on_close();
         return;
     }
     buffer_.append(buf, len);
-    if (is_request_complete(buffer_)) {
+    if (ClientHandler::is_request_ready(buffer_)) {
         request_ = HttpParser::http_request_parse(buffer_);
+        // try {
+        // } catch (const HttpException& e) {
+        //     sendErrorResponse(e.status_code());
+        // }
         event_.mod(fd_, EPOLLOUT);
     }
 }
