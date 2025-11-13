@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstddef>
-// #include <cstdint>//-std=c++98ではサポートされていない可能性があるため使用できない？？変更
+// #include <cstdint>//-std=c++98で△
 #include "../core/Common.h" // DEFAULT_PORT
 
 
@@ -40,14 +40,7 @@ typedef struct ListenDirective {
 class CommonConfig {
 
     public:
-    CommonConfig()
-        : client_max_body_size(-1),  // ０は制限なしを意味するので-1に初期化
-          autoindex(false),          // デフォルトは off
-          autoindex_is_set(false),  // autoindex が設定されたかどうかのフラグ
-          root_is_set(false),   // root が設定されたかどうかのフラグ
-          upload_store_is_set(false), // upload_store が設定されたかどうかのフラグ
-          redirect_is_set(false)
-    {}
+    CommonConfig();
 
     // --- ↓↓　セッターを追加 ↓↓ ---
     void setRoot(const std::string& path) {
@@ -72,12 +65,10 @@ class CommonConfig {
     void addErrorPage(int status, const ErrorPageDirective& ep) {
         error_page[status] = ep; 
     }
+    
     void setClientMaxBodySize(off_t size) { client_max_body_size = size; }
     void addIndexFile(const std::string& file) { index_files.push_back(file); }
     
-    // --- 変更 ---
-
-
     bool isRootSet() const {return root_is_set; }
     const std::string& getRoot() const { return root; }
 
@@ -118,18 +109,64 @@ class LocationConfig {
     
     public:
     // --- ↓↓セッターを追加 ↓↓ ---
-    void setPath(const std::string& p) {
-        path = p;
-    }
-        void setRoot(const std::string& r) { common_config.setRoot(r); }
-		void addIndexFile(const std::string& file) { common_config.addIndexFile(file); }
-		void setAutoindex(bool on) { common_config.setAutoindex(on); }
-        void setClientMaxBodySize(off_t size) { common_config.setClientMaxBodySize(size); }
+    void setPath(const std::string& p) {path = p;}
+    void setRoot(const std::string& r) { common_config.setRoot(r); }
+	void addIndexFile(const std::string& file) { common_config.addIndexFile(file); }
+	void setAutoindex(bool on) { common_config.setAutoindex(on); }
+    void setClientMaxBodySize(off_t size) { common_config.setClientMaxBodySize(size); }
 
     void addAllowedMethod(const Method& m) { allowed_methods.push_back(m); }
     void setCgiPath(const std::string& p) { cgi_path = p; }
     void setCgiExtension(const std::string& e) { cgi_extension = e; }
-    //=-- 変更 ---↑↑
+
+    //継承設定（locationの場合、server で設定されたものを継承する関数）
+    void resolveDefaults(const CommonConfig& server_common) {//<-親の設定
+        // 1. root
+        if (!common_config.isRootSet()) { 
+            // 自分が設定していないなら、親の設定をコピー
+            if (server_common.isRootSet()) {
+                common_config.setRoot(server_common.getRoot());
+            }
+        }
+        // 2. autoindex
+        if (!common_config.isAutoindexSet()) {
+            if (server_common.isAutoindexSet()) {
+                common_config.setAutoindex(server_common.getAutoindex());
+            }
+        }
+        // 3. client_max_body_size (-1 は未設定)
+        if (common_config.getClientMaxBodySize() == -1) {
+            common_config.setClientMaxBodySize(server_common.getClientMaxBodySize());
+        }
+        // 4. upload_store
+        if (!common_config.isUploadStoreSet()) {
+            if (server_common.isUploadStoreSet()) {
+                common_config.setUploadStore(server_common.getUploadStore());
+            }
+        }
+        // 5. index_files (vectorが空なら継承)
+        if (common_config.getIndexFiles().empty()) {
+            const std::vector<std::string>& parent_index = server_common.getIndexFiles();
+            for (size_t i = 0; i < parent_index.size(); ++i) {
+                common_config.addIndexFile(parent_index[i]);
+            }
+        }
+        // 6. error_pages (mapが空なら継承)
+        // ※Nginx仕様: 自分の階層で1つでも定義したら継承しない。空の時だけ継承。
+        if (common_config.getErrorPages().empty()) {
+            std::map<int, ErrorPageDirective>::const_iterator it;
+            for (it = server_common.getErrorPages().begin(); it != server_common.getErrorPages().end(); ++it) {
+                common_config.addErrorPage(it->first, it->second);
+            }
+        }
+        // 7. return (redirect)
+        // ※Nginx仕様: 自分が設定していなければ親を使う
+        if (!common_config.isRedirectSet()) {
+            if (server_common.isRedirectSet()) {
+                common_config.setRedirect(server_common.getRedirect());
+            }
+        }
+    }
 
     private:
     CommonConfig common_config; // 共通設定
@@ -143,12 +180,7 @@ class LocationConfig {
 class ServerConfig {
 
     public:
-    // --- ↓↓ セッターを追加 ↓↓ ---
-    void addLocation(const LocationConfig& l) {
-        locations.push_back(l);
-    }
-
-    // --- ↓↓ セッターを追加 ↓↓ ---
+    void addLocation(const LocationConfig& l) { locations.push_back(l); }
     void setListen(const ListenDirective& l) { listens = l; }
     void addServerName(const std::string& name) { server_names.push_back(name); }
     // --- ↑↑ ここまで 変更---
@@ -157,7 +189,7 @@ class ServerConfig {
 	void addIndexFile(const std::string& file) { common_config.addIndexFile(file); }
 	void setAutoindex(bool on) { common_config.setAutoindex(on); }
     void setClientMaxBodySize(off_t size) { common_config.setClientMaxBodySize(size); }
-
+    
     private:
         std::vector<LocationConfig> locations;
         ListenDirective listens;
@@ -171,13 +203,8 @@ class HttpConfig {
     public:
     // --- ↓↓ セッターを追加 ↓↓ ---
     // (パーサーが addServerConfig と呼んでいるため名前を合わせる)
-    void addServerConfig(const ServerConfig& s) {
-        servers.push_back(s);
-    }
-
-    // --- セッターを追加 ↓↓ ---
+    void addServerConfig(const ServerConfig& s) { servers.push_back(s); }
     void setDefaults(const CommonConfig& c) { common_config = c; }
-    // --- ↑↑ ここまで変更---
 
     private:
         std::vector<ServerConfig> servers;
