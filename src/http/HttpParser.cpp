@@ -50,7 +50,6 @@ std::string::size_type HttpParser::request_line_parse(const std::string& buffer,
 
 void HttpParser::header_section_host_parse(
     const std::vector<std::string>& header_field, HttpRequest& request) {
-    HostHeader host;
     if (header_field.size() > MAX_HOST_FIELD_NUM) {
         throw HttpException(HttpStatus::BadRequest,
                             HttpStatus::reason(HttpStatus::BadRequest));
