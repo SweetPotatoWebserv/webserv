@@ -21,15 +21,6 @@ const char* const HttpConfigParser::DIRECTIVE_AUTOINDEX = "autoindex";
 const char* const HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE =
     "client_max_body_size";
 
-//マジックナンバー定数に
-const off_t HttpConfigParser::BYTES_PER_KB = 1024;
-const off_t HttpConfigParser::BYTES_PER_MB = static_cast<off_t>(1024) * 1024;
-const off_t HttpConfigParser::BYTES_PER_GB =
-    static_cast<off_t>(1024) * 1024 * 1024;  // linter修正
-
-//最大値のポート番号
-const int HttpConfigParser::MAX_PORT_NUMBER = 65535;
-
 //終端に来たかどうか
 bool HttpConfigParser::isEof(const std::vector<std::string>& tokens,
                              size_t index) {

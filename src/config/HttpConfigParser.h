@@ -104,10 +104,10 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_CLIENT_MAX_BODY_SIZE;
 
     // マジックナンバー定数に
-    static const off_t BYTES_PER_KB;
-    static const off_t BYTES_PER_MB;
-    static const off_t BYTES_PER_GB;
+    static const off_t BYTES_PER_KB = 1024;
+    static const off_t BYTES_PER_MB = static_cast<off_t>(1024) * 1024;
+    static const off_t BYTES_PER_GB = static_cast<off_t>(1024) * 1024 * 1024;
 
     // 最大値のポート番号を定数化
-    static const int MAX_PORT_NUMBER;
+    static const int MAX_PORT_NUMBER = 65535;
 };
