@@ -17,7 +17,7 @@ typedef struct ErrorPageDirective {
     std::string target;
     int override_status;
     ErrorPageDirective();
-    ErrorPageDirective(std::string& t, int o);
+    ErrorPageDirective(const std::string& t, int o);
 } ErrorPageDirective;
 
 typedef struct ReturnDirective {

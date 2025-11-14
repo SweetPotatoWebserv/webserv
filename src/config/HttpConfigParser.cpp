@@ -325,7 +325,7 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
         else {
             //知らないディレクティブはエラー
             throw std::runtime_error(
-                "Error: unknown directive in location block: " + token);
+                "Error: Unknown directive in location block: " + token);
         }
     }
     if (!found_closing_brace) {
