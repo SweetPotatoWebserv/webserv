@@ -576,7 +576,7 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
         int status_code;
         // (ss >> status_code) で変換を試み、
         // ss.eof() で "404foo" のような余計な文字がないことを確認
-        // 課題の要件ではエラーページは MIN_ERROR_STATUS_CODE-599 の範囲が妥当
+        // 課題の要件ではエラーページは 300-599 の範囲が妥当
         if ((ss >> status_code) && ss.eof() &&
             status_code >= MIN_ERROR_STATUS_CODE &&
             status_code <= MAX_ERROR_STATUS_CODE) {

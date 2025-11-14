@@ -86,6 +86,18 @@ class HttpConfigParser {
     static uint16_t validateAndConvertPort(uint64_t temp_port,
                                            const std::string& error_value);
 
+    // parseErrorPage は複数の引数を返す必要があるため、
+    // 専用のヘルパー構造体を定義
+    struct ParsedErrorPage {
+        std::vector<int> status_codes;
+        ErrorPageDirective directive;
+    };
+
+    ///@brief error_page ディレクティブをパースする
+    ///@return ParsedErrorPage (ステータスコードのリストと、設定内容)
+    static ParsedErrorPage parseErrorPage(
+        const std::vector<std::string>& tokens, size_t& index);
+
     // 特殊文字リスト（トークン分割用）構文解析用
     static const char* const SPECIAL_CHARS;
     static const char HASH_CHAR;
@@ -102,6 +114,7 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_INDEX;
     static const char* const DIRECTIVE_AUTOINDEX;
     static const char* const DIRECTIVE_CLIENT_MAX_BODY_SIZE;
+    static const char* const DIRECTIVE_ERROR_PAGE;
 
     // マジックナンバー定数に
     static const off_t BYTES_PER_KB;
@@ -110,4 +123,8 @@ class HttpConfigParser {
 
     // 最大値のポート番号を定数化
     static const int MAX_PORT_NUMBER;
+    // error_page で使用するステータスコードの境界
+    static const int MIN_ERROR_STATUS_CODE = 300;
+    static const int MAX_ERROR_STATUS_CODE = 599;
+    static const int MIN_OVERRIDE_STATUS_CODE = 200;
 };
