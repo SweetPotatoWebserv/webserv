@@ -146,9 +146,7 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
         } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
             off_t size = parseClientMaxBodySize(tokens, index);
             http_common_config.setClientMaxBodySize(size);
-        }
-        // ★ ステップ5でここに error_page, return のパース処理を追加します
-        else {
+        } else {
             throw std::runtime_error(
                 "Error: Unknown directive in http block: " + token);
         }
@@ -158,7 +156,7 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
         throw std::runtime_error("Error: Expected '}' to close http block");
     }
 
-    // 5. 読み取った http レベルの設定を、config 全体のデフォルトとして保存
+    //読み取った http レベルの設定を、config 全体のデフォルトとして保存
     config.setDefaults(http_common_config);
 
     //継承処理）
@@ -200,38 +198,30 @@ void HttpConfigParser::parserServer(HttpConfig& config,
             break;
         }
 
-        if (token == KEYWORD_LOCATION) {  // KEYWORD_LOCATION=="location"
-            //"location"を見つけたら、locationを呼び出す。
+        if (token ==
+            KEYWORD_LOCATION) {  // KEYWORD_LOCATION=="location"を見つけたら、locationを呼び出す。
             HttpConfigParser::parserLocation(server_config, tokens, index);
         } else if (token == DIRECTIVE_LISTEN) {  // DIRECTIVE_LISTEN=="listen"
-            // listen を呼び出し、結果をserver_configにセット
             ListenDirective ld = HttpConfigParser::parseListen(tokens, index);
-            server_config.setListen(ld);       //<- セッターが必要
+            server_config.setListen(ld);
         } else if (token == DIRECTIVE_ROOT) {  // DIRECTIVE_ROOT== "root"
-            // root を呼び出し、結果をserver_configにセット
             std::string r = HttpConfigParser::parseRoot(tokens, index);
-            server_config.setRoot(r);           //<- セッターが必要
+            server_config.setRoot(r);
         } else if (token == DIRECTIVE_INDEX) {  // DIRECTIVE_INDEX=="index"
-            // index を呼び出し、結果をserver_configにセット
             std::vector<std::string> files =
                 HttpConfigParser::parseIndex(tokens, index);
             for (size_t i = 0; i < files.size(); ++i) {
-                server_config.addIndexFile(files[i]);  //<- セッターが必要
+                server_config.addIndexFile(files[i]);
             }
         } else if (token ==
-                   DIRECTIVE_AUTOINDEX) {  // DIRECTIVE_AUTOINDEX==autoindex
-            // parseAutoindex 呼び出し、結果をserver_configにセット
+                   DIRECTIVE_AUTOINDEX) {  // DIRECTIVE_AUTOINDEX=="autoindex"
             bool ai = HttpConfigParser::parseAutoindex(tokens, index);
-            server_config.setAutoindex(ai);  //<- セッターが必要
+            server_config.setAutoindex(ai);
         } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
-            // ▼copilot
-            // DIRECTIVE_CLIENT_MAX_BODY_SIZE == "client_max_body_size"
             off_t size =
                 HttpConfigParser::parseClientMaxBodySize(tokens, index);
             server_config.setClientMaxBodySize(size);
-        }
-        // error_page, return,などのディレクティブのパース処理を追加予定???
-        else {
+        } else {
             //知らないディレクティブはエラー
             throw std::runtime_error(
                 "Error: Unknown directive in server block: " + token);
@@ -241,8 +231,7 @@ void HttpConfigParser::parserServer(HttpConfig& config,
         throw std::runtime_error("Error: Expected '}' to close server block");
     }
 
-    //完成した server_config を config に追加//// (※ HttpConfig.h に public な
-    // addServer(ServerConfig s) セッターが必要)
+    //完成した server_config を config に追加
     config.addServerConfig(server_config);
 }
 
@@ -271,11 +260,9 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
     //このロケーションの設定を保持する LocationConfig location_config(path);
     LocationConfig location_config;
 
-    // (※ LocationConfig.h に public な setPath(std::string s)
-    // セッターが必要です)
     location_config.setPath(path);
 
-    bool found_closing_brace = false;  // ⇐追加copilot
+    bool found_closing_brace = false;
     // BRACE_CLOSE が来るまでループ
     while (!HttpConfigParser::isEof(tokens, index)) {
         std::string token = HttpConfigParser::getNextToken(tokens, index);
@@ -286,24 +273,21 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
         }
         if (token == DIRECTIVE_ROOT) {
             std::string r = HttpConfigParser::parseRoot(tokens, index);
-            location_config.setRoot(r);  //<- セッターが必要
+            location_config.setRoot(r);
         } else if (token == DIRECTIVE_INDEX) {
             std::vector<std::string> files =
                 HttpConfigParser::parseIndex(tokens, index);
             for (size_t i = 0; i < files.size(); ++i) {
-                location_config.addIndexFile(files[i]);  //<- セッターが必要
+                location_config.addIndexFile(files[i]);
             }
         } else if (token == DIRECTIVE_AUTOINDEX) {
             bool ai = HttpConfigParser::parseAutoindex(tokens, index);
-            location_config.setAutoindex(ai);  //<- セッターが必要
+            location_config.setAutoindex(ai);
         } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
             off_t size =
                 HttpConfigParser::parseClientMaxBodySize(tokens, index);
-            location_config.setClientMaxBodySize(
-                size);  // (CommonConfig::setClientMaxBodySize セッター)
-        }
-        // error_page, return,などのディレクティブのパース処理を追加予定???
-        else {
+            location_config.setClientMaxBodySize(size);
+        } else {
             //知らないディレクティブはエラー
             throw std::runtime_error(
                 "Error: unknown directive in location block: " + token);
@@ -314,9 +298,7 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
         throw std::runtime_error(
             "Error: location block missing closing brace '}'");
     }
-    // 6. 完成した location_config を、引数の server_config に追加する
-    // (※ ServerConfig.h に public な addLocation(LocationConfig l)
-    // セッターが必要です)
+    //完成した location_config を、引数の server_config に追加する
     server_config.addLocation(location_config);
 }
 
@@ -416,9 +398,6 @@ ListenDirective HttpConfigParser::parseListen(
     std::string value = HttpConfigParser::getNextToken(tokens, index);
     std::string::size_type colon_pos = value.find(':');
 
-    // ▼修正1: unsigned long -> uint64_t に変更 (google-runtime-int対応)
-    // 環境依存の long ではなく、確実に大きなサイズを確保できる uint64_t を使用
-    // copilot&linter
     uint64_t temp_port;
 
     if (colon_pos != std::string::npos) {
@@ -428,7 +407,6 @@ ListenDirective HttpConfigParser::parseListen(
 
         std::stringstream ss(port_str);
         if (!(ss >> temp_port) || !ss.eof()) {
-            // ▼修正8: エラーメッセージにコロンを追加copilot
             throw std::runtime_error("Error: Invalid port number in: " +
                                      port_str);
         }
@@ -441,8 +419,6 @@ ListenDirective HttpConfigParser::parseListen(
         std::stringstream ss(value);
 
         if (!(ss >> temp_port) || !ss.eof()) {
-            // ▼修正4: エラーメッセージを "Invalid port number + " から "Invalid
-            // port number: " に変更copilot
             throw std::runtime_error("Error: Invalid port number: " + value);
         }
         ld.port = HttpConfigParser::validateAndConvertPort(temp_port, value);
@@ -490,8 +466,7 @@ off_t HttpConfigParser::parseClientMaxBodySize(
     num_part = value.substr(0, i);
 
     if (i < value.size()) {
-        suffix = static_cast<char>(
-            std::tolower(value[i]));  // k, m, g のいずれか linter修正
+        suffix = static_cast<char>(std::tolower(value[i]));
         if (i + 1 != value.size() ||
             (suffix != 'k' && suffix != 'm' && suffix != 'g')) {
             throw std::runtime_error(
@@ -506,7 +481,7 @@ off_t HttpConfigParser::parseClientMaxBodySize(
             "Error: Invalid number in client_max_body_size: " + num_part);
     }
 
-    // 5. サフィックスに基づいて乗算
+    // サフィックスに基づいて乗算
     //    (オーバーフローチェック。off_t の最大値 / 1024
     //    より大きい数に乗算すると危険)
     const off_t max_off_t = std::numeric_limits<off_t>::max();
