@@ -19,6 +19,14 @@ const char* const COLON = ":";
 const int HEADER_FIELD_NUM = 2;
 const char* const CONTENT_LENGTH = "content-length";
 const char* const TRANSFER_ENCODING = "transfer-encoding";
+const char* const CONTENT_TYPE = "content-type";
+const char* const HOST = "host";
+const char* const CHUNKED = "chunked";
+const char* const HTTP_HEADER_END = "\r\n\r\n";
+const int HTTP_LINE_END_LEN = 2;
+const int HTTP_HEADER_END_LEN = 4;
+const char* const QUESTION_MARK = "?";
+const int DECIMAL = 10;
 
 std::map<int, std::string> HttpStatus::createReasonMap() {
     std::map<int, std::string> m;
@@ -80,7 +88,6 @@ bool HostHeader::resolve_ipv4(const std::string& host, uint16_t port,
 }
 
 const std::string& HostHeader::getAddress() const { return address_; }
-
 uint16_t HostHeader::getPort() const { return port_; }
 
 Socket::Socket() {
@@ -148,4 +155,12 @@ void Socket::set_nonblocking(int fd) {  // NOLINT
         throw std::runtime_error("fcntl failed: " +
                                  std::string(strerror(errno)));
     }
+}
+
+Method string_to_method(const std::string& method_str) {
+    if (method_str == "GET") return MethodGET;
+    if (method_str == "HEAD") return MethodHEAD;
+    if (method_str == "POST") return MethodPOST;
+    if (method_str == "DELETE") return MethodDELETE;
+    return MethodUNKNOWN;
 }

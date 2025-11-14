@@ -1,16 +1,21 @@
 #include "ClientHandler.h"
 
+#include <sys/socket.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <cctype>
 #include <cerrno>
 #include <cstring>
 #include <stdexcept>
 
+#include "../core/String.h"
+#include "HttpException.h"
+
+const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
+
 ClientHandler::ClientHandler(int fd, Event& event, const Router& router)
-    : fd_(fd), event_(event), router_(router) {
-    written_ = 0;
-    len_ = 0;
-}
+    : fd_(fd), event_(event), router_(router) {}
 
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
     static_cast<void>(fd);
@@ -26,33 +31,82 @@ void ClientHandler::on_close() {
     delete this;
 }
 
-void ClientHandler::on_readable() {  // NOLINT
-    len_ = ::read(fd_, buf_, sizeof(buf_));
-    if (len_ < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) return;  // no data now
-        on_close();
-        return;
+bool ClientHandler::is_request_ready(const std::string& buffer) {
+    std::string::size_type message_head_end = buffer.find(HTTP_HEADER_END);
+    if (message_head_end == std::string::npos) return false;
+    std::string message_head =
+        buffer.substr(0, message_head_end + HTTP_HEADER_END_LEN);
+    std::transform(message_head.begin(), message_head.end(),
+                   message_head.begin(), ::tolower);
+
+    std::vector<std::string> found_field;
+    if (search_header_field(message_head, TRANSFER_ENCODING, found_field))
+        return is_complete_transfer(buffer, message_head, found_field);
+    if (search_header_field(message_head, CONTENT_LENGTH, found_field)) {
+        return is_complete_content_length(buffer, message_head, found_field);
     }
-    if (len_ == 0) {  // EOF
-        on_close();
-        return;
-    }
-    written_ = 0;
-    event_.mod(fd_, EPOLLOUT);
+    return true;
 }
 
-void ClientHandler::on_writable() {
-    ssize_t ret;
-    ret = ::write(fd_, buf_ + written_, len_ - written_);
-    if (ret == -1) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) return;  // try again later
-        throw std::runtime_error("write failed: " +
-                                 std::string(strerror(errno)));
+bool ClientHandler::is_complete_transfer(
+    const std::string& buffer, const std::string& message_head,
+    const std::vector<std::string>& transfer_encoding) {
+    if (transfer_encoding[1].find(CHUNKED) == std::string::npos) {
+        return true;
     }
-    written_ += ret;
-    if (written_ == len_) {
-        len_ = 0;
-        written_ = 0;
-        event_.mod(fd_, EPOLLIN);
+    return buffer.find(TRANSFER_ENCODING_CHUNKED_END, message_head.size()) !=
+           std::string::npos;
+}
+
+bool ClientHandler::is_complete_content_length(
+    const std::string& buffer, const std::string& message_head,
+    const std::vector<std::string>& content_length) {
+    // リクエストが完全に届いたのか判定する
+    size_t total_len =
+        message_head.size() + strtoul(content_length[1].c_str(), NULL, DECIMAL);
+    return buffer.size() >= total_len;
+}
+
+void ClientHandler::on_readable() {  // NOLINT
+    char buf[BUFFER_SIZE];
+    ssize_t len = ::recv(fd_, buf, sizeof(buf), RECV_FLG);
+    // recv の失敗
+    if (len < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return;
+        on_close();
+        return;
     }
+    // 接続が閉じられた
+    if (len == 0) {
+        on_close();
+        return;
+    }
+    buffer_.append(buf, len);
+    if (ClientHandler::is_request_ready(buffer_)) {
+        // request_ = HttpParser::http_request_parse(buffer_);
+        // try {
+        // } catch (const HttpException& e) {
+        //     sendErrorResponse(e.status_code());
+        // }
+        event_.mod(fd_, EPOLLOUT);
+    }
+}
+
+void ClientHandler::on_writable() {  // NOLINT
+    std::cout << "method: " << request_.method_ << '\n';
+    std::cout << "path: " << request_.request_target_.path_ << '\n';
+    // ssize_t ret;
+    // ret = ::write(fd_, buf_ + written_, len_ - written_);
+    // if (ret == -1) {
+    //     if (errno == EAGAIN || errno == EWOULDBLOCK) return;  // try again
+    //     later throw std::runtime_error("write failed: " +
+    //                              std::string(strerror(errno)));
+    // }
+    // written_ += ret;
+    // if (written_ == len_) {
+    //     len_ = 0;
+    //     written_ = 0;
+    //     std::memset(buf_, 0, sizeof(buf_));
+    //     event_.mod(fd_, EPOLLIN);
+    // }
 }
