@@ -7,8 +7,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include "../core/Common.h"
@@ -17,6 +19,21 @@ namespace {
 const int CGI_TIMEOUT_MS = 5000;
 const int MAX_EPOLL_EVENTS = 1;
 const int BUFFER_SIZE = 100000;
+void safeClose(int &fd) {
+    if (fd == -1) {
+        return;
+    }
+
+    int tmp_fd = fd;
+    fd = -1;
+
+    if (close(tmp_fd) == -1) {
+        std::stringstream ss;
+        ss << "Failed CgiExecutor close(" << tmp_fd << ")";
+
+        perror(ss.str().c_str());
+    }
+}
 }  // namespace
 
 CgiExecutor::CgiExecutor() {
@@ -27,10 +44,10 @@ CgiExecutor::CgiExecutor() {
 }
 
 CgiExecutor::~CgiExecutor() {
-    if (pipeIn_[0] != -1) close(pipeIn_[0]);
-    if (pipeIn_[1] != -1) close(pipeIn_[1]);
-    if (pipeOut_[0] != -1) close(pipeOut_[0]);
-    if (pipeOut_[1] != -1) close(pipeOut_[1]);
+    safeClose(pipeIn_[0]);
+    safeClose(pipeIn_[1]);
+    safeClose(pipeOut_[0]);
+    safeClose(pipeOut_[1]);
 }
 
 std::string CgiExecutor::execute(const std::string &scriptPath,
