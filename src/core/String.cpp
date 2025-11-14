@@ -1,9 +1,5 @@
 #include "String.h"
 
-#include <ctype.h>
-
-#include <cctype>
-
 std::vector<std::string> split(const std::string& buffer,
                                const std::string& sep) {
     std::vector<std::string> res;
