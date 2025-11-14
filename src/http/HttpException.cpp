@@ -15,4 +15,9 @@ HttpException& HttpException::operator=(const HttpException& other) throw() {
 
 HttpException::~HttpException() throw() {}
 int HttpException::status_code() const { return status_code_; }
-const char* HttpException::what() const throw() { return message_.c_str(); }
+const char* HttpException::what() const throw() {
+    if (!message_.empty()) {
+        return message_.c_str();
+    }
+    return "HTTP Exception";
+}
