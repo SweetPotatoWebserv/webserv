@@ -50,7 +50,7 @@ bool HttpConfigParser::isEof(const std::vector<std::string>& tokens,
 std::string HttpConfigParser::getNextToken(
     const std::vector<std::string>& tokens, size_t& index) {
     if (isEof(tokens, index)) {
-        throw std::runtime_error("Error: Unexpected end of EOF");
+        throw std::runtime_error("Error: Unexpected end of file");
     }
     return tokens[index++];
 }
@@ -602,6 +602,13 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
         }
     }
 
+    // ループがEOFで抜けた場合、ターゲットURIや'='がない
+    if (isEof(tokens, index) && !pep.status_codes.empty()) {
+        // (status_codesが空の場合は、次のempty()チェックでエラーになるのでここではじかない)
+        throw std::runtime_error(
+            "Error: Expected target URI or '=' after status code(s)");
+    }
+
     if (pep.status_codes.empty()) {
         throw std::runtime_error(
             "Error: Expected status code(s) for error_page");
@@ -630,6 +637,15 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
                 "Error: Expected target URI after status code in error_page");
         }
         pep.directive.target = getNextToken(tokens, index);
+        // URI検証
+        if (pep.directive.target.empty() ||
+            pep.directive.target[0] !=
+                '/') {  //ターゲットURIは'/'で始まらなければならない：500がターゲットに入った×
+            throw std::runtime_error(
+                "Error: Invalid target URI in error_page, must start with "
+                "'/': " +
+                pep.directive.target);
+        }
 
     } else {
         // '=' がなかった場合
