@@ -127,6 +127,9 @@ class LocationConfig {
     void addErrorPage(int status, const ErrorPageDirective& ep) {
         common_config.addErrorPage(status, ep);
     }
+    void setRedirect(const ReturnDirective& ret) {
+        common_config.setRedirect(ret);
+    }
 
     void addAllowedMethod(const Method& m) { allowed_methods.push_back(m); }
     void setCgiPath(const std::string& p) { cgi_path = p; }
@@ -212,6 +215,9 @@ class ServerConfig {
     }
     void addErrorPage(int status, const ErrorPageDirective& ep) {
         common_config.addErrorPage(status, ep);
+    }
+    void setRedirect(const ReturnDirective& ret) {
+        common_config.setRedirect(ret);
     }
 
     void resolveDefaults(const CommonConfig& http_common) {  //<-親の設定

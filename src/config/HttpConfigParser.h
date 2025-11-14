@@ -98,6 +98,11 @@ class HttpConfigParser {
     static ParsedErrorPage parseErrorPage(
         const std::vector<std::string>& tokens, size_t& index);
 
+    ///@brief return ディレクティブをパースする
+    ///@return 完成した ReturnDirective オブジェクト
+    static ReturnDirective parseReturn(const std::vector<std::string>& tokens,
+                                       size_t& index);
+
     // 特殊文字リスト（トークン分割用）構文解析用
     static const char* const SPECIAL_CHARS;
     static const char HASH_CHAR;
@@ -115,6 +120,7 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_AUTOINDEX;
     static const char* const DIRECTIVE_CLIENT_MAX_BODY_SIZE;
     static const char* const DIRECTIVE_ERROR_PAGE;
+    static const char* const DIRECTIVE_RETURN;
 
     // マジックナンバー定数に
     static const off_t BYTES_PER_KB;
@@ -127,4 +133,8 @@ class HttpConfigParser {
     static const int MIN_ERROR_STATUS_CODE;     // = 300
     static const int MAX_ERROR_STATUS_CODE;     // = 599
     static const int MIN_OVERRIDE_STATUS_CODE;  // = 200
+
+    // return で使用するステータスコードの境界 (0-999)
+    static const int MIN_RETURN_STATUS_CODE;
+    static const int MAX_RETURN_STATUS_CODE;
 };

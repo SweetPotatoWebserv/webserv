@@ -21,6 +21,7 @@ const char* const HttpConfigParser::DIRECTIVE_AUTOINDEX = "autoindex";
 const char* const HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE =
     "client_max_body_size";
 const char* const HttpConfigParser::DIRECTIVE_ERROR_PAGE = "error_page";
+const char* const HttpConfigParser::DIRECTIVE_RETURN = "return";
 
 //マジックナンバー定数に
 const off_t HttpConfigParser::BYTES_PER_KB = 1024;
@@ -34,6 +35,10 @@ const int HttpConfigParser::MAX_PORT_NUMBER = 65535;
 const int HttpConfigParser::MIN_ERROR_STATUS_CODE = 300;
 const int HttpConfigParser::MAX_ERROR_STATUS_CODE = 599;
 const int HttpConfigParser::MIN_OVERRIDE_STATUS_CODE = 200;
+
+// returnで使用するステータスコードの境界(0-999)
+const int HttpConfigParser::MIN_RETURN_STATUS_CODE = 0;
+const int HttpConfigParser::MAX_RETURN_STATUS_CODE = 999;
 
 //終端に来たかどうか
 bool HttpConfigParser::isEof(const std::vector<std::string>& tokens,
@@ -158,9 +163,10 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
                 http_common_config.addErrorPage(pep.status_codes[i],
                                                 pep.directive);
             }
-        }
-        // ★ ステップ5でここに error_page, return のパース処理を追加します
-        else {
+        } else if (token == DIRECTIVE_RETURN) {
+            ReturnDirective rd = parseReturn(tokens, index);
+            http_common_config.setRedirect(rd);  // 上書き
+        } else {
             throw std::runtime_error(
                 "Error: Unknown directive in http block: " + token);
         }
@@ -246,9 +252,10 @@ void HttpConfigParser::parserServer(HttpConfig& config,
             for (size_t i = 0; i < pep.status_codes.size(); ++i) {
                 server_config.addErrorPage(pep.status_codes[i], pep.directive);
             }
-        }
-        // error_page, return,などのディレクティブのパース処理を追加予定???
-        else {
+        } else if (token == DIRECTIVE_RETURN) {
+            ReturnDirective rd = parseReturn(tokens, index);
+            server_config.setRedirect(rd);  // 上書き
+        } else {
             //知らないディレクティブはエラー
             throw std::runtime_error(
                 "Error: Unknown directive in server block: " + token);
@@ -324,6 +331,9 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
                 location_config.addErrorPage(pep.status_codes[i],
                                              pep.directive);
             }
+        } else if (token == DIRECTIVE_RETURN) {
+            ReturnDirective rd = parseReturn(tokens, index);
+            location_config.setRedirect(rd);  // 上書き
         }
         // error_page, return,などのディレクティブのパース処理を追加予定???
         else {
@@ -643,4 +653,56 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
     }
 
     return pep;
+}
+
+//-----------------------------------------------------------------
+//------------------returnディレクティブパーサー-------------------
+//-----------------------------------------------------------------
+///@brief return ディレクティブをパースする
+///       (例: return 301 /new-path;)
+///       (例: return 404 "Not Found";)
+///       (例: return 302 http://example.com;)
+ReturnDirective HttpConfigParser::parseReturn(
+    const std::vector<std::string>& tokens, size_t& index) {
+    ReturnDirective rd;
+
+    // 1. ステータスコードを取得
+    std::string status_str = getNextToken(tokens, index);
+    std::stringstream ss(status_str);
+
+    // マジックナンバーを定数でチェック
+    if (!(ss >> rd.status) || !ss.eof() || rd.status < MIN_RETURN_STATUS_CODE ||
+        rd.status > MAX_RETURN_STATUS_CODE) {
+        throw std::runtime_error(
+            "Error: Invalid status code for return directive: " + status_str);
+    }
+
+    // 2. 次のトークンを取得 (テキスト/URL または セミコロン)
+    std::string next_token = getNextToken(tokens, index);
+
+    if (next_token == SEMICOLON) {
+        // "return 404;" の形式
+        rd.text = "";
+        rd.target = "";
+        return rd;
+    }
+
+    // 3. "return 301 /path;" または "return 404 "text";" の形式
+    // 2番目の引数 (text_or_target) を取得
+    std::string const& text_or_target = next_token;
+
+    // 4. セミコロンを確認
+    if (getNextToken(tokens, index) != SEMICOLON) {
+        throw std::runtime_error("Error: Expected ';' after return directive");
+    }
+
+    // 5. 2番目の引数が URL/パス か、ただのテキストかを判定
+    if (text_or_target.find('/') == 0 || text_or_target.find("http://") == 0 ||
+        text_or_target.find("https://") == 0) {
+        rd.target = text_or_target;  // URL or Path
+    } else {
+        rd.text = text_or_target;  // Plain text
+    }
+
+    return rd;
 }
