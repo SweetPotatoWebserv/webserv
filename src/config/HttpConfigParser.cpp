@@ -396,6 +396,17 @@ std::vector<std::string> HttpConfigParser::parseIndex(
 //------------------listenディレクティブパーサー---------------------
 //-----------------------------------------------------------------
 
+//------------------ポート検証ヘルパー関数-------------------------
+uint16_t HttpConfigParser::validateAndConvertPort(
+    uint64_t temp_port, const std::string& error_value) {
+    // クラスのメンバーなので、 `MAX_PORT_NUMBER` に直接アクセスできる
+    if (temp_port > MAX_PORT_NUMBER) {
+        throw std::runtime_error("Error: Port number out of range: " +
+                                 error_value);
+    }
+    return static_cast<uint16_t>(temp_port);
+}
+
 ///@brief listen ディレクティブをパースする
 ///@return 完成した ListenDirective オブジェクト
 ListenDirective HttpConfigParser::parseListen(
@@ -421,11 +432,8 @@ ListenDirective HttpConfigParser::parseListen(
             throw std::runtime_error("Error: Invalid port number in: " +
                                      port_str);
         }
-        if (temp_port > MAX_PORT_NUMBER) {
-            throw std::runtime_error("Error: Port number out of range: " +
-                                     port_str);
-        }
-        ld.port = static_cast<uint16_t>(temp_port);
+
+        ld.port = HttpConfigParser::validateAndConvertPort(temp_port, port_str);
 
     } else {
         // port 形式のみ
@@ -437,11 +445,7 @@ ListenDirective HttpConfigParser::parseListen(
             // port number: " に変更copilot
             throw std::runtime_error("Error: Invalid port number: " + value);
         }
-        if (temp_port > MAX_PORT_NUMBER) {
-            throw std::runtime_error("Error: Port number out of range: " +
-                                     value);
-        }
-        ld.port = static_cast<uint16_t>(temp_port);
+        ld.port = HttpConfigParser::validateAndConvertPort(temp_port, value);
     }
 
     std::string next_token = HttpConfigParser::getNextToken(tokens, index);

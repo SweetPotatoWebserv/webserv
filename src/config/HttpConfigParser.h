@@ -82,6 +82,10 @@ class HttpConfigParser {
     static off_t parseClientMaxBodySize(const std::vector<std::string>& tokens,
                                         size_t& index);
 
+    ///@brief listenのポート番号を検証し、uint16_tに変換するヘルパー関数
+    static uint16_t validateAndConvertPort(uint64_t temp_port,
+                                           const std::string& error_value);
+
     // 特殊文字リスト（トークン分割用）構文解析用
     static const char* const SPECIAL_CHARS;
     static const char HASH_CHAR;
