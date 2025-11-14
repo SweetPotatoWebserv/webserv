@@ -30,6 +30,10 @@ const off_t HttpConfigParser::BYTES_PER_GB =
 
 //最大値のポート番号
 const int HttpConfigParser::MAX_PORT_NUMBER = 65535;
+// error_page の範囲
+const int HttpConfigParser::MIN_ERROR_STATUS_CODE = 300;
+const int HttpConfigParser::MAX_ERROR_STATUS_CODE = 599;
+const int HttpConfigParser::MIN_OVERRIDE_STATUS_CODE = 200;
 
 //終端に来たかどうか
 bool HttpConfigParser::isEof(const std::vector<std::string>& tokens,

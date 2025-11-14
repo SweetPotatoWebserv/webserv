@@ -124,7 +124,7 @@ class HttpConfigParser {
     // 最大値のポート番号を定数化
     static const int MAX_PORT_NUMBER;
     // error_page で使用するステータスコードの境界
-    static const int MIN_ERROR_STATUS_CODE = 300;
-    static const int MAX_ERROR_STATUS_CODE = 599;
-    static const int MIN_OVERRIDE_STATUS_CODE = 200;
+    static const int MIN_ERROR_STATUS_CODE;     // = 300
+    static const int MAX_ERROR_STATUS_CODE;     // = 599
+    static const int MIN_OVERRIDE_STATUS_CODE;  // = 200
 };
