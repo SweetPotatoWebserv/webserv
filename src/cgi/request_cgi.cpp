@@ -29,6 +29,10 @@ char** createArgv(const std::string& script_path) {
     char** argv = new char*[2];
     argv[0] = strdup(script_path.c_str());
     argv[1] = NULL;
+    if (argv[0] == NULL) {
+        delete[] argv;
+        return NULL;
+    }
     return argv;
 }
 
