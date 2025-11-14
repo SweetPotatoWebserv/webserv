@@ -124,6 +124,9 @@ class LocationConfig {
     void setClientMaxBodySize(off_t size) {
         common_config.setClientMaxBodySize(size);
     }
+    void addErrorPage(int status, const ErrorPageDirective& ep) {
+        common_config.addErrorPage(status, ep);
+    }
 
     void addAllowedMethod(const Method& m) { allowed_methods.push_back(m); }
     void setCgiPath(const std::string& p) { cgi_path = p; }
@@ -206,6 +209,9 @@ class ServerConfig {
     void setAutoindex(bool on) { common_config.setAutoindex(on); }
     void setClientMaxBodySize(off_t size) {
         common_config.setClientMaxBodySize(size);
+    }
+    void addErrorPage(int status, const ErrorPageDirective& ep) {
+        common_config.addErrorPage(status, ep);
     }
 
     void resolveDefaults(const CommonConfig& http_common) {  //<-親の設定

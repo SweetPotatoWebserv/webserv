@@ -20,6 +20,7 @@ const char* const HttpConfigParser::DIRECTIVE_INDEX = "index";
 const char* const HttpConfigParser::DIRECTIVE_AUTOINDEX = "autoindex";
 const char* const HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE =
     "client_max_body_size";
+const char* const HttpConfigParser::DIRECTIVE_ERROR_PAGE = "error_page";
 
 //マジックナンバー定数に
 const off_t HttpConfigParser::BYTES_PER_KB = 1024;
@@ -146,6 +147,13 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
         } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
             off_t size = parseClientMaxBodySize(tokens, index);
             http_common_config.setClientMaxBodySize(size);
+        } else if (token == DIRECTIVE_ERROR_PAGE) {
+            ParsedErrorPage pep = parseErrorPage(tokens, index);
+            // 取得した全てのステータスコードについて、map に登録
+            for (size_t i = 0; i < pep.status_codes.size(); ++i) {
+                http_common_config.addErrorPage(pep.status_codes[i],
+                                                pep.directive);
+            }
         }
         // ★ ステップ5でここに error_page, return のパース処理を追加します
         else {
@@ -229,6 +237,11 @@ void HttpConfigParser::parserServer(HttpConfig& config,
             off_t size =
                 HttpConfigParser::parseClientMaxBodySize(tokens, index);
             server_config.setClientMaxBodySize(size);
+        } else if (token == DIRECTIVE_ERROR_PAGE) {
+            ParsedErrorPage pep = parseErrorPage(tokens, index);
+            for (size_t i = 0; i < pep.status_codes.size(); ++i) {
+                server_config.addErrorPage(pep.status_codes[i], pep.directive);
+            }
         }
         // error_page, return,などのディレクティブのパース処理を追加予定???
         else {
@@ -301,6 +314,12 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
                 HttpConfigParser::parseClientMaxBodySize(tokens, index);
             location_config.setClientMaxBodySize(
                 size);  // (CommonConfig::setClientMaxBodySize セッター)
+        } else if (token == DIRECTIVE_ERROR_PAGE) {
+            ParsedErrorPage pep = parseErrorPage(tokens, index);
+            for (size_t i = 0; i < pep.status_codes.size(); ++i) {
+                location_config.addErrorPage(pep.status_codes[i],
+                                             pep.directive);
+            }
         }
         // error_page, return,などのディレクティブのパース処理を追加予定???
         else {
@@ -535,4 +554,80 @@ off_t HttpConfigParser::parseClientMaxBodySize(
     }
 
     return size;
+}
+
+//-----------------------------------------------------------------
+//------------------error_pageディレクティブパーサー---------------
+//-----------------------------------------------------------------
+///@brief error_page ディレクティブをパースする
+///       (例: error_page 404 500 /50x.html;)
+///       (例: error_page 403 =200 /index.html;)
+HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
+    const std::vector<std::string>& tokens, size_t& index) {
+    ParsedErrorPage pep;
+    std::string token;
+
+    // 1. ステータスコードを読み込む (数値が続く限り)
+    while (!isEof(tokens, index)) {
+        token = getNextToken(tokens, index);
+
+        // トークンが数値 (ステータスコード) かどうかをチェック
+        std::stringstream ss(token);
+        int status_code;
+        // (ss >> status_code) で変換を試み、
+        // ss.eof() で "404foo" のような余計な文字がないことを確認
+        // 課題の要件ではエラーページは MIN_ERROR_STATUS_CODE-599 の範囲が妥当
+        if ((ss >> status_code) && ss.eof() &&
+            status_code >= MIN_ERROR_STATUS_CODE &&
+            status_code <= MAX_ERROR_STATUS_CODE) {
+            pep.status_codes.push_back(status_code);
+        } else {
+            // 数値でなければ、ループを抜ける
+            // この 'token' は、'=' か ターゲットパス (e.g., "/50x.html") のはず
+            break;
+        }
+    }
+
+    if (pep.status_codes.empty()) {
+        throw std::runtime_error(
+            "Error: Expected status code(s) for error_page");
+    }
+
+    // 2. オプションの '=' (ステータスコード上書き) をチェック
+    if (token == "=") {
+        if (isEof(tokens, index)) {
+            throw std::runtime_error(
+                "Error: Expected new status code after '=' in error_page");
+        }
+        token =
+            getNextToken(tokens, index);  // 新しいステータスコード (例: "200")
+
+        std::stringstream ss(token);
+        if (!(ss >> pep.directive.override_status) || !ss.eof() ||
+            pep.directive.override_status < MIN_OVERRIDE_STATUS_CODE ||
+            pep.directive.override_status > MAX_ERROR_STATUS_CODE) {
+            throw std::runtime_error(
+                "Error: Invalid new status code in error_page: " + token);
+        }
+
+        // 最後の引数 (ターゲットURI) を取得
+        if (isEof(tokens, index)) {
+            throw std::runtime_error(
+                "Error: Expected target URI after status code in error_page");
+        }
+        pep.directive.target = getNextToken(tokens, index);
+
+    } else {
+        // '=' がなかった場合
+        pep.directive.override_status = -1;  // -1 を「上書きなし」とする
+        pep.directive.target = token;  // ループを抜けた 'token' がターゲットURI
+    }
+
+    // 3. 最後にセミコロンがあるか確認
+    if (getNextToken(tokens, index) != SEMICOLON) {
+        throw std::runtime_error(
+            "Error: Expected ';' after error_page directive");
+    }
+
+    return pep;
 }
