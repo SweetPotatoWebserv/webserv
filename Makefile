@@ -17,8 +17,8 @@ TEST_SRC = $(addprefix $(TEST_DIR)/, test_main.cpp \
             test_trim.cpp \
             test_search_header_field.cpp \
             test_http_request_parse.cpp \
-            test_mime_types.cpp \
             test_http_exception.cpp \
+            test_mime_types.cpp \
             )
 
 HEADERS = # you can add *.h files here
