@@ -117,14 +117,14 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_ERROR_PAGE;
 
     // マジックナンバー定数に
-    static const off_t BYTES_PER_KB;
-    static const off_t BYTES_PER_MB;
-    static const off_t BYTES_PER_GB;
+    static const off_t BYTES_PER_KB = 1024;
+    static const off_t BYTES_PER_MB = static_cast<off_t>(1024) * 1024;
+    static const off_t BYTES_PER_GB = static_cast<off_t>(1024) * 1024 * 1024;
 
     // 最大値のポート番号を定数化
-    static const int MAX_PORT_NUMBER;
-    // error_page で使用するステータスコードの境界
-    static const int MIN_ERROR_STATUS_CODE;     // = 300
-    static const int MAX_ERROR_STATUS_CODE;     // = 599
-    static const int MIN_OVERRIDE_STATUS_CODE;  // = 200
+    static const int MAX_PORT_NUMBER = 65535;
+    // error pageの範囲
+    static const int MIN_ERROR_STATUS_CODE = 300;
+    static const int MAX_ERROR_STATUS_CODE = 599;
+    static const int MIN_OVERRIDE_STATUS_CODE = 200;
 };

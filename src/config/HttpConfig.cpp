@@ -1,4 +1,4 @@
-#include "HttpConfig.h"  // 自分のヘッダーをインクルード
+#include "HttpConfig.h"
 
 CommonConfig::CommonConfig()
     : root_is_set(false),

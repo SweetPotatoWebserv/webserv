@@ -1,14 +1,13 @@
 #pragma once
 
-#include <cstddef>
-// #include <cstdint>//-std=c++98で△
 #include <sys/types.h>
 
+#include <cstddef>
 #include <map>
 #include <string>
 #include <vector>
 
-#include "../core/Common.h"  // DEFAULT_PORT
+#include "../core/Common.h"
 
 // GET・HEAD 以外は GET に変換される
 typedef struct ErrorPageDirective {
@@ -37,7 +36,7 @@ typedef struct ListenDirective {
     // listen localhost:8080;
     std::string address;
 
-    uint16_t port;  //<-修正
+    uint16_t port;
     bool is_default_server;
     ListenDirective();
 } ListenDirective;
@@ -46,7 +45,7 @@ class CommonConfig {
    public:
     CommonConfig();
 
-    // --- ↓↓　セッターを追加 ↓↓ ---
+    // ---setter---
     void setRoot(const std::string& path) {
         root = path;
         root_is_set = true;  // root が設定されたことを記録
@@ -55,21 +54,17 @@ class CommonConfig {
         autoindex = on;
         autoindex_is_set = true;
     }
-
     void setUploadStore(const std::string& store_path) {
         upload_store = store_path;
         upload_store_is_set = true;
     }
-
     void setRedirect(const ReturnDirective& ret) {
         redirect = ret;
         redirect_is_set = true;
     }
-
     void addErrorPage(int status, const ErrorPageDirective& ep) {
         error_page[status] = ep;
     }
-
     void setClientMaxBodySize(off_t size) { client_max_body_size = size; }
     void addIndexFile(const std::string& file) { index_files.push_back(file); }
 
@@ -100,13 +95,12 @@ class CommonConfig {
     bool autoindex_is_set;
     bool autoindex;
 
-    bool upload_store_is_set;  // private管理で
+    bool upload_store_is_set;  // 自動的にis_setを設定するためprivate管理
     std::string upload_store;
 
     ReturnDirective redirect;
     bool redirect_is_set;
 
-    // 値が 0 の場合制限なしを意味する
     off_t client_max_body_size;
     std::map<int, ErrorPageDirective> error_page;
     std::vector<std::string> index_files;
@@ -114,7 +108,7 @@ class CommonConfig {
 
 class LocationConfig {
    public:
-    // --- ↓↓セッターを追加 ↓↓ ---
+    // ---setter---
     void setPath(const std::string& p) { path = p; }
     void setRoot(const std::string& r) { common_config.setRoot(r); }
     void addIndexFile(const std::string& file) {
@@ -134,31 +128,31 @@ class LocationConfig {
 
     // 継承設定（locationの場合、server で設定されたものを継承する関数）
     void resolveDefaults(const CommonConfig& server_common) {  //<-親の設定
-        // 1. root
+        // root
         if (!common_config.isRootSet()) {
             // 自分が設定していないなら、親の設定をコピー
             if (server_common.isRootSet()) {
                 common_config.setRoot(server_common.getRoot());
             }
         }
-        // 2. autoindex
+        // autoindex
         if (!common_config.isAutoindexSet()) {
             if (server_common.isAutoindexSet()) {
                 common_config.setAutoindex(server_common.getAutoindex());
             }
         }
-        // 3. client_max_body_size (-1 は未設定)
+        // client_max_body_size
         if (common_config.getClientMaxBodySize() == -1) {
             common_config.setClientMaxBodySize(
                 server_common.getClientMaxBodySize());
         }
-        // 4. upload_store
+        // upload_store
         if (!common_config.isUploadStoreSet()) {
             if (server_common.isUploadStoreSet()) {
                 common_config.setUploadStore(server_common.getUploadStore());
             }
         }
-        // 5. index_files (vectorが空なら継承)
+        // index_files (vectorが空なら継承)
         if (common_config.getIndexFiles().empty()) {
             const std::vector<std::string>& parent_index =
                 server_common.getIndexFiles();
@@ -166,8 +160,9 @@ class LocationConfig {
                 common_config.addIndexFile(parent_index[i]);
             }
         }
-        // 6. error_pages (mapが空なら継承)
-        // ※Nginx仕様: 自分の階層で1つでも定義したら継承しない。空の時だけ継承。
+        // error_pages (mapが空なら継承)
+        //  ※Nginx仕様:
+        //  自分の階層で1つでも定義したら継承しない。空の時だけ継承。
         if (common_config.getErrorPages().empty()) {
             std::map<int, ErrorPageDirective>::const_iterator it;
             for (it = server_common.getErrorPages().begin();
@@ -175,8 +170,8 @@ class LocationConfig {
                 common_config.addErrorPage(it->first, it->second);
             }
         }
-        // 7. return (redirect)
-        // ※Nginx仕様: 自分が設定していなければ親を使う
+        // return (redirect)
+        //  ※Nginx仕様: 自分が設定していなければ親を使う
         if (!common_config.isRedirectSet()) {
             if (server_common.isRedirectSet()) {
                 common_config.setRedirect(server_common.getRedirect());
@@ -200,7 +195,6 @@ class ServerConfig {
     void addServerName(const std::string& name) {
         server_names.push_back(name);
     }
-    // --- ↑↑ ここまで 変更---
 
     void setRoot(const std::string& r) { common_config.setRoot(r); }
     void addIndexFile(const std::string& file) {
@@ -215,8 +209,7 @@ class ServerConfig {
     }
 
     void resolveDefaults(const CommonConfig& http_common) {  //<-親の設定
-        // 1. まず、自分の未設定項目を http から埋める (ロジックは Location
-        // と同じ)
+        //ロジックは Locationと同じ
 
         if (!common_config.isRootSet() && http_common.isRootSet()) {
             common_config.setRoot(http_common.getRoot());
@@ -250,16 +243,16 @@ class ServerConfig {
         }
 
         // return は http
-        // ブロックには書けませんが、今回は書かない。Nginxの設定思想に準じていないため
+        //今回は書かない。Nginxの設定思想に準じていないため
 
-        // 自分が完全体(httpの設定を含んだ設定)になったので、子分である location
+        // 自分がhttpの設定を含んだ設定になったので、子であるlocation
         // たちに設定を配る
         for (size_t i = 0; i < locations.size(); ++i) {
             locations[i].resolveDefaults(this->common_config);
         }
     }
 
-    // ★ Parserから呼ぶために、common_config のゲッターが必要なら追加
+    // Parserから呼ぶために、common_config のゲッターが必要なら追加
     // (今回は内部で処理しているので不要、念のため)//testなどで使うかもしれない
     const CommonConfig& getCommonConfig() const { return common_config; }
 
@@ -272,7 +265,7 @@ class ServerConfig {
 
 class HttpConfig {
    public:
-    // --- ↓↓ セッターを追加 ↓↓ ---
+    // ---setter---
     // (パーサーが addServerConfig と呼んでいるため名前を合わせる)
     void addServerConfig(const ServerConfig& s) { servers.push_back(s); }
     void setDefaults(const CommonConfig& c) { common_config = c; }
