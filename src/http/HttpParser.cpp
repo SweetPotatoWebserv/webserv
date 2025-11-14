@@ -83,6 +83,10 @@ std::string::size_type HttpParser::header_section_parse(
             throw HttpException(HttpStatus::BadRequest,
                                 HttpStatus::reason(HttpStatus::BadRequest));
         }
+        if (header_field[0].empty() || header_field[1].empty()) {
+            throw HttpException(HttpStatus::BadRequest,
+                                HttpStatus::reason(HttpStatus::BadRequest));
+        }
         header_field[1] = trim(header_field[1]);
         if (header_field[0] == HOST) {
             HttpParser::header_section_host_parse(header_field, request);
