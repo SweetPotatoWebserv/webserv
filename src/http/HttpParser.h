@@ -55,6 +55,12 @@ struct HttpResponse {
 class HttpParser {
    public:
     static HttpRequest http_request_parse(const std::string& buffer);
+
+   private:
+    static const int HOST_ONLY = 2;
+    static const int MAX_HOST_FIELD_NUM = 3;
+    static const int REQUEST_LINE_NUM = 3;
+    static std::vector<std::string> split_path(const std::string& target_path);
     static std::string::size_type request_line_parse(const std::string& buffer,
                                                      HttpRequest& request);
     static std::string::size_type header_section_parse(
@@ -67,10 +73,4 @@ class HttpParser {
                                    std::string::size_type body_section_start);
 
     static std::string parse_chunked(const std::string& data);
-
-   private:
-    static const int HOST_ONLY = 2;
-    static const int MAX_HOST_FIELD_NUM = 3;
-    static const int REQUEST_LINE_NUM = 3;
-    static std::vector<std::string> split_path(const std::string& target_path);
 };
