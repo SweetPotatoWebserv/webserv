@@ -16,4 +16,4 @@ ErrorPageDirective::ErrorPageDirective(std::string& t, int o)
 
 // ListenDirective のコンストラクタ実装
 ListenDirective::ListenDirective()
-    : port(DEFAULT_PORT), is_default_server(false) {}
+    : address(DEFAULT_ADDRESS), port(DEFAULT_PORT), is_default_server(false) {}

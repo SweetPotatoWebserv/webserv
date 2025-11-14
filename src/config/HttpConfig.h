@@ -2,6 +2,12 @@
 
 #include <cstddef>
 // #include <cstdint>//-std=c++98で△
+#include <sys/types.h>
+
+#include <map>
+#include <string>
+#include <vector>
+
 #include "../core/Common.h"  // DEFAULT_PORT
 
 // GET・HEAD 以外は GET に変換される

@@ -234,7 +234,7 @@ void HttpConfigParser::parserServer(HttpConfig& config,
         else {
             //知らないディレクティブはエラー
             throw std::runtime_error(
-                "Error: Unknown directive in server block:" + token);
+                "Error: Unknown directive in server block: " + token);
         }
     }
     if (!found_closing_brace) {
