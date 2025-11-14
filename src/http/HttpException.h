@@ -3,7 +3,6 @@
 #include <stdexcept>
 #include <string>
 
-
 class HttpException : public std::exception {
    public:
     explicit HttpException(int status_code, const std::string& message = "");
