@@ -624,7 +624,16 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
     } else {
         // '=' がなかった場合
         pep.directive.override_status = -1;  // -1 を「上書きなし」とする
-        pep.directive.target = token;  // ループを抜けた 'token' がターゲットURI
+
+        // ここで検証を追加
+        // ターゲットURIは '/' で始まらなければならない
+        if (token.empty() || token[0] != '/') {
+            throw std::runtime_error(
+                "Error: Invalid target URI in error_page, must start with "
+                "'/': " +
+                token);
+        }
+        pep.directive.target = token;  // 検証OK
     }
 
     // 3. 最後にセミコロンがあるか確認
