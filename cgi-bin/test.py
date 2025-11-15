@@ -14,7 +14,7 @@ print("Status: 200 OK")
 print()
 
 # --- CgiExecutor が stdin/stdout を正しく処理したかのテスト ---
-print("Hello from CgiProcess") 
+print("Hello from CgiProcess")
 print(body)
 
 # --- CgiEnvBuilder (createEnvp) が envp を正しく構築したかのテスト ---
