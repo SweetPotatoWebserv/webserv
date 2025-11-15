@@ -35,30 +35,28 @@ bool CgiProcess::run(const HttpRequest& request, HttpResponse& response) {
             return true;
         }
 
-        // ファイルのread権限とx権限をstatでチェック
-        if (!(st.st_mode & S_IXUSR) || !(st.st_mode & S_IRUSR)) {
+        bool is_executable = ((st.st_mode & S_IXUSR) != 0) ||
+                             ((st.st_mode & S_IXGRP) != 0) ||
+                             ((st.st_mode & S_IXOTH) != 0);
+        if (!is_executable) {
             response.status_code_ = HttpStatus::Forbidden;
-            response.body_ = "CGI script is not readable/executable.";
+            response.body_ = "CGI script is not executable (no 'x' bit set)";
             return true;
         }
 
-        // CgiEnvBuilderなどに移行したい(envpにしてexecveの時に渡せば他の環境変数は引き継がれないので削除する必要がない)
         char** argv = createArgv(script_path);
         char** envp = createEnvp(request);
 
-        // HttpRequestからstdin(リクエストボディ)の内容を取得
         const std::string& request_body = request.body_;
 
         std::string raw_output;
         try {
-            // CgiExecutorでスクリプトを実行
             raw_output =
                 executor_->execute(script_path, argv, envp, request_body);
         } catch (const CgiExecutionException& e) {
             // CgiExecutor(fork, pipe, execve, waitpid)でエラーが発生した場合
             std::cerr << "CGI Execution failed: " << e.what() << "\n";
 
-            // エラーレスポンスを生成
             response.status_code_ = e.getStatusCode();
             response.body_ = e.what();
 
@@ -67,7 +65,6 @@ bool CgiProcess::run(const HttpRequest& request, HttpResponse& response) {
             return true;
         }
 
-        // CGIの生出力(stdoutから親proccessが読み取ったもの)をパースしてHttpResponseに格納
         parseCgiResponse(response, raw_output);
 
         freeArray(argv);
@@ -76,7 +73,7 @@ bool CgiProcess::run(const HttpRequest& request, HttpResponse& response) {
     } catch (const std::exception& e) {
         std::cerr << "CgiProcess FATAL error: " << e.what() << "\n";
 
-        // エラーページすら生成できなかった、という意味でfalseを返す
+        // エラーページすら生成できなかった時のみエラーを返す
         return false;
     }
 }
