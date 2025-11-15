@@ -47,63 +47,63 @@ class CommonConfig {
 
     // ---setter---
     void setRoot(const std::string& path) {
-        root = path;
-        root_is_set = true;  // root が設定されたことを記録
+        root_ = path;
+        root_is_set_ = true;  // root が設定されたことを記録
     }
     void setAutoindex(bool on) {
-        autoindex = on;
-        autoindex_is_set = true;
+        autoindex_ = on;
+        autoindex_is_set_ = true;
     }
     void setUploadStore(const std::string& store_path) {
-        upload_store = store_path;
-        upload_store_is_set = true;
+        upload_store_ = store_path;
+        upload_store_is_set_ = true;
     }
     void setRedirect(const ReturnDirective& ret) {
-        redirect = ret;
-        redirect_is_set = true;
+        redirect_ = ret;
+        redirect_is_set_ = true;
     }
     void addErrorPage(int status, const ErrorPageDirective& ep) {
-        error_page[status] = ep;
+        error_page_[status] = ep;
     }
-    void setClientMaxBodySize(off_t size) { client_max_body_size = size; }
-    void addIndexFile(const std::string& file) { index_files.push_back(file); }
+    void setClientMaxBodySize(off_t size) { client_max_body_size_ = size; }
+    void addIndexFile(const std::string& file) { index_files_.push_back(file); }
 
-    bool isRootSet() const { return root_is_set; }
-    const std::string& getRoot() const { return root; }
+    bool isRootSet() const { return root_is_set_; }
+    const std::string& getRoot() const { return root_; }
 
-    bool isAutoindexSet() const { return autoindex_is_set; }
-    bool getAutoindex() const { return autoindex; }
+    bool isAutoindexSet() const { return autoindex_is_set_; }
+    bool getAutoindex() const { return autoindex_; }
 
-    bool isUploadStoreSet() const { return upload_store_is_set; }
-    const std::string& getUploadStore() const { return upload_store; }
+    bool isUploadStoreSet() const { return upload_store_is_set_; }
+    const std::string& getUploadStore() const { return upload_store_; }
 
-    bool isRedirectSet() const { return redirect_is_set; }
-    const ReturnDirective& getRedirect() const { return redirect; }
+    bool isRedirectSet() const { return redirect_is_set_; }
+    const ReturnDirective& getRedirect() const { return redirect_; }
 
-    off_t getClientMaxBodySize() const { return client_max_body_size; }
+    off_t getClientMaxBodySize() const { return client_max_body_size_; }
     const std::map<int, ErrorPageDirective>& getErrorPages() const {
-        return error_page;
+        return error_page_;
     }
     const std::vector<std::string>& getIndexFiles() const {
-        return index_files;
+        return index_files_;
     }
 
    private:
-    bool root_is_set;
-    std::string root;
+    bool root_is_set_;
+    std::string root_;
 
-    bool autoindex_is_set;
-    bool autoindex;
+    bool autoindex_is_set_;
+    bool autoindex_;
 
-    bool upload_store_is_set;  // 自動的にis_setを設定するためprivate管理
-    std::string upload_store;
+    bool upload_store_is_set_;  // 自動的にis_setを設定するためprivate管理
+    std::string upload_store_;
 
-    ReturnDirective redirect;
-    bool redirect_is_set;
+    ReturnDirective redirect_;
+    bool redirect_is_set_;
 
-    off_t client_max_body_size;
-    std::map<int, ErrorPageDirective> error_page;
-    std::vector<std::string> index_files;
+    off_t client_max_body_size_;
+    std::map<int, ErrorPageDirective> error_page_;
+    std::vector<std::string> index_files_;
 };
 
 class LocationConfig {
