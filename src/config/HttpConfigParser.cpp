@@ -25,6 +25,9 @@ const char* const HttpConfigParser::DIRECTIVE_RETURN = "return";
 const char* const HttpConfigParser::DIRECTIVE_ALLOW_METHODS = "allow_methods";
 // parseListen
 const char* const HttpConfigParser::KEYWORD_DEFAULT_SERVER = "default_server";
+// directive keyword
+const char* const HttpConfigParser::DIRECTIVE_CGI_PATH = "cgi_path";
+const char* const HttpConfigParser::DIRECTIVE_CGI_EXTENSION = "cgi_extension";
 // on,off->autoindex
 const char* const HttpConfigParser::VALUE_ON = "on";
 const char* const HttpConfigParser::VALUE_OFF = "off";
@@ -317,6 +320,13 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
                  ++i) {  // 取得したメソッドのリストを config に登録
                 location_config.addAllowedMethod(methods[i]);
             }
+        } else if (token == DIRECTIVE_CGI_PATH) {
+            std::string path = parseStringDirective(
+                tokens, index);  // 汎用パーサーを呼び出し、結果をセットする
+            location_config.setCgiPath(path);
+        } else if (token == DIRECTIVE_CGI_EXTENSION) {
+            std::string ext = parseStringDirective(tokens, index);
+            location_config.setCgiExtension(ext);
         } else {
             //知らないディレクティブはエラー
             throw std::runtime_error(
@@ -735,4 +745,23 @@ std::vector<Method> HttpConfigParser::parseAllowedMethods(
     }
 
     return methods;
+}
+
+//-----------------------------------------------------------------
+//------------------汎用文字列ディレクティブパーサー---------------
+//-----------------------------------------------------------------
+///@brief "コマンド名 値;" 形式のディレクティブをパースする
+//@return 値 (文字列)
+std::string HttpConfigParser::parseStringDirective(
+    const std::vector<std::string>& tokens, size_t& index) {
+    //値（パスや拡張子など）を取得
+    std::string value = HttpConfigParser::getNextToken(tokens, index);
+
+    //セミコロンを期待
+    if (HttpConfigParser::getNextToken(tokens, index) != SEMICOLON) {
+        // エラーメッセージは呼び出し元で判断できるよう、ここでは汎用的に
+        throw std::runtime_error("Error: Expected ';' after directive value");
+    }
+
+    return value;
 }
