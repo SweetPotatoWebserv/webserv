@@ -5,14 +5,14 @@
 
 static HttpConfig createTestHttpConfig() {
     HttpConfig config;
-    config.defaults_.client_max_body_size_ = 5 * 1024 * 1024;  // 5MB // NOLINT
-    config.defaults_.autoindex_ = false;
-    config.defaults_.root_ = "www";
-    config.defaults_.index_files_.push_back("index.html");
-    config.defaults_.index_files_.push_back("index.htm");
-    config.defaults_.error_page_.statuses.push_back(404);  // NOLINT
-    config.defaults_.error_page_.target = "/404.html";
-    config.defaults_.error_page_.override_status = -1;  // NOLINT
+    config.common_config_.client_max_body_size_ =
+        5 * 1024 * 1024;  // 5MB // NOLINT
+    config.common_config_.autoindex_ = false;
+    config.common_config_.root_ = "www";
+    config.common_config_.index_files_.push_back("index.html");
+    config.common_config_.index_files_.push_back("index.htm");
+    config.common_config_.error_page_[404] =  // NOLINT
+        ErrorPageDirective("/404.html", -1);
 
     // server 1: 127.0.0.1:8080 default_server
     {

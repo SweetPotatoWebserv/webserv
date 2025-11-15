@@ -209,3 +209,16 @@ ssize_t HttpResponse::send_response(int client_fd, HttpResponse& response) {
     }
     return sent;
 }
+
+void HttpResponse::clear() {
+    body_ = "";
+    status_code_ = 0;
+    version_ = "";
+    message_ = "";
+    header_.content_length_ = 0;
+    header_.content_type_ = "";
+    header_.transfer_encoding_ = "";
+    location_ = "";
+    // date clear
+    // date_ = "";
+}

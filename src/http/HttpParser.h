@@ -50,6 +50,7 @@ struct HttpResponse {
     std::string body_;
     std::string version_;
     static ssize_t send_response(int client_fd, HttpResponse& response);
+    void clear();
 };
 
 class HttpParser {

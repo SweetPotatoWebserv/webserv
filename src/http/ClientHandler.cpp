@@ -84,20 +84,24 @@ void ClientHandler::on_readable() {  // NOLINT
     buffer_.append(buf, len);
     if (ClientHandler::is_request_ready(buffer_)) {
         // TODO 例外処理する
+        // BadRequest
+        // NotImplemented
         try {
             request_ = HttpParser::http_request_parse(buffer_);
         } catch (const HttpException& e) {
-            std::cerr << e.what() << '\n';
+            response_.status_code_ = e.status_code();
         }
+        response_ = router_.create_response(request_);
         event_.mod(fd_, EPOLLOUT);
     }
 }
 
 void ClientHandler::on_writable() {  // NOLINT
-    response_ = router_.create_response(request_);
     ssize_t ret = HttpResponse::send_response(fd_, response_);
     if (ret == -1) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) return;
     }
+    buffer_.clear();
+    response_.clear();
     event_.mod(fd_, EPOLLIN);
 }
