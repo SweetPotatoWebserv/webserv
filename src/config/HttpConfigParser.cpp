@@ -29,6 +29,7 @@ const char* const HttpConfigParser::DIRECTIVE_ALLOW_METHODS = "allow_methods";
 const char* const HttpConfigParser::DIRECTIVE_CGI_PATH = "cgi_path";
 const char* const HttpConfigParser::DIRECTIVE_CGI_EXTENSION = "cgi_extension";
 const char* const HttpConfigParser::DIRECTIVE_UPLOAD_STORE = "upload_store";
+const char* const HttpConfigParser::DIRECTIVE_SERVER_NAME = "server_name";
 // on,off->autoindex
 const char* const HttpConfigParser::VALUE_ON = "on";
 const char* const HttpConfigParser::VALUE_OFF = "off";
@@ -207,50 +208,10 @@ void HttpConfigParser::parserServer(HttpConfig& config,
     while (!HttpConfigParser::isEof(tokens, index)) {
         std::string token = HttpConfigParser::getNextToken(tokens, index);
         if (token == BRACE_CLOSE) {  // BRACE_CLOSE=="}"
-            // server ブロック終了
             found_closing_brace = true;
             break;
         }
-
-        if (token ==
-            KEYWORD_LOCATION) {  // KEYWORD_LOCATION=="location"を見つけたら、locationを呼び出す。
-            HttpConfigParser::parserLocation(server_config, tokens, index);
-        } else if (token == DIRECTIVE_LISTEN) {  // DIRECTIVE_LISTEN=="listen"
-            ListenDirective ld = HttpConfigParser::parseListen(tokens, index);
-            server_config.setListen(ld);
-        } else if (token == DIRECTIVE_ROOT) {  // DIRECTIVE_ROOT== "root"
-            std::string r = HttpConfigParser::parseRoot(tokens, index);
-            server_config.setRoot(r);
-        } else if (token == DIRECTIVE_INDEX) {  // DIRECTIVE_INDEX=="index"
-            std::vector<std::string> files =
-                HttpConfigParser::parseIndex(tokens, index);
-            for (size_t i = 0; i < files.size(); ++i) {
-                server_config.addIndexFile(files[i]);
-            }
-        } else if (token ==
-                   DIRECTIVE_AUTOINDEX) {  // DIRECTIVE_AUTOINDEX=="autoindex"
-            bool ai = HttpConfigParser::parseAutoindex(tokens, index);
-            server_config.setAutoindex(ai);
-        } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
-            off_t size =
-                HttpConfigParser::parseClientMaxBodySize(tokens, index);
-            server_config.setClientMaxBodySize(size);
-        } else if (token == DIRECTIVE_ERROR_PAGE) {
-            ParsedErrorPage pep = parseErrorPage(tokens, index);
-            for (size_t i = 0; i < pep.status_codes.size(); ++i) {
-                server_config.addErrorPage(pep.status_codes[i], pep.directive);
-            }
-        } else if (token == DIRECTIVE_RETURN) {
-            ReturnDirective rd = parseReturn(tokens, index);
-            server_config.setRedirect(rd);  // 上書き
-        } else if (token == DIRECTIVE_UPLOAD_STORE) {
-            std::string path = parseStringDirective(tokens, index);
-            server_config.setUploadStore(path);
-        } else {
-            //知らないディレクティブはエラー
-            throw std::runtime_error(
-                "Error: Unknown directive in server block: " + token);
-        }
+        parseServerDirective(token, server_config, tokens, index);
     }
     if (!found_closing_brace) {
         throw std::runtime_error("Error: Expected '}' to close server block");
@@ -258,6 +219,59 @@ void HttpConfigParser::parserServer(HttpConfig& config,
 
     //完成した server_config を config に追加
     config.addServerConfig(server_config);
+}
+
+//-----------------------------------------------------------
+//------------------サーバーディレクティブパーサー本体---------
+//-----------------------------------------------------------
+///@brief server ブロック内のディレクティブを1つパースする
+///(parserServerのヘルパー)
+void HttpConfigParser::parseServerDirective(
+    const std::string& token, ServerConfig& server_config,
+    const std::vector<std::string>& tokens, size_t& index) {
+    if (token == KEYWORD_LOCATION) {  // KEYWORD_LOCATION=="location"
+        HttpConfigParser::parserLocation(server_config, tokens, index);
+    } else if (token == DIRECTIVE_LISTEN) {  // DIRECTIVE_LISTEN=="listen"
+        ListenDirective ld = HttpConfigParser::parseListen(tokens, index);
+        server_config.setListen(ld);
+    } else if (token == DIRECTIVE_SERVER_NAME) {  // server_name
+        std::vector<std::string> names = parseServerName(tokens, index);
+        for (size_t i = 0; i < names.size(); ++i) {
+            server_config.addServerName(names[i]);
+        }
+    } else if (token == DIRECTIVE_ROOT) {  // DIRECTIVE_ROOT== "root"
+        std::string r = HttpConfigParser::parseRoot(tokens, index);
+        server_config.setRoot(r);
+    } else if (token == DIRECTIVE_INDEX) {  // DIRECTIVE_INDEX=="index"
+        std::vector<std::string> files =
+            HttpConfigParser::parseIndex(tokens, index);
+        for (size_t i = 0; i < files.size(); ++i) {
+            server_config.addIndexFile(files[i]);
+        }
+    } else if (token ==
+               DIRECTIVE_AUTOINDEX) {  // DIRECTIVE_AUTOINDEX=="autoindex"
+        bool ai = HttpConfigParser::parseAutoindex(tokens, index);
+        server_config.setAutoindex(ai);
+    } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
+        off_t size = HttpConfigParser::parseClientMaxBodySize(tokens, index);
+        server_config.setClientMaxBodySize(size);
+    } else if (token == DIRECTIVE_ERROR_PAGE) {
+        // ★ 型名は "HttpConfigParser::" をつけて修飾する
+        HttpConfigParser::ParsedErrorPage pep = parseErrorPage(tokens, index);
+        for (size_t i = 0; i < pep.status_codes.size(); ++i) {
+            server_config.addErrorPage(pep.status_codes[i], pep.directive);
+        }
+    } else if (token == DIRECTIVE_RETURN) {  // return
+        ReturnDirective rd = parseReturn(tokens, index);
+        server_config.setRedirect(rd);
+    } else if (token == DIRECTIVE_UPLOAD_STORE) {  // upload_store
+        std::string path = parseStringDirective(tokens, index);
+        server_config.setUploadStore(path);
+    } else {
+        //知らないディレクティブはエラー
+        throw std::runtime_error("Error: Unknown directive in server block: " +
+                                 token);
+    }
 }
 
 //-----------------------------------------------------------
@@ -314,8 +328,6 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
 void HttpConfigParser::parseLocationDirective(
     const std::string& token, LocationConfig& location_config,
     const std::vector<std::string>& tokens, size_t& index) {
-    // ★ ここに、元々 parserLocation にあった if-else を貼り付ける
-
     if (token == DIRECTIVE_ROOT) {
         std::string r = HttpConfigParser::parseRoot(tokens, index);
         location_config.setRoot(r);
@@ -333,36 +345,24 @@ void HttpConfigParser::parseLocationDirective(
         location_config.setClientMaxBodySize(size);
 
     } else if (token == DIRECTIVE_ERROR_PAGE) {
-        // ★★★ 修正点: 型名をフルネームで指定 ★★★
         HttpConfigParser::ParsedErrorPage pep = parseErrorPage(tokens, index);
-        // ★ pep が定義されたので、エラーが消えるはず
         for (size_t i = 0; i < pep.status_codes.size(); ++i) {
             location_config.addErrorPage(pep.status_codes[i], pep.directive);
         }
-
-        // ★★★ 修正点: return を else if で正しくつなぐ ★★★
     } else if (token == DIRECTIVE_RETURN) {
         ReturnDirective rd = parseReturn(tokens, index);
         location_config.setRedirect(rd);
-
-        // ★★★ 修正点: allow_methods を else if で正しくつなぐ ★★★
     } else if (token == DIRECTIVE_ALLOW_METHODS) {
         std::vector<Method> methods = parseAllowedMethods(tokens, index);
         for (size_t i = 0; i < methods.size(); ++i) {
             location_config.addAllowedMethod(methods[i]);
         }
-
-        // ★★★ 修正点: cgi_path を else if で正しくつなぐ ★★★
     } else if (token == DIRECTIVE_CGI_PATH) {
         std::string path = parseStringDirective(tokens, index);
         location_config.setCgiPath(path);
-
-        // ★★★ 修正点: cgi_extension を else if で正しくつなぐ ★★★
     } else if (token == DIRECTIVE_CGI_EXTENSION) {
         std::string ext = parseStringDirective(tokens, index);
         location_config.setCgiExtension(ext);
-
-        // ★★★ 修正点: upload_store を else if で正しくつなぐ ★★★
     } else if (token == DIRECTIVE_UPLOAD_STORE) {
         std::string path = parseStringDirective(tokens, index);
         location_config.setUploadStore(path);
@@ -796,4 +796,30 @@ std::string HttpConfigParser::parseStringDirective(
     }
 
     return value;
+}
+
+//-----------------------------------------------------------------
+//------------------server_nameディレクティブパーサー--------------
+//-----------------------------------------------------------------
+///@brief server_name ディレクティブをパースする (複数形対応)
+//@return サーバー名のリスト
+std::vector<std::string> HttpConfigParser::parseServerName(
+    const std::vector<std::string>& tokens, size_t& index) {
+    std::vector<std::string> server_names;
+
+    // SEMICOLON が来るまでループ
+    while (!isEof(tokens, index)) {
+        std::string token = HttpConfigParser::getNextToken(tokens, index);
+        if (token == SEMICOLON) {
+            break;
+        }
+        server_names.push_back(token);
+    }
+
+    if (server_names.empty()) {
+        throw std::runtime_error(
+            "Error: Expected at least one server name before ';'");
+    }
+
+    return server_names;
 }

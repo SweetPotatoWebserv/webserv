@@ -49,6 +49,11 @@ class HttpConfigParser {
     static void parserServer(HttpConfig& config,
                              const std::vector<std::string>& tokens,
                              size_t& index);
+    // ifelse分岐が多すぎるためそれを処理するヘルパー関数
+    static void parseServerDirective(const std::string& token,
+                                     ServerConfig& server_config,
+                                     const std::vector<std::string>& tokens,
+                                     size_t& index);
     //@brief locationブロックをパースする
     //@param server_config ServerConfigオブジェクト（パース結果を格納）
     //@param tokens トークンリスト
@@ -57,8 +62,7 @@ class HttpConfigParser {
                                const std::vector<std::string>& tokens,
                                size_t& index);
     static void
-    parseLocationDirective(  // if
-                             // else分岐が多すぎるためそれを処理するヘルパー関数
+    parseLocationDirective(  // ifelse分岐が多すぎるためそれを処理するヘルパー関数
         const std::string& token, LocationConfig& location_config,
         const std::vector<std::string>& tokens, size_t& index);
 
@@ -116,6 +120,9 @@ class HttpConfigParser {
     /// upload_store などで使い回す)
     static std::string parseStringDirective(
         const std::vector<std::string>& tokens, size_t& index);
+    ///@brief server_name ディレクティブをパースする
+    static std::vector<std::string> parseServerName(
+        const std::vector<std::string>& tokens, size_t& index);
 
     // 特殊文字リスト（トークン分割用）構文解析用
     static const char* const SPECIAL_CHARS;
@@ -139,6 +146,7 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_CGI_PATH;
     static const char* const DIRECTIVE_CGI_EXTENSION;
     static const char* const DIRECTIVE_UPLOAD_STORE;
+    static const char* const DIRECTIVE_SERVER_NAME;
     // parserlisten defult
     static const char* const KEYWORD_DEFAULT_SERVER;
     // on,off
