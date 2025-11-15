@@ -19,6 +19,8 @@ CgiProcess::CgiProcess() { executor_ = new CgiExecutor(); }
 CgiProcess::~CgiProcess() { delete executor_; }
 
 bool CgiProcess::run(const HttpRequest& request, HttpResponse& response) {
+    char** argv = NULL;
+    char** envp = NULL;
     try {
         std::string script_path = request.request_target_.path_;
         struct stat st;
@@ -44,8 +46,8 @@ bool CgiProcess::run(const HttpRequest& request, HttpResponse& response) {
             return true;
         }
 
-        char** argv = createArgv(script_path);
-        char** envp = createEnvp(request);
+        argv = createArgv(script_path);
+        envp = createEnvp(request);
 
         const std::string& request_body = request.body_;
 
@@ -72,6 +74,8 @@ bool CgiProcess::run(const HttpRequest& request, HttpResponse& response) {
         return true;
     } catch (const std::exception& e) {
         std::cerr << "CgiProcess FATAL error: " << e.what() << "\n";
+        freeArray(argv);
+        freeArray(envp);
 
         // エラーページすら生成できなかった時のみエラーを返す
         return false;
