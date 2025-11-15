@@ -20,6 +20,10 @@ const char* const HttpConfigParser::DIRECTIVE_INDEX = "index";
 const char* const HttpConfigParser::DIRECTIVE_AUTOINDEX = "autoindex";
 const char* const HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE =
     "client_max_body_size";
+// ClientMaxBodySize
+const char HttpConfigParser::SUFFIX_KILOBYTE = 'k';
+const char HttpConfigParser::SUFFIX_MEGABYTE = 'm';
+const char HttpConfigParser::SUFFIX_GIGABYTE = 'g';
 
 //終端に来たかどうか
 bool HttpConfigParser::isEof(const std::vector<std::string>& tokens,
@@ -451,7 +455,8 @@ off_t HttpConfigParser::parseClientMaxBodySize(
     if (i < value.size()) {
         suffix = static_cast<char>(std::tolower(value[i]));
         if (i + 1 != value.size() ||
-            (suffix != 'k' && suffix != 'm' && suffix != 'g')) {
+            (suffix != SUFFIX_KILOBYTE && suffix != SUFFIX_MEGABYTE &&
+             suffix != SUFFIX_GIGABYTE)) {
             throw std::runtime_error(
                 "Error: Invalid client_max_body_size value: " + value);
         }
@@ -469,21 +474,21 @@ off_t HttpConfigParser::parseClientMaxBodySize(
     //    より大きい数に乗算すると危険)
     const off_t max_off_t = std::numeric_limits<off_t>::max();
 
-    if (suffix == 'k') {
+    if (suffix == SUFFIX_KILOBYTE) {
         // オーバーフローチェック: size > MAX / 1024
         if (size > max_off_t / BYTES_PER_KB) {
             throw std::runtime_error(
                 "Error: client_max_body_size (k) overflows");
         }
         size *= BYTES_PER_KB;
-    } else if (suffix == 'm') {
+    } else if (suffix == SUFFIX_MEGABYTE) {
         // オーバーフローチェック: size > MAX / (1024*1024)
         if (size > max_off_t / BYTES_PER_MB) {
             throw std::runtime_error(
                 "Error: client_max_body_size (m) overflows");
         }
         size *= BYTES_PER_MB;
-    } else if (suffix == 'g') {
+    } else if (suffix == SUFFIX_GIGABYTE) {
         // オーバーフローチェック: size > MAX / (1024*1024*1024)
         if (size > max_off_t / BYTES_PER_GB) {
             throw std::runtime_error(
