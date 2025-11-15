@@ -13,8 +13,10 @@ class CgiProcess {
     bool run(const HttpRequest& request, HttpResponse& response);
 
    private:
-    CgiExecutor* executor_;
+    CgiExecutor executor_;
 
+    static bool validateCgiScript(const std::string& script_path,
+                                  HttpResponse& response);
     CgiProcess(const CgiProcess&);
     CgiProcess& operator=(const CgiProcess&);
 };
