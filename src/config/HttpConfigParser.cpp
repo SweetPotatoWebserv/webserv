@@ -20,6 +20,8 @@ const char* const HttpConfigParser::DIRECTIVE_INDEX = "index";
 const char* const HttpConfigParser::DIRECTIVE_AUTOINDEX = "autoindex";
 const char* const HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE =
     "client_max_body_size";
+// parseListen
+const char* const HttpConfigParser::KEYWORD_DEFAULT_SERVER = "default_server";
 // ClientMaxBodySize
 const char HttpConfigParser::SUFFIX_KILOBYTE = 'k';
 const char HttpConfigParser::SUFFIX_MEGABYTE = 'm';
@@ -412,7 +414,7 @@ ListenDirective HttpConfigParser::parseListen(
     }
 
     std::string next_token = HttpConfigParser::getNextToken(tokens, index);
-    if (next_token == "default_server") {
+    if (next_token == KEYWORD_DEFAULT_SERVER) {
         ld.is_default_server = true;
         next_token = HttpConfigParser::getNextToken(tokens, index);
     }
