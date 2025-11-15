@@ -104,6 +104,9 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_CLIENT_MAX_BODY_SIZE;
     // parserlisten defult
     static const char* const KEYWORD_DEFAULT_SERVER;
+    // on,off
+    static const char* const VALUE_ON;
+    static const char* const VALUE_OFF;
     // ClientMaxBodySize
     static const char SUFFIX_KILOBYTE;
     static const char SUFFIX_MEGABYTE;

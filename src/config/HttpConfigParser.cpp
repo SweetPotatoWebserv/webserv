@@ -22,6 +22,9 @@ const char* const HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE =
     "client_max_body_size";
 // parseListen
 const char* const HttpConfigParser::KEYWORD_DEFAULT_SERVER = "default_server";
+// on,off->autoindex
+const char* const HttpConfigParser::VALUE_ON = "on";
+const char* const HttpConfigParser::VALUE_OFF = "off";
 // ClientMaxBodySize
 const char HttpConfigParser::SUFFIX_KILOBYTE = 'k';
 const char HttpConfigParser::SUFFIX_MEGABYTE = 'm';
@@ -322,10 +325,10 @@ bool HttpConfigParser::parseAutoindex(const std::vector<std::string>& tokens,
         throw std::runtime_error(
             "Error: Expected ';' after autoindex directive");
     }
-    if (value == "on") {
+    if (value == VALUE_ON) {
         return true;
     }
-    if (value == "off") {
+    if (value == VALUE_OFF) {
         return false;
     }
     throw std::runtime_error("Error: autoindex value must be 'on' or 'off'");
