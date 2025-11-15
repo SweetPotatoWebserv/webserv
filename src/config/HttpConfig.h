@@ -123,59 +123,6 @@ class LocationConfig {
     void setCgiPath(const std::string& p) { cgi_path_ = p; }
     void setCgiExtension(const std::string& e) { cgi_extension_ = e; }
 
-    // 継承設定（locationの場合、server で設定されたものを継承する関数）
-    void resolveDefaults(const CommonConfig& server_common) {  //<-親の設定
-        // root
-        if (!common_config_.isRootSet()) {
-            // 自分が設定していないなら、親の設定をコピー
-            if (server_common.isRootSet()) {
-                common_config_.setRoot(server_common.getRoot());
-            }
-        }
-        // autoindex
-        if (!common_config_.isAutoindexSet()) {
-            if (server_common.isAutoindexSet()) {
-                common_config_.setAutoindex(server_common.getAutoindex());
-            }
-        }
-        // client_max_body_size
-        if (common_config_.getClientMaxBodySize() == -1) {
-            common_config_.setClientMaxBodySize(
-                server_common.getClientMaxBodySize());
-        }
-        // upload_store
-        if (!common_config_.isUploadStoreSet()) {
-            if (server_common.isUploadStoreSet()) {
-                common_config_.setUploadStore(server_common.getUploadStore());
-            }
-        }
-        // index_files (vectorが空なら継承)
-        if (common_config_.getIndexFiles().empty()) {
-            const std::vector<std::string>& parent_index =
-                server_common.getIndexFiles();
-            for (size_t i = 0; i < parent_index.size(); ++i) {
-                common_config_.addIndexFile(parent_index[i]);
-            }
-        }
-        // error_pages (mapが空なら継承)
-        //  ※Nginx仕様:
-        //  自分の階層で1つでも定義したら継承しない。空の時だけ継承。
-        if (common_config_.getErrorPages().empty()) {
-            std::map<int, ErrorPageDirective>::const_iterator it;
-            for (it = server_common.getErrorPages().begin();
-                 it != server_common.getErrorPages().end(); ++it) {
-                common_config_.addErrorPage(it->first, it->second);
-            }
-        }
-        // return (redirect)
-        //  ※Nginx仕様: 自分が設定していなければ親を使う
-        if (!common_config_.isRedirectSet()) {
-            if (server_common.isRedirectSet()) {
-                common_config_.setRedirect(server_common.getRedirect());
-            }
-        }
-    }
-
    private:
     CommonConfig common_config_;  // 共通設定
     // 許可するメソッドが入るだけ（例：GET HEAD POST DELETE）
@@ -200,50 +147,6 @@ class ServerConfig {
     void setAutoindex(bool on) { common_config_.setAutoindex(on); }
     void setClientMaxBodySize(off_t size) {
         common_config_.setClientMaxBodySize(size);
-    }
-
-    void resolveDefaults(const CommonConfig& http_common) {  //<-親の設定
-        //ロジックは Locationと同じ
-
-        if (!common_config_.isRootSet() && http_common.isRootSet()) {
-            common_config_.setRoot(http_common.getRoot());
-        }
-        if (!common_config_.isAutoindexSet() && http_common.isAutoindexSet()) {
-            common_config_.setAutoindex(http_common.getAutoindex());
-        }
-        if (common_config_.getClientMaxBodySize() == -1) {
-            common_config_.setClientMaxBodySize(
-                http_common.getClientMaxBodySize());
-        }
-        if (!common_config_.isUploadStoreSet() &&
-            http_common.isUploadStoreSet()) {
-            common_config_.setUploadStore(http_common.getUploadStore());
-        }
-
-        if (common_config_.getIndexFiles().empty()) {
-            const std::vector<std::string>& parent_index =
-                http_common.getIndexFiles();
-            for (size_t i = 0; i < parent_index.size(); ++i) {
-                common_config_.addIndexFile(parent_index[i]);
-            }
-        }
-
-        if (common_config_.getErrorPages().empty()) {
-            std::map<int, ErrorPageDirective>::const_iterator it;
-            for (it = http_common.getErrorPages().begin();
-                 it != http_common.getErrorPages().end(); ++it) {
-                common_config_.addErrorPage(it->first, it->second);
-            }
-        }
-
-        // return は http
-        //今回は書かない。Nginxの設定思想に準じていないため
-
-        // 自分がhttpの設定を含んだ設定になったので、子であるlocation
-        // たちに設定を配る
-        for (size_t i = 0; i < locations_.size(); ++i) {
-            locations_[i].resolveDefaults(this->common_config_);
-        }
     }
 
     // Parserから呼ぶために、common_config_ のゲッターが必要なら追加
