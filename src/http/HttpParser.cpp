@@ -27,7 +27,9 @@ std::string::size_type HttpParser::request_line_parse(const std::string& buffer,
     std::string::size_type request_line_end = buffer.find(HTTP_LINE_END);
     std::string request_line = buffer.substr(0, request_line_end);
     std::vector<std::string> request_line_vec = ::split(request_line);
-    if (request_line_vec.size() != REQUEST_LINE_NUM) {
+    if (request_line_vec.size() != REQUEST_LINE_NUM ||
+        request_line_vec[0].empty() || request_line_vec[1].empty() ||
+        request_line_vec[2].empty()) {
         throw HttpException(HttpStatus::BadRequest,
                             HttpStatus::reason(HttpStatus::BadRequest));
     }
@@ -84,6 +86,10 @@ std::string::size_type HttpParser::header_section_parse(
          header_line != header_fields.end(); ++header_line) {
         std::vector<std::string> header_field = split(*header_line, COLON);
         if (header_field.size() < HEADER_FIELD_NUM) {
+            throw HttpException(HttpStatus::BadRequest,
+                                HttpStatus::reason(HttpStatus::BadRequest));
+        }
+        if (header_field[0].empty() || header_field[1].empty()) {
             throw HttpException(HttpStatus::BadRequest,
                                 HttpStatus::reason(HttpStatus::BadRequest));
         }

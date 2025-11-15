@@ -130,6 +130,16 @@ TEST(HttpRequestParse, InvalidRequestLineNotPath) {
     ASSERT_THROW(HttpParser::http_request_parse(req), HttpException);
 }
 
+TEST(HttpRequestParse, InvalidRequestLineNotPathWithSpace) {
+    std::string req = std::string("GET  HTTP/1.1") +
+                      HTTP_LINE_END +
+                      "Host: example.com:8080" + HTTP_LINE_END +
+                      HTTP_LINE_END;
+
+    ASSERT_TRUE(ClientHandler::is_request_ready(req));
+    ASSERT_THROW(HttpParser::http_request_parse(req), HttpException);
+}
+
 TEST(HttpRequestParse, InvalidRequestLineLowerMethod) {
     std::string req = std::string("get / HTTP/1.1") +
                       HTTP_LINE_END +
