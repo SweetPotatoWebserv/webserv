@@ -22,12 +22,13 @@ const char* const HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE =
     "client_max_body_size";
 const char* const HttpConfigParser::DIRECTIVE_ERROR_PAGE = "error_page";
 const char* const HttpConfigParser::DIRECTIVE_RETURN = "return";
-const char* const HttpConfigParser::DIRECTIVE_ALLOW_METHODS = "allow_methods";
 // parseListen
 const char* const HttpConfigParser::KEYWORD_DEFAULT_SERVER = "default_server";
-// directive keyword
+// location
+const char* const HttpConfigParser::DIRECTIVE_ALLOW_METHODS = "allow_methods";
 const char* const HttpConfigParser::DIRECTIVE_CGI_PATH = "cgi_path";
 const char* const HttpConfigParser::DIRECTIVE_CGI_EXTENSION = "cgi_extension";
+const char* const HttpConfigParser::DIRECTIVE_UPLOAD_STORE = "upload_store";
 // on,off->autoindex
 const char* const HttpConfigParser::VALUE_ON = "on";
 const char* const HttpConfigParser::VALUE_OFF = "off";
@@ -162,6 +163,11 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
         } else if (token == DIRECTIVE_RETURN) {
             ReturnDirective rd = parseReturn(tokens, index);
             http_common_config.setRedirect(rd);  // 上書き
+        } else if (
+            token ==
+            DIRECTIVE_UPLOAD_STORE) {  // 汎用パーサーを呼び出し、httpの共通設定に入れる
+            std::string path = parseStringDirective(tokens, index);
+            http_common_config.setUploadStore(path);
         } else {
             throw std::runtime_error(
                 "Error: Unknown directive in http block: " + token);
@@ -237,6 +243,9 @@ void HttpConfigParser::parserServer(HttpConfig& config,
         } else if (token == DIRECTIVE_RETURN) {
             ReturnDirective rd = parseReturn(tokens, index);
             server_config.setRedirect(rd);  // 上書き
+        } else if (token == DIRECTIVE_UPLOAD_STORE) {
+            std::string path = parseStringDirective(tokens, index);
+            server_config.setUploadStore(path);
         } else {
             //知らないディレクティブはエラー
             throw std::runtime_error(
@@ -275,10 +284,9 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
 
     //このロケーションの設定を保持する LocationConfig location_config(path);
     LocationConfig location_config;
-
     location_config.setPath(path);
-
     bool found_closing_brace = false;
+
     // BRACE_CLOSE が来るまでループ
     while (!HttpConfigParser::isEof(tokens, index)) {
         std::string token = HttpConfigParser::getNextToken(tokens, index);
@@ -287,51 +295,8 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
             found_closing_brace = true;
             break;
         }
-        if (token == DIRECTIVE_ROOT) {
-            std::string r = HttpConfigParser::parseRoot(tokens, index);
-            location_config.setRoot(r);
-        } else if (token == DIRECTIVE_INDEX) {
-            std::vector<std::string> files =
-                HttpConfigParser::parseIndex(tokens, index);
-            for (size_t i = 0; i < files.size(); ++i) {
-                location_config.addIndexFile(files[i]);
-            }
-        } else if (token == DIRECTIVE_AUTOINDEX) {
-            bool ai = HttpConfigParser::parseAutoindex(tokens, index);
-            location_config.setAutoindex(ai);
-        } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
-            off_t size =
-                HttpConfigParser::parseClientMaxBodySize(tokens, index);
-            location_config.setClientMaxBodySize(
-                size);  // (CommonConfig::setClientMaxBodySize セッター)
-        } else if (token == DIRECTIVE_ERROR_PAGE) {
-            ParsedErrorPage pep = parseErrorPage(tokens, index);
-            for (size_t i = 0; i < pep.status_codes.size(); ++i) {
-                location_config.addErrorPage(pep.status_codes[i],
-                                             pep.directive);
-            }
-        } else if (token == DIRECTIVE_RETURN) {
-            ReturnDirective rd = parseReturn(tokens, index);
-            location_config.setRedirect(rd);  // 上書き
-        } else if (token ==
-                   DIRECTIVE_ALLOW_METHODS) {  // allow_methods パーサー
-            std::vector<Method> methods = parseAllowedMethods(tokens, index);
-            for (size_t i = 0; i < methods.size();
-                 ++i) {  // 取得したメソッドのリストを config に登録
-                location_config.addAllowedMethod(methods[i]);
-            }
-        } else if (token == DIRECTIVE_CGI_PATH) {
-            std::string path = parseStringDirective(
-                tokens, index);  // 汎用パーサーを呼び出し、結果をセットする
-            location_config.setCgiPath(path);
-        } else if (token == DIRECTIVE_CGI_EXTENSION) {
-            std::string ext = parseStringDirective(tokens, index);
-            location_config.setCgiExtension(ext);
-        } else {
-            //知らないディレクティブはエラー
-            throw std::runtime_error(
-                "Error: Unknown directive in location block: " + token);
-        }
+
+        parseLocationDirective(token, location_config, tokens, index);
     }
     if (!found_closing_brace) {
         // ループを抜けたのに閉じ括弧が見つからなかった場合
@@ -340,6 +305,73 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
     }
     //完成した location_config を、引数の server_config に追加する
     server_config.addLocation(location_config);
+}
+
+//-----------------------------------------------------------
+//------------------Location directive parser----------------
+//-----------------------------------------------------------
+///@brief location ブロック内のディレクティブを1つパースする
+void HttpConfigParser::parseLocationDirective(
+    const std::string& token, LocationConfig& location_config,
+    const std::vector<std::string>& tokens, size_t& index) {
+    // ★ ここに、元々 parserLocation にあった if-else を貼り付ける
+
+    if (token == DIRECTIVE_ROOT) {
+        std::string r = HttpConfigParser::parseRoot(tokens, index);
+        location_config.setRoot(r);
+    } else if (token == DIRECTIVE_INDEX) {
+        std::vector<std::string> files =
+            HttpConfigParser::parseIndex(tokens, index);
+        for (size_t i = 0; i < files.size(); ++i) {
+            location_config.addIndexFile(files[i]);
+        }
+    } else if (token == DIRECTIVE_AUTOINDEX) {
+        bool ai = HttpConfigParser::parseAutoindex(tokens, index);
+        location_config.setAutoindex(ai);
+    } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
+        off_t size = HttpConfigParser::parseClientMaxBodySize(tokens, index);
+        location_config.setClientMaxBodySize(size);
+
+    } else if (token == DIRECTIVE_ERROR_PAGE) {
+        // ★★★ 修正点: 型名をフルネームで指定 ★★★
+        HttpConfigParser::ParsedErrorPage pep = parseErrorPage(tokens, index);
+        // ★ pep が定義されたので、エラーが消えるはず
+        for (size_t i = 0; i < pep.status_codes.size(); ++i) {
+            location_config.addErrorPage(pep.status_codes[i], pep.directive);
+        }
+
+        // ★★★ 修正点: return を else if で正しくつなぐ ★★★
+    } else if (token == DIRECTIVE_RETURN) {
+        ReturnDirective rd = parseReturn(tokens, index);
+        location_config.setRedirect(rd);
+
+        // ★★★ 修正点: allow_methods を else if で正しくつなぐ ★★★
+    } else if (token == DIRECTIVE_ALLOW_METHODS) {
+        std::vector<Method> methods = parseAllowedMethods(tokens, index);
+        for (size_t i = 0; i < methods.size(); ++i) {
+            location_config.addAllowedMethod(methods[i]);
+        }
+
+        // ★★★ 修正点: cgi_path を else if で正しくつなぐ ★★★
+    } else if (token == DIRECTIVE_CGI_PATH) {
+        std::string path = parseStringDirective(tokens, index);
+        location_config.setCgiPath(path);
+
+        // ★★★ 修正点: cgi_extension を else if で正しくつなぐ ★★★
+    } else if (token == DIRECTIVE_CGI_EXTENSION) {
+        std::string ext = parseStringDirective(tokens, index);
+        location_config.setCgiExtension(ext);
+
+        // ★★★ 修正点: upload_store を else if で正しくつなぐ ★★★
+    } else if (token == DIRECTIVE_UPLOAD_STORE) {
+        std::string path = parseStringDirective(tokens, index);
+        location_config.setUploadStore(path);
+
+    } else {
+        //知らないディレクティブはエラー
+        throw std::runtime_error(
+            "Error: unknown directive in location block: " + token);
+    }
 }
 
 //-----------------------------------------------------------------

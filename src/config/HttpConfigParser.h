@@ -56,6 +56,11 @@ class HttpConfigParser {
     static void parserLocation(ServerConfig& server_config,
                                const std::vector<std::string>& tokens,
                                size_t& index);
+    static void
+    parseLocationDirective(  // if
+                             // else分岐が多すぎるためそれを処理するヘルパー関数
+        const std::string& token, LocationConfig& location_config,
+        const std::vector<std::string>& tokens, size_t& index);
 
     ///@brief listen ディレクティブをパースする
     ///@return 完成した ListenDirective オブジェクト
@@ -108,7 +113,7 @@ class HttpConfigParser {
         const std::vector<std::string>& tokens, size_t& index);
 
     ///@brief 文字列を1つ読み取る汎用パーサー(cgi_path, cgi_extension,
-    ///upload_store などで使い回す)
+    /// upload_store などで使い回す)
     static std::string parseStringDirective(
         const std::vector<std::string>& tokens, size_t& index);
 
@@ -133,6 +138,7 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_ALLOW_METHODS;
     static const char* const DIRECTIVE_CGI_PATH;
     static const char* const DIRECTIVE_CGI_EXTENSION;
+    static const char* const DIRECTIVE_UPLOAD_STORE;
     // parserlisten defult
     static const char* const KEYWORD_DEFAULT_SERVER;
     // on,off

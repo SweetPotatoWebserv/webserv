@@ -124,6 +124,9 @@ class LocationConfig {
     void setRedirect(const ReturnDirective& ret) {
         common_config_.setRedirect(ret);
     }
+    void setUploadStore(const std::string& path) {
+        common_config_.setUploadStore(path);
+    }
 
     void addAllowedMethod(const Method& m) { allowed_methods_.push_back(m); }
     void setCgiPath(const std::string& p) { cgi_path_ = p; }
@@ -159,6 +162,9 @@ class ServerConfig {
     }
     void setRedirect(const ReturnDirective& ret) {
         common_config_.setRedirect(ret);
+    }
+    void setUploadStore(const std::string& path) {
+        common_config_.setUploadStore(path);
     }
 
     // Parserから呼ぶために、common_config_ のゲッターが必要なら追加
