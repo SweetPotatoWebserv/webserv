@@ -2,3 +2,4 @@
 webserv
 **/all_tests
 googletest
+cgi_test_runner
