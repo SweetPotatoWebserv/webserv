@@ -149,14 +149,6 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
 
     //読み取った http レベルの設定を、config 全体のデフォルトとして保存
     config.setDefaults(http_common_config);
-
-    //継承処理）
-    std::vector<ServerConfig>& servers = config.getServers();
-    const CommonConfig& http_common = config.getCommonConfig();
-
-    for (size_t i = 0; i < servers.size(); ++i) {
-        servers[i].resolveDefaults(http_common);
-    }
     return config;
 }
 
