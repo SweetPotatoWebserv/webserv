@@ -121,20 +121,27 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_CLIENT_MAX_BODY_SIZE;
     static const char* const DIRECTIVE_ERROR_PAGE;
     static const char* const DIRECTIVE_RETURN;
+    // parserlisten defult
+    static const char* const KEYWORD_DEFAULT_SERVER;
+    // on,off
+    static const char* const VALUE_ON;
+    static const char* const VALUE_OFF;
+    // ClientMaxBodySize
+    static const char SUFFIX_KILOBYTE;
+    static const char SUFFIX_MEGABYTE;
+    static const char SUFFIX_GIGABYTE;
 
     // マジックナンバー定数に
-    static const off_t BYTES_PER_KB;
-    static const off_t BYTES_PER_MB;
-    static const off_t BYTES_PER_GB;
+    static const off_t BYTES_PER_KB = 1024;
+    static const off_t BYTES_PER_MB = static_cast<off_t>(1024) * 1024;
+    static const off_t BYTES_PER_GB = static_cast<off_t>(1024) * 1024 * 1024;
 
-    // 最大値のポート番号を定数化
-    static const int MAX_PORT_NUMBER;
-    // error_page で使用するステータスコードの境界
-    static const int MIN_ERROR_STATUS_CODE;     // = 300
-    static const int MAX_ERROR_STATUS_CODE;     // = 599
-    static const int MIN_OVERRIDE_STATUS_CODE;  // = 200
-
-    // return で使用するステータスコードの境界 (0-999)
-    static const int MIN_RETURN_STATUS_CODE;
-    static const int MAX_RETURN_STATUS_CODE;
+    static const int MAX_PORT_NUMBER = 65535;
+    // error pageの範囲
+    static const int MIN_ERROR_STATUS_CODE = 300;
+    static const int MAX_ERROR_STATUS_CODE = 599;
+    static const int MIN_OVERRIDE_STATUS_CODE = 200;
+    // returnで使用するステータスコードの境界(0-999)
+    static const int MIN_RETURN_STATUS_CODE = 0;
+    static const int MAX_RETURN_STATUS_CODE = 999;
 };

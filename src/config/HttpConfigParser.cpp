@@ -22,23 +22,15 @@ const char* const HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE =
     "client_max_body_size";
 const char* const HttpConfigParser::DIRECTIVE_ERROR_PAGE = "error_page";
 const char* const HttpConfigParser::DIRECTIVE_RETURN = "return";
-
-//マジックナンバー定数に
-const off_t HttpConfigParser::BYTES_PER_KB = 1024;
-const off_t HttpConfigParser::BYTES_PER_MB = static_cast<off_t>(1024) * 1024;
-const off_t HttpConfigParser::BYTES_PER_GB =
-    static_cast<off_t>(1024) * 1024 * 1024;  // linter修正
-
-//最大値のポート番号
-const int HttpConfigParser::MAX_PORT_NUMBER = 65535;
-// error_page の範囲
-const int HttpConfigParser::MIN_ERROR_STATUS_CODE = 300;
-const int HttpConfigParser::MAX_ERROR_STATUS_CODE = 599;
-const int HttpConfigParser::MIN_OVERRIDE_STATUS_CODE = 200;
-
-// returnで使用するステータスコードの境界(0-999)
-const int HttpConfigParser::MIN_RETURN_STATUS_CODE = 0;
-const int HttpConfigParser::MAX_RETURN_STATUS_CODE = 999;
+// parseListen
+const char* const HttpConfigParser::KEYWORD_DEFAULT_SERVER = "default_server";
+// on,off->autoindex
+const char* const HttpConfigParser::VALUE_ON = "on";
+const char* const HttpConfigParser::VALUE_OFF = "off";
+// ClientMaxBodySize
+const char HttpConfigParser::SUFFIX_KILOBYTE = 'k';
+const char HttpConfigParser::SUFFIX_MEGABYTE = 'm';
+const char HttpConfigParser::SUFFIX_GIGABYTE = 'g';
 
 //終端に来たかどうか
 bool HttpConfigParser::isEof(const std::vector<std::string>& tokens,
@@ -176,16 +168,8 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
         throw std::runtime_error("Error: Expected '}' to close http block");
     }
 
-    // 5. 読み取った http レベルの設定を、config 全体のデフォルトとして保存
+    //読み取った http レベルの設定を、config 全体のデフォルトとして保存
     config.setDefaults(http_common_config);
-
-    //継承処理）
-    std::vector<ServerConfig>& servers = config.getServers();
-    const CommonConfig& http_common = config.getCommonConfig();
-
-    for (size_t i = 0; i < servers.size(); ++i) {
-        servers[i].resolveDefaults(http_common);
-    }
     return config;
 }
 
@@ -218,32 +202,26 @@ void HttpConfigParser::parserServer(HttpConfig& config,
             break;
         }
 
-        if (token == KEYWORD_LOCATION) {  // KEYWORD_LOCATION=="location"
-            //"location"を見つけたら、locationを呼び出す。
+        if (token ==
+            KEYWORD_LOCATION) {  // KEYWORD_LOCATION=="location"を見つけたら、locationを呼び出す。
             HttpConfigParser::parserLocation(server_config, tokens, index);
         } else if (token == DIRECTIVE_LISTEN) {  // DIRECTIVE_LISTEN=="listen"
-            // listen を呼び出し、結果をserver_configにセット
             ListenDirective ld = HttpConfigParser::parseListen(tokens, index);
-            server_config.setListen(ld);       //<- セッターが必要
+            server_config.setListen(ld);
         } else if (token == DIRECTIVE_ROOT) {  // DIRECTIVE_ROOT== "root"
-            // root を呼び出し、結果をserver_configにセット
             std::string r = HttpConfigParser::parseRoot(tokens, index);
-            server_config.setRoot(r);           //<- セッターが必要
+            server_config.setRoot(r);
         } else if (token == DIRECTIVE_INDEX) {  // DIRECTIVE_INDEX=="index"
-            // index を呼び出し、結果をserver_configにセット
             std::vector<std::string> files =
                 HttpConfigParser::parseIndex(tokens, index);
             for (size_t i = 0; i < files.size(); ++i) {
-                server_config.addIndexFile(files[i]);  //<- セッターが必要
+                server_config.addIndexFile(files[i]);
             }
         } else if (token ==
-                   DIRECTIVE_AUTOINDEX) {  // DIRECTIVE_AUTOINDEX==autoindex
-            // parseAutoindex 呼び出し、結果をserver_configにセット
+                   DIRECTIVE_AUTOINDEX) {  // DIRECTIVE_AUTOINDEX=="autoindex"
             bool ai = HttpConfigParser::parseAutoindex(tokens, index);
-            server_config.setAutoindex(ai);  //<- セッターが必要
+            server_config.setAutoindex(ai);
         } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
-            // ▼copilot
-            // DIRECTIVE_CLIENT_MAX_BODY_SIZE == "client_max_body_size"
             off_t size =
                 HttpConfigParser::parseClientMaxBodySize(tokens, index);
             server_config.setClientMaxBodySize(size);
@@ -265,8 +243,7 @@ void HttpConfigParser::parserServer(HttpConfig& config,
         throw std::runtime_error("Error: Expected '}' to close server block");
     }
 
-    //完成した server_config を config に追加//// (※ HttpConfig.h に public な
-    // addServer(ServerConfig s) セッターが必要)
+    //完成した server_config を config に追加
     config.addServerConfig(server_config);
 }
 
@@ -295,11 +272,9 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
     //このロケーションの設定を保持する LocationConfig location_config(path);
     LocationConfig location_config;
 
-    // (※ LocationConfig.h に public な setPath(std::string s)
-    // セッターが必要です)
     location_config.setPath(path);
 
-    bool found_closing_brace = false;  // ⇐追加copilot
+    bool found_closing_brace = false;
     // BRACE_CLOSE が来るまでループ
     while (!HttpConfigParser::isEof(tokens, index)) {
         std::string token = HttpConfigParser::getNextToken(tokens, index);
@@ -310,16 +285,16 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
         }
         if (token == DIRECTIVE_ROOT) {
             std::string r = HttpConfigParser::parseRoot(tokens, index);
-            location_config.setRoot(r);  //<- セッターが必要
+            location_config.setRoot(r);
         } else if (token == DIRECTIVE_INDEX) {
             std::vector<std::string> files =
                 HttpConfigParser::parseIndex(tokens, index);
             for (size_t i = 0; i < files.size(); ++i) {
-                location_config.addIndexFile(files[i]);  //<- セッターが必要
+                location_config.addIndexFile(files[i]);
             }
         } else if (token == DIRECTIVE_AUTOINDEX) {
             bool ai = HttpConfigParser::parseAutoindex(tokens, index);
-            location_config.setAutoindex(ai);  //<- セッターが必要
+            location_config.setAutoindex(ai);
         } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
             off_t size =
                 HttpConfigParser::parseClientMaxBodySize(tokens, index);
@@ -347,9 +322,7 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
         throw std::runtime_error(
             "Error: location block missing closing brace '}'");
     }
-    // 6. 完成した location_config を、引数の server_config に追加する
-    // (※ ServerConfig.h に public な addLocation(LocationConfig l)
-    // セッターが必要です)
+    //完成した location_config を、引数の server_config に追加する
     server_config.addLocation(location_config);
 }
 
@@ -384,10 +357,10 @@ bool HttpConfigParser::parseAutoindex(const std::vector<std::string>& tokens,
         throw std::runtime_error(
             "Error: Expected ';' after autoindex directive");
     }
-    if (value == "on") {
+    if (value == VALUE_ON) {
         return true;
     }
-    if (value == "off") {
+    if (value == VALUE_OFF) {
         return false;
     }
     throw std::runtime_error("Error: autoindex value must be 'on' or 'off'");
@@ -449,9 +422,6 @@ ListenDirective HttpConfigParser::parseListen(
     std::string value = HttpConfigParser::getNextToken(tokens, index);
     std::string::size_type colon_pos = value.find(':');
 
-    // ▼修正1: unsigned long -> uint64_t に変更 (google-runtime-int対応)
-    // 環境依存の long ではなく、確実に大きなサイズを確保できる uint64_t を使用
-    // copilot&linter
     uint64_t temp_port;
 
     if (colon_pos != std::string::npos) {
@@ -461,7 +431,6 @@ ListenDirective HttpConfigParser::parseListen(
 
         std::stringstream ss(port_str);
         if (!(ss >> temp_port) || !ss.eof()) {
-            // ▼修正8: エラーメッセージにコロンを追加copilot
             throw std::runtime_error("Error: Invalid port number in: " +
                                      port_str);
         }
@@ -474,15 +443,13 @@ ListenDirective HttpConfigParser::parseListen(
         std::stringstream ss(value);
 
         if (!(ss >> temp_port) || !ss.eof()) {
-            // ▼修正4: エラーメッセージを "Invalid port number + " から "Invalid
-            // port number: " に変更copilot
             throw std::runtime_error("Error: Invalid port number: " + value);
         }
         ld.port = HttpConfigParser::validateAndConvertPort(temp_port, value);
     }
 
     std::string next_token = HttpConfigParser::getNextToken(tokens, index);
-    if (next_token == "default_server") {
+    if (next_token == KEYWORD_DEFAULT_SERVER) {
         ld.is_default_server = true;
         next_token = HttpConfigParser::getNextToken(tokens, index);
     }
@@ -523,10 +490,10 @@ off_t HttpConfigParser::parseClientMaxBodySize(
     num_part = value.substr(0, i);
 
     if (i < value.size()) {
-        suffix = static_cast<char>(
-            std::tolower(value[i]));  // k, m, g のいずれか linter修正
+        suffix = static_cast<char>(std::tolower(value[i]));
         if (i + 1 != value.size() ||
-            (suffix != 'k' && suffix != 'm' && suffix != 'g')) {
+            (suffix != SUFFIX_KILOBYTE && suffix != SUFFIX_MEGABYTE &&
+             suffix != SUFFIX_GIGABYTE)) {
             throw std::runtime_error(
                 "Error: Invalid client_max_body_size value: " + value);
         }
@@ -539,26 +506,26 @@ off_t HttpConfigParser::parseClientMaxBodySize(
             "Error: Invalid number in client_max_body_size: " + num_part);
     }
 
-    // 5. サフィックスに基づいて乗算
+    // サフィックスに基づいて乗算
     //    (オーバーフローチェック。off_t の最大値 / 1024
     //    より大きい数に乗算すると危険)
     const off_t max_off_t = std::numeric_limits<off_t>::max();
 
-    if (suffix == 'k') {
+    if (suffix == SUFFIX_KILOBYTE) {
         // オーバーフローチェック: size > MAX / 1024
         if (size > max_off_t / BYTES_PER_KB) {
             throw std::runtime_error(
                 "Error: client_max_body_size (k) overflows");
         }
         size *= BYTES_PER_KB;
-    } else if (suffix == 'm') {
+    } else if (suffix == SUFFIX_MEGABYTE) {
         // オーバーフローチェック: size > MAX / (1024*1024)
         if (size > max_off_t / BYTES_PER_MB) {
             throw std::runtime_error(
                 "Error: client_max_body_size (m) overflows");
         }
         size *= BYTES_PER_MB;
-    } else if (suffix == 'g') {
+    } else if (suffix == SUFFIX_GIGABYTE) {
         // オーバーフローチェック: size > MAX / (1024*1024*1024)
         if (size > max_off_t / BYTES_PER_GB) {
             throw std::runtime_error(
