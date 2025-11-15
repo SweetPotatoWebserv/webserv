@@ -42,7 +42,7 @@ bool CgiProcess::run(const HttpRequest& request, HttpResponse& response) {
                              ((st.st_mode & S_IXOTH) != 0);
         if (!is_executable) {
             response.status_code_ = HttpStatus::Forbidden;
-            response.body_ = "CGI script is not executable (no 'x' bit set)";
+            response.body_ = "CGI script is not executable (no 'x' bit set).";
             return true;
         }
 
