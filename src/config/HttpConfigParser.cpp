@@ -155,9 +155,6 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
                 http_common_config.addErrorPage(pep.status_codes[i],
                                                 pep.directive);
             }
-        } else if (token == DIRECTIVE_RETURN) {
-            ReturnDirective rd = parseReturn(tokens, index);
-            http_common_config.setRedirect(rd);  // 上書き
         } else {
             throw std::runtime_error(
                 "Error: Unknown directive in http block: " + token);
