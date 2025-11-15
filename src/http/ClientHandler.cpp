@@ -83,7 +83,7 @@ void ClientHandler::on_readable() {  // NOLINT
     }
     buffer_.append(buf, len);
     if (ClientHandler::is_request_ready(buffer_)) {
-        // request_ = HttpParser::http_request_parse(buffer_);
+        request_ = HttpParser::http_request_parse(buffer_);
         // try {
         // } catch (const HttpException& e) {
         //     sendErrorResponse(e.status_code());

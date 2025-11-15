@@ -11,7 +11,15 @@ SRC_WITHOUT_MAIN = $(filter-out src/core/main.cpp,$(SRC))
 
 TEST_DIR = test
 # test 追加時は TEST_SRC に追加
-TEST_SRC = $(addprefix $(TEST_DIR)/, test_main.cpp test_split.cpp test_trim.cpp test_http_exception.cpp test_mime_types.cpp test_is_request_ready.cpp test_search_header_field.cpp)
+TEST_SRC = $(addprefix $(TEST_DIR)/, test_main.cpp \
+            test_is_request_ready.cpp \
+            test_split.cpp \
+            test_trim.cpp \
+            test_search_header_field.cpp \
+            test_http_request_parse.cpp \
+            test_http_exception.cpp \
+            test_mime_types.cpp \
+            )
 
 HEADERS = # you can add *.h files here
 
