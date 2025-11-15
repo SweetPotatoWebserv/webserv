@@ -103,6 +103,10 @@ class HttpConfigParser {
     static ReturnDirective parseReturn(const std::vector<std::string>& tokens,
                                        size_t& index);
 
+    ///@brief allow_methodsディレクティブのパース
+    static std::vector<Method> parseAllowedMethods(
+        const std::vector<std::string>& tokens, size_t& index);
+
     // 特殊文字リスト（トークン分割用）構文解析用
     static const char* const SPECIAL_CHARS;
     static const char HASH_CHAR;
@@ -121,6 +125,7 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_CLIENT_MAX_BODY_SIZE;
     static const char* const DIRECTIVE_ERROR_PAGE;
     static const char* const DIRECTIVE_RETURN;
+    static const char* const DIRECTIVE_ALLOW_METHODS;
     // parserlisten defult
     static const char* const KEYWORD_DEFAULT_SERVER;
     // on,off

@@ -22,6 +22,7 @@ const char* const HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE =
     "client_max_body_size";
 const char* const HttpConfigParser::DIRECTIVE_ERROR_PAGE = "error_page";
 const char* const HttpConfigParser::DIRECTIVE_RETURN = "return";
+const char* const HttpConfigParser::DIRECTIVE_ALLOW_METHODS = "allow_methods";
 // parseListen
 const char* const HttpConfigParser::KEYWORD_DEFAULT_SERVER = "default_server";
 // on,off->autoindex
@@ -309,9 +310,14 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
         } else if (token == DIRECTIVE_RETURN) {
             ReturnDirective rd = parseReturn(tokens, index);
             location_config.setRedirect(rd);  // 上書き
-        }
-        // error_page, return,などのディレクティブのパース処理を追加予定???
-        else {
+        } else if (token ==
+                   DIRECTIVE_ALLOW_METHODS) {  // allow_methods パーサー
+            std::vector<Method> methods = parseAllowedMethods(tokens, index);
+            for (size_t i = 0; i < methods.size();
+                 ++i) {  // 取得したメソッドのリストを config に登録
+                location_config.addAllowedMethod(methods[i]);
+            }
+        } else {
             //知らないディレクティブはエラー
             throw std::runtime_error(
                 "Error: Unknown directive in location block: " + token);
@@ -688,4 +694,45 @@ ReturnDirective HttpConfigParser::parseReturn(
     }
 
     return rd;
+}
+
+//-----------------------------------------------------------------
+//------------------allow_methodsディレクティブパーサー------------
+//-----------------------------------------------------------------
+///@brief "allow_methods" ディレクティブをパースする
+//@return 許可された Method のリスト
+std::vector<Method> HttpConfigParser::parseAllowedMethods(
+    const std::vector<std::string>& tokens, size_t& index) {
+    std::vector<Method> methods;
+
+    // セミコロンが来るまでトークンを読み続ける
+    while (!isEof(tokens, index)) {
+        std::string token = getNextToken(tokens, index);
+        if (token == SEMICOLON) {
+            break;  // ループ終了
+        }
+
+        // 文字列を Method enum に変換
+        if (token == "GET") {
+            methods.push_back(MethodGET);
+        } else if (token == "POST") {
+            methods.push_back(MethodPOST);
+        } else if (token == "DELETE") {
+            methods.push_back(MethodDELETE);
+        } else if (token == "HEAD") {
+            methods.push_back(MethodHEAD);
+        } else {
+            // "GET", "POST", "DELETE", "HEAD" 以外はエラー
+            throw std::runtime_error(
+                "Error: Unknown method in allow_methods: " + token);
+        }
+    }
+
+    // 1つもメソッドが指定されていなかったらエラー
+    if (methods.empty()) {
+        throw std::runtime_error(
+            "Error: allow_methods requires at least one method");
+    }
+
+    return methods;
 }
