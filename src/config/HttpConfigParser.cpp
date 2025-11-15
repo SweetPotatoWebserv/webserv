@@ -161,9 +161,6 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
                 http_common_config.addErrorPage(pep.status_codes[i],
                                                 pep.directive);
             }
-        } else if (token == DIRECTIVE_RETURN) {
-            ReturnDirective rd = parseReturn(tokens, index);
-            http_common_config.setRedirect(rd);  // 上書き
         } else if (
             token ==
             DIRECTIVE_UPLOAD_STORE) {  // 汎用パーサーを呼び出し、httpの共通設定に入れる
