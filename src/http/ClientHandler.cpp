@@ -20,9 +20,13 @@ ClientHandler::ClientHandler(int fd, Event& event, Router& router)
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
     static_cast<void>(fd);
     ClientHandler* handler = static_cast<ClientHandler*>(self);
-    if (event & EPOLLIN) handler->on_readable();
-    if (event & EPOLLOUT) handler->on_writable();
-    if (event & (EPOLLHUP | EPOLLERR)) handler->on_close();
+    if (event & (EPOLLHUP | EPOLLERR)) {
+        handler->on_close();
+    } else if (event & EPOLLIN) {
+        handler->on_readable();
+    } else if (event & EPOLLOUT) {
+        handler->on_writable();
+    }
 }
 
 void ClientHandler::on_close() {

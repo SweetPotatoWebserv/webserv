@@ -26,10 +26,10 @@ class Router {
    private:
     HttpResponse render_error(int status_code,
                               const std::string& error_page = "");
-    ResolveConfig resolve_config(const ServerConfig* server,
-                                 const LocationConfig* location) const;
-    const ServerConfig* find_server(const HttpRequest& request);
-    static const LocationConfig* find_location(const ServerConfig& server,
+    ResolveConfig resolve_config(const ServerConfig& server,
+                                 const LocationConfig& location) const;
+    const ServerConfig& find_server(const HttpRequest& request);
+    static const LocationConfig& find_location(const ServerConfig& server,
                                                const HttpRequest& request);
     ResolveConfig resolve_;
     HttpConfig config_;
