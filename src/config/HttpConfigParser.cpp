@@ -109,13 +109,13 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
             "Error: Expected 'http' block at the beginning");
     }
 
-    // 3. 次のトークンが "{" であることを確認
+    // 次のトークンが "{" であることを確認
     if (isEof(tokens, index) ||
         getNextToken(tokens, index) != BRACE_OPEN) {  //{
         throw std::runtime_error("Error: Expected '{' after http directive");
     }
 
-    // 4. http ブロックの中身をパース
+    // http ブロックの中身をパース
     CommonConfig http_common_config;  // httpレベルの共通設定をここに溜める
     bool found_closing_brace = false;
 
@@ -132,28 +132,10 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
             // "server" が来たら、parserServer に任せる
             // (※ parserServerの中で config.addServerConfig される)
             HttpConfigParser::parserServer(config, tokens, index);
-        } else if (token == DIRECTIVE_ROOT) {  // --- ↓↓ http
-                                               // レベルのディレクティブ↓↓ ---
-            std::string r = parseRoot(tokens, index);
-            http_common_config.setRoot(r);
-        } else if (token == DIRECTIVE_INDEX) {
-            std::vector<std::string> files = parseIndex(tokens, index);
-            for (size_t i = 0; i < files.size(); ++i) {
-                http_common_config.addIndexFile(files[i]);
-            }
-        } else if (token == DIRECTIVE_AUTOINDEX) {
-            bool ai = parseAutoindex(tokens, index);
-            http_common_config.setAutoindex(ai);
-        } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
-            off_t size = parseClientMaxBodySize(tokens, index);
-            http_common_config.setClientMaxBodySize(size);
-        } else if (token == DIRECTIVE_ERROR_PAGE) {
-            ParsedErrorPage pep = parseErrorPage(tokens, index);
-            // 取得した全てのステータスコードについて、map に登録
-            for (size_t i = 0; i < pep.status_codes.size(); ++i) {
-                http_common_config.addErrorPage(pep.status_codes[i],
-                                                pep.directive);
-            }
+        } else if (HttpConfigParser::parseCommonDirective(
+                       http_common_config, token, tokens, index)) {
+            continue;
+
         } else {
             throw std::runtime_error(
                 "Error: Unknown directive in http block: " + token);
@@ -204,28 +186,9 @@ void HttpConfigParser::parserServer(HttpConfig& config,
         } else if (token == DIRECTIVE_LISTEN) {  // DIRECTIVE_LISTEN=="listen"
             ListenDirective ld = HttpConfigParser::parseListen(tokens, index);
             server_config.setListen(ld);
-        } else if (token == DIRECTIVE_ROOT) {  // DIRECTIVE_ROOT== "root"
-            std::string r = HttpConfigParser::parseRoot(tokens, index);
-            server_config.setRoot(r);
-        } else if (token == DIRECTIVE_INDEX) {  // DIRECTIVE_INDEX=="index"
-            std::vector<std::string> files =
-                HttpConfigParser::parseIndex(tokens, index);
-            for (size_t i = 0; i < files.size(); ++i) {
-                server_config.addIndexFile(files[i]);
-            }
-        } else if (token ==
-                   DIRECTIVE_AUTOINDEX) {  // DIRECTIVE_AUTOINDEX=="autoindex"
-            bool ai = HttpConfigParser::parseAutoindex(tokens, index);
-            server_config.setAutoindex(ai);
-        } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
-            off_t size =
-                HttpConfigParser::parseClientMaxBodySize(tokens, index);
-            server_config.setClientMaxBodySize(size);
-        } else if (token == DIRECTIVE_ERROR_PAGE) {
-            ParsedErrorPage pep = parseErrorPage(tokens, index);
-            for (size_t i = 0; i < pep.status_codes.size(); ++i) {
-                server_config.addErrorPage(pep.status_codes[i], pep.directive);
-            }
+        } else if (HttpConfigParser::parseCommonDirective(server_config, token,
+                                                          tokens, index)) {
+            continue;
         } else {
             //知らないディレクティブはエラー
             throw std::runtime_error(
@@ -276,34 +239,13 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
             found_closing_brace = true;
             break;
         }
-        if (token == DIRECTIVE_ROOT) {
-            std::string r = HttpConfigParser::parseRoot(tokens, index);
-            location_config.setRoot(r);
-        } else if (token == DIRECTIVE_INDEX) {
-            std::vector<std::string> files =
-                HttpConfigParser::parseIndex(tokens, index);
-            for (size_t i = 0; i < files.size(); ++i) {
-                location_config.addIndexFile(files[i]);
-            }
-        } else if (token == DIRECTIVE_AUTOINDEX) {
-            bool ai = HttpConfigParser::parseAutoindex(tokens, index);
-            location_config.setAutoindex(ai);
-        } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
-            off_t size =
-                HttpConfigParser::parseClientMaxBodySize(tokens, index);
-            location_config.setClientMaxBodySize(
-                size);  // (CommonConfig::setClientMaxBodySize セッター)
-        } else if (token == DIRECTIVE_ERROR_PAGE) {
-            ParsedErrorPage pep = parseErrorPage(tokens, index);
-            for (size_t i = 0; i < pep.status_codes.size(); ++i) {
-                location_config.addErrorPage(pep.status_codes[i],
-                                             pep.directive);
-            }
-        } else {
-            //知らないディレクティブはエラー
-            throw std::runtime_error(
-                "Error: Unknown directive in location block: " + token);
+        if (HttpConfigParser::parseCommonDirective(location_config, token,
+                                                   tokens, index)) {
+            continue;
         }
+        //知らないディレクティブはエラー
+        throw std::runtime_error(
+            "Error: Unknown directive in location block: " + token);
     }
     if (!found_closing_brace) {
         // ループを抜けたのに閉じ括弧が見つからなかった場合
