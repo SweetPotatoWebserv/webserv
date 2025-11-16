@@ -42,18 +42,10 @@ typedef struct ListenDirective {
 } ListenDirective;
 
 struct CommonConfig {
-    bool root_is_set_;
     std::string root_;
-
-    bool autoindex_is_set_;
     bool autoindex_;
-
-    bool upload_store_is_set_;  // 自動的にis_setを設定するためprivate管理
     std::string upload_store_;
-
     ReturnDirective redirect_;
-    bool redirect_is_set_;
-
     off_t client_max_body_size_;
     std::map<int, ErrorPageDirective> error_page_;
     std::vector<std::string> index_files_;
