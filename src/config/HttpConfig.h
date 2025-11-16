@@ -42,63 +42,10 @@ typedef struct ListenDirective {
 } ListenDirective;
 
 struct CommonConfig {
-    //
-    //  // ---setter---
-    //  void setRoot(const std::string& path) {
-    //      root_ = path;
-    //      root_is_set_ = true;  // root が設定されたことを記録
-    //  }
-    //  void setAutoindex(bool on) {
-    //      autoindex_ = on;
-    //      autoindex_is_set_ = true;
-    //  }
-    //  void setUploadStore(const std::string& store_path_) {
-    //      upload_store_ = store_path_;
-    //      upload_store_is_set_ = true;
-    //  }
-    //  void setRedirect(const ReturnDirective& ret) {
-    //      redirect_ = ret;
-    //      redirect_is_set_ = true;
-    //  }
-    //  void addErrorPage(int status, const ErrorPageDirective& ep) {
-    //      error_page_[status] = ep;
-    //  }
-    //  void setClientMaxBodySize(off_t size) { client_max_body_size_ = size; }
-    //  void addIndexFile(const std::string& file) {
-    //  index_files_.push_back(file); }
-    //
-    //  bool isRootSet() const { return root_is_set_; }
-    //  const std::string& getRoot() const { return root_; }
-    //
-    //  bool isAutoindexSet() const { return autoindex_is_set_; }
-    //  bool getAutoindex() const { return autoindex_; }
-    //
-    //  bool isUploadStoreSet() const { return upload_store_is_set_; }
-    //  const std::string& getUploadStore() const { return upload_store_; }
-    //
-    //  bool isRedirectSet() const { return redirect_is_set_; }
-    //  const ReturnDirective& getRedirect() const { return redirect_; }
-    //
-    //  off_t getClientMaxBodySize() const { return client_max_body_size_; }
-    //  const std::map<int, ErrorPageDirective>& getErrorPages() const {
-    //      return error_page_;
-    //  }
-    //  const std::vector<std::string>& getIndexFiles() const {
-    //      return index_files_;
-    //  }
-
-    bool root_is_set_;
     std::string root_;
-
-    bool autoindex_is_set_;
     bool autoindex_;
-
-    bool upload_store_is_set_;  // 自動的にis_setを設定するためprivate管理
     std::string upload_store_;
-
     ReturnDirective redirect_;
-    bool redirect_is_set_;
-
     off_t client_max_body_size_;
     std::map<int, ErrorPageDirective> error_page_;
     std::vector<std::string> index_files_;
@@ -121,7 +68,7 @@ class LocationConfig {
     void setCgiPath(const std::string& p) { cgi_path_ = p; }
     void setCgiExtension(const std::string& e) { cgi_extension_ = e; }
     const CommonConfig& getCommonConfig() const { return common_config_; }
-    const std::vector<Method>& getAllowdMethods() const {
+    const std::vector<Method>& getAllowedMethods() const {
         return allowed_methods_;
     }
     const std::string& getCgiPath() const { return cgi_path_; }
@@ -180,9 +127,7 @@ class HttpConfig {
     void setDefaults(const CommonConfig& c) { common_config_ = c; }
     // parserが使うため追加
     const CommonConfig& getCommonConfig() const { return common_config_; }
-    const std::vector<ServerConfig>& getservers() const {
-        return servers_;
-    }  // non-const参照 (中身を書き換えるため)
+    const std::vector<ServerConfig>& getservers() const { return servers_; }
 
    private:
     std::vector<ServerConfig> servers_;

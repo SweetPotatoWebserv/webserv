@@ -45,8 +45,8 @@ ResolveConfig ResolveConfig::resolve_config(
         resolve.index_files_ = location.getCommonConfig().index_files_;
     if (!location.getCommonConfig().upload_store_.empty())
         resolve.upload_store_ = location.getCommonConfig().upload_store_;
-    if (!location.getAllowdMethods().empty())
-        resolve.allowed_methods_ = location.getAllowdMethods();
+    if (!location.getAllowedMethods().empty())
+        resolve.allowed_methods_ = location.getAllowedMethods();
     if (!location.getCgiPath().empty())
         resolve.cgi_path_ = location.getCgiPath();
     if (!location.getCgiExtension().empty())
