@@ -76,7 +76,7 @@ class LocationConfig {
     void setCgiPath(const std::string& p) { cgi_path_ = p; }
     void setCgiExtension(const std::string& e) { cgi_extension_ = e; }
     const CommonConfig& getCommonConfig() const { return common_config_; }
-    const std::vector<Method>& getAllowdMethods() const {
+    const std::vector<Method>& getAllowedMethods() const {
         return allowed_methods_;
     }
     const std::string& getCgiPath() const { return cgi_path_; }
