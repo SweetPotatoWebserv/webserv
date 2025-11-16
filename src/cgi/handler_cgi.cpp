@@ -30,6 +30,9 @@ bool CgiProcess::validateCgiScript(const std::string& script_path,
         return false;
     }
 
+    // ファイルのパーミッション(st_mode)から、
+    // ユーザー(S_IXUSR)、グループ(S_IXGRP)、その他(S_IXOTH)の
+    // いずれかに実行権限('x'ビット)があるかを確認する。
     bool is_executable = ((st.st_mode & S_IXUSR) != 0) ||
                          ((st.st_mode & S_IXGRP) != 0) ||
                          ((st.st_mode & S_IXOTH) != 0);
