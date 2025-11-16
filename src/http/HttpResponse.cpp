@@ -7,8 +7,7 @@ ssize_t HttpResponse::send_response(int client_fd, HttpResponse& response) {
 
     oss << HTTP_VERSION << " " << response.status_code_ << " "
         << response.message_ << "\r\n";
-    // if (response.date_.to_string().size()) // NOLINT
-    //     oss << "Date: " << response.date_.to_string() << "\r\n";
+    oss << "Date: " << HttpDate::getCurrentGMT() << "\r\n";
     if (!response.header_.content_type_.empty())  // NOLINT
         oss << "Content-Type: " << response.header_.content_type_ << "\r\n";
 
@@ -49,8 +48,6 @@ void HttpResponse::clear() {
     header_.content_type_ = "";
     header_.transfer_encoding_ = "";
     location_ = "";
-    // date clear
-    // date_ = "";
 }
 
 HttpResponse HttpResponse::render_default_error_page(int status_code) {

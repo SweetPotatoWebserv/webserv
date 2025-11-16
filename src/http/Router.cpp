@@ -76,11 +76,11 @@ HttpResponse Router::create_response(
                                           resolve_.error_page_, server);
     }
 
-    if (std::find(resolve_.allowed_methods_.begin(),
-                  resolve_.allowed_methods_.end(),
-                  request.method_) == resolve_.allowed_methods_.end())
-        return HttpResponse::render_error(HttpStatus::MethodNotAllowed,
-                                          resolve_.error_page_, server);
+    // if (std::find(resolve_.allowed_methods_.begin(),
+    //               resolve_.allowed_methods_.end(),
+    //               request.method_) == resolve_.allowed_methods_.end())
+    //     return HttpResponse::render_error(HttpStatus::MethodNotAllowed,
+    //                                       resolve_.error_page_, server);
 
     std::string path_name;
     for (std::vector<std::string>::const_iterator index_files =
