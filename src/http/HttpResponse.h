@@ -9,7 +9,5 @@ struct HttpResponse {
     std::string location_;
     std::string body_;
     std::string version_;
-    void clear();
     static ssize_t send_response(int client_fd, HttpResponse& response);
-    static HttpResponse render_default_error_page(int status_code);
 };
