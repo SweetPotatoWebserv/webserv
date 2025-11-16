@@ -1,4 +1,5 @@
 #pragma once
+#include "../config/HttpConfig.h"
 #include "HttpDate.h"
 #include "HttpParser.h"
 
@@ -10,5 +11,10 @@ struct HttpResponse {
     std::string location_;
     std::string body_;
     std::string version_;
+    void clear();
     static ssize_t send_response(int client_fd, HttpResponse& response);
+    static HttpResponse render_default_error_page(int status_code);
+    static HttpResponse render_error(
+        int status_code, const std::map<int, ErrorPageDirective>& error_pages,
+        const ServerConfig& servers);
 };
