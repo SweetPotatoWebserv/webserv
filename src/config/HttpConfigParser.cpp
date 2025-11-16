@@ -475,7 +475,7 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
     ParsedErrorPage pep;
     std::string token;
 
-    // 1. ステータスコードを読み込む (数値が続く限り)
+    // ステータスコードを読み込む (数値が続く限り)
     while (!isEof(tokens, index)) {
         token = getNextToken(tokens, index);
 
@@ -508,14 +508,13 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
             "Error: Expected status code(s) for error_page");
     }
 
-    // 2. オプションの '=' (ステータスコード上書き) をチェック
+    // オプションの '=' (ステータスコード上書き) をチェック
     if (token == "=") {
         if (isEof(tokens, index)) {
             throw std::runtime_error(
                 "Error: Expected new status code after '=' in error_page");
         }
-        token =
-            getNextToken(tokens, index);  // 新しいステータスコード (例: "200")
+        token = getNextToken(tokens, index);
 
         std::stringstream ss(token);
         if (!(ss >> pep.directive.override_status) || !ss.eof() ||
@@ -556,7 +555,7 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
         pep.directive.target = token;  // 検証OK
     }
 
-    // 3. 最後にセミコロンがあるか確認
+    //最後にセミコロンがあるか確認
     if (getNextToken(tokens, index) != SEMICOLON) {
         throw std::runtime_error(
             "Error: Expected ';' after error_page directive");

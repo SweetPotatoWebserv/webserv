@@ -109,7 +109,6 @@ class ServerConfig {
         return server_names_;
     }
     void addErrorPage(int status, const ErrorPageDirective& ep) {
-        //修正: structのmapに直接アクセス
         common_config_.error_page_[status] = ep;
     }
 
@@ -132,7 +131,6 @@ class HttpConfig {
     // ---setter---
     // (パーサーが addServerConfig と呼んでいるため名前を合わせる)
     void addServerConfig(const ServerConfig& s) { servers_.push_back(s); }
-    //修正:setDefaultsは不要になるが、
     // parseCommonDirectiveテンプレートから呼ばれるため、
     // 共通設定用のセッター群をすべてここに追加する。
     void setRoot(const std::string& r) { common_config_.root_ = r; }
