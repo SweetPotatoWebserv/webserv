@@ -20,4 +20,13 @@ struct ResolveConfig {
     static ResolveConfig resolve_config(const HttpConfig& http,
                                         const ServerConfig& server,
                                         const LocationConfig& location);
+    template <typename T>
+    static void merge_error_pages(ResolveConfig& target, T source) {
+        for (std::map<int, ErrorPageDirective>::const_iterator error_page =
+                 source.getCommonConfig().error_page_.begin();
+             error_page != source.getCommonConfig().error_page_.end();
+             ++error_page) {
+            target.error_page_[error_page->first] = error_page->second;
+        }
+    }
 };

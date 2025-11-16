@@ -21,7 +21,7 @@ ResolveConfig ResolveConfig::resolve_config(  // NOLINT
     if (http.getCommonConfig().autoindex_.is_set_)
         resolve.autoindex_ = http.getCommonConfig().autoindex_;
     if (!http.getCommonConfig().error_page_.empty())
-        resolve.error_page_ = http.getCommonConfig().error_page_;
+        merge_error_pages(resolve, http);
     if (!http.getCommonConfig().index_files_.empty())
         resolve.index_files_ = http.getCommonConfig().index_files_;
 
@@ -38,7 +38,7 @@ ResolveConfig ResolveConfig::resolve_config(  // NOLINT
     if (server.getCommonConfig().autoindex_.is_set_)
         resolve.autoindex_ = server.getCommonConfig().autoindex_;
     if (!server.getCommonConfig().error_page_.empty())
-        resolve.error_page_ = server.getCommonConfig().error_page_;
+        merge_error_pages(resolve, server);
     if (!server.getCommonConfig().index_files_.empty())
         resolve.index_files_ = server.getCommonConfig().index_files_;
     if (!server.getListens().address.empty())
@@ -60,7 +60,7 @@ ResolveConfig ResolveConfig::resolve_config(  // NOLINT
     if (location.getCommonConfig().autoindex_.is_set_)
         resolve.autoindex_ = location.getCommonConfig().autoindex_;
     if (!location.getCommonConfig().error_page_.empty())
-        resolve.error_page_ = location.getCommonConfig().error_page_;
+        merge_error_pages(resolve, location);
     if (!location.getCommonConfig().index_files_.empty())
         resolve.index_files_ = location.getCommonConfig().index_files_;
     if (!location.getAllowedMethods().empty())
