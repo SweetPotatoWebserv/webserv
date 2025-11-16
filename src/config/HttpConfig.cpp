@@ -1,7 +1,5 @@
 #include "HttpConfig.h"
 
-const int CommonConfig::INVALID_NUM;
-
 CommonConfig::CommonConfig()
     : client_max_body_size_(CommonConfig::INVALID_NUM) {}
 AutoIndexDirective::AutoIndexDirective() : is_set_(false), value_(false) {}

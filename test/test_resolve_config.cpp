@@ -6,17 +6,17 @@
 
 // Helpers to construct directives
 static CommonConfig make_http_common(
-    off_t body = CommonConfig::INVALID_NUM,
+    off_t body = -1,
     const char* root = NULL,
     bool autoindex_set = false,
     bool autoindex_value = false,
     const char* upload_store = NULL,
-    int redirect_status = CommonConfig::INVALID_NUM,
+    int redirect_status = -1,
     const char* redirect_target = NULL,
     const std::vector<std::pair<int, std::pair<std::string, int> > >& error_pages = std::vector<std::pair<int, std::pair<std::string, int> > >(),
     const std::vector<std::string>& index_files = std::vector<std::string>()) {
     CommonConfig cc;
-    if (body != CommonConfig::INVALID_NUM) cc.client_max_body_size_ = body;
+    if (body != -1) cc.client_max_body_size_ = body;
     if (root) {
         cc.root_.value_ = root;
         cc.root_.is_set_ = true;
@@ -29,7 +29,7 @@ static CommonConfig make_http_common(
         cc.upload_store_.is_set_ = true;
         cc.upload_store_.value_ = upload_store;
     }
-    if (redirect_status != CommonConfig::INVALID_NUM) {
+    if (redirect_status != -1) {
         cc.redirect_.status = redirect_status;
         if (redirect_target) cc.redirect_.target = redirect_target;
     }
@@ -55,8 +55,8 @@ TEST(ResolveConfigTest, DefaultResolution_NoValuesSet) {
 
     ResolveConfig r = ResolveConfig::resolve_config(http, server, location);
 
-    EXPECT_EQ(r.client_max_body_size_, CommonConfig::INVALID_NUM);
-    EXPECT_EQ(r.redirect_.status, CommonConfig::INVALID_NUM);
+    EXPECT_EQ(r.client_max_body_size_, -1);
+    EXPECT_EQ(r.redirect_.status, -1);
     EXPECT_FALSE(r.root_.is_set_);
     EXPECT_FALSE(r.upload_store_.is_set_);
     EXPECT_FALSE(r.autoindex_.is_set_);
@@ -81,7 +81,7 @@ TEST(ResolveConfigTest, HttpLevelOnly_PopulatesFields) {
         301, "/moved",
         std::vector<std::pair<int, std::pair<std::string, int> > >{
             std::make_pair(404, std::make_pair(std::string("/404.html"), 200)),
-            std::make_pair(500, std::make_pair(std::string("/50x.html"), CommonConfig::INVALID_NUM))},
+            std::make_pair(500, std::make_pair(std::string("/50x.html"), -1))},
         std::vector<std::string>{"index.html", "index.htm"}
     );
 
@@ -108,7 +108,7 @@ TEST(ResolveConfigTest, HttpLevelOnly_PopulatesFields) {
     EXPECT_EQ(r.error_page_[404].target, std::string("/404.html"));
     EXPECT_EQ(r.error_page_[404].override_status, 200);
     EXPECT_EQ(r.error_page_[500].target, std::string("/50x.html"));
-    EXPECT_EQ(r.error_page_[500].override_status, CommonConfig::INVALID_NUM);
+    EXPECT_EQ(r.error_page_[500].override_status, -1);
 
     // Server-derived fields
     EXPECT_EQ(r.listens_.address, std::string(DEFAULT_ADDRESS));
@@ -120,7 +120,7 @@ TEST(ResolveConfigTest, ServerOverridesHttp_AndProvidesServerFields) {
     // http-level base
     HttpConfig http;
     http.setDefaults(make_http_common(100, "/h-root", true, true, NULL,
-                                      CommonConfig::INVALID_NUM, NULL));
+                                      -1, NULL));
 
     // server overrides common and sets listen + names
     ServerConfig server;
@@ -219,10 +219,10 @@ TEST(ResolveConfigTest, HttpOnlyDirectivesRemainWhenNoOverrides) {
     // Set http-only directives: upload_store, error_page, redirect
     std::vector<std::pair<int, std::pair<std::string, int> > > eps;
     eps.push_back(std::make_pair(404, std::make_pair(std::string("/custom404.html"), 200)));
-    eps.push_back(std::make_pair(403, std::make_pair(std::string("/403.html"), CommonConfig::INVALID_NUM)));
+    eps.push_back(std::make_pair(403, std::make_pair(std::string("/403.html"), -1)));
 
     HttpConfig http;
-    http.setDefaults(make_http_common(CommonConfig::INVALID_NUM, NULL, false, false,
+    http.setDefaults(make_http_common(-1, NULL, false, false,
                                       "/uploads",
                                       301, "/moved", eps));
 
@@ -239,6 +239,40 @@ TEST(ResolveConfigTest, HttpOnlyDirectivesRemainWhenNoOverrides) {
     EXPECT_EQ(r.error_page_[404].target, std::string("/custom404.html"));
     EXPECT_EQ(r.error_page_[404].override_status, 200);
     EXPECT_EQ(r.error_page_[403].target, std::string("/403.html"));
-    EXPECT_EQ(r.error_page_[403].override_status, CommonConfig::INVALID_NUM);
+    EXPECT_EQ(r.error_page_[403].override_status, -1);
 }
 
+TEST(ResolveConfigTest, MergeErrorPages_HttpAndServer) {
+    // http: error_page 400 /400
+    std::vector<std::pair<int, std::pair<std::string, int> > > http_eps;
+    http_eps.push_back(
+        std::make_pair(400, std::make_pair(std::string("/400"), -1)));
+
+    HttpConfig http;
+    http.setDefaults(make_http_common(-1, NULL, false, false,
+                                      NULL,
+                                      -1, NULL, http_eps));
+
+    // server: error_page 300 /300 (inject via const_cast inside test)
+    ServerConfig server;
+    {
+        CommonConfig& scc = const_cast<CommonConfig&>(server.getCommonConfig());
+        ErrorPageDirective ep;
+        ep.target = "/300";
+        ep.override_status = -1;
+        scc.error_page_[300] = ep;
+    }
+
+    LocationConfig location;  // no location overrides
+
+    ResolveConfig r = ResolveConfig::resolve_config(http, server, location);
+
+    // Expect both entries to be present and preserved
+    ASSERT_EQ(r.error_page_.size(), static_cast<size_t>(2));
+    ASSERT_TRUE(r.error_page_.count(400));
+    EXPECT_EQ(r.error_page_[400].target, std::string("/400"));
+    EXPECT_EQ(r.error_page_[400].override_status, -1);
+    ASSERT_TRUE(r.error_page_.count(300));
+    EXPECT_EQ(r.error_page_[300].target, std::string("/300"));
+    EXPECT_EQ(r.error_page_[300].override_status, -1);
+}
