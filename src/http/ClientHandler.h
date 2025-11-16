@@ -1,7 +1,6 @@
 #pragma once
 #include "../event/Event.h"
 #include "HttpParser.h"
-#include "HttpResponse.h"
 #include "Router.h"
 
 class ClientHandler {

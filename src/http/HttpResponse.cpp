@@ -1,7 +1,5 @@
 #include "HttpResponse.h"
 
-#include "Router.h"
-
 ssize_t HttpResponse::send_response(int client_fd, HttpResponse& response) {
     std::ostringstream oss;
 
@@ -38,33 +36,4 @@ ssize_t HttpResponse::send_response(int client_fd, HttpResponse& response) {
         sent += len;
     }
     return sent;
-}
-
-void HttpResponse::clear() {
-    body_ = "";
-    status_code_ = 0;
-    version_ = "";
-    message_ = "";
-    header_.content_length_ = 0;
-    header_.content_type_ = "";
-    header_.transfer_encoding_ = "";
-    location_ = "";
-    // date clear
-    // date_ = "";
-}
-
-HttpResponse HttpResponse::render_default_error_page(int status_code) {
-    HttpResponse response;
-    std::stringstream ss;
-    ss << "<!DOCTYPE html>\n"
-       << "<html>\n"
-       << "<head>\n"
-       << "<title>" << status_code << "</title>\n"
-       << "</head>\n"
-       << "<body>" << HttpStatus::reason(status_code) << "</body>\n"
-       << "</html>\n";
-    response.body_ = ss.str();
-    response.header_.content_type_ = "text/html";
-    response.header_.content_length_ = response.body_.size();
-    return response;
 }
