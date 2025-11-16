@@ -89,7 +89,7 @@ HttpResponse Router::create_response(const HttpRequest& request) {  // NOLINT
     for (std::vector<std::string>::const_iterator index_files =
              resolve_.index_files_.begin();
          index_files != resolve_.index_files_.end(); ++index_files) {
-        path_name = resolve_.root_ + *index_files;
+        path_name = resolve_.root_.value_ + *index_files;
         int fd = open(path_name.c_str(), O_RDONLY);
         if (fd == -1) {
             throw std::runtime_error("open() failed");

@@ -89,7 +89,7 @@ HttpResponse HttpResponse::render_error(
          index_file != location.getCommonConfig().index_files_.end();
          ++index_file) {
         fd = open((error_page->second.target +
-                   location.getCommonConfig().root_ + *index_file)
+                   location.getCommonConfig().root_.value_ + *index_file)
                       .c_str(),
                   O_RDONLY);
         if (fd == -1) continue;
