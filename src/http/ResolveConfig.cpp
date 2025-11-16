@@ -1,5 +1,7 @@
 #include "ResolveConfig.h"
 
+ResolveConfig::ResolveConfig() : client_max_body_size_(0), autoindex_(false) {}
+
 ResolveConfig ResolveConfig::resolve_config(
     const HttpConfig& http, const ServerConfig& server,  // NOLINT
     const LocationConfig& location) {

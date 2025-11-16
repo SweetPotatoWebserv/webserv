@@ -42,6 +42,7 @@ typedef struct ListenDirective {
 } ListenDirective;
 
 struct CommonConfig {
+    CommonConfig();
     std::string root_;
     bool autoindex_;
     std::string upload_store_;

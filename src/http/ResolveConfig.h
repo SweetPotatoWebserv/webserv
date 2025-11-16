@@ -3,6 +3,7 @@
 #include "../config/HttpConfig.h"
 
 struct ResolveConfig {
+    ResolveConfig();
     off_t client_max_body_size_;
     std::map<int, ErrorPageDirective> error_page_;
     ReturnDirective redirect_;
