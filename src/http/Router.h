@@ -1,6 +1,7 @@
 #pragma once
 #include "../config/HttpConfig.h"
 #include "HttpParser.h"
+#include "HttpResponse.h"
 #include "ResolveConfig.h"
 
 class Router {
@@ -11,8 +12,6 @@ class Router {
                                                const std::string& path);
 
    private:
-    HttpResponse render_error(int status_code,
-                              const std::string& error_page = "");
     const ServerConfig& find_server(const HttpRequest& request);
     ResolveConfig resolve_;
     HttpConfig config_;
