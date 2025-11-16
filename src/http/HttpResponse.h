@@ -1,6 +1,6 @@
 #pragma once
-#include "HttpParser.h"
 #include "HttpDate.h"
+#include "HttpParser.h"
 
 struct HttpResponse {
     HttpCommonHeader header_;
