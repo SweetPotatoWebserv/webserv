@@ -87,9 +87,6 @@ void ClientHandler::on_readable() {  // NOLINT
     }
     buffer_.append(buf, len);
     if (ClientHandler::is_request_ready(buffer_)) {
-        // TODO 例外処理する
-        // BadRequest
-        // NotImplemented
         try {
             request_ = HttpParser::http_request_parse(buffer_);
         } catch (const HttpException& e) {

@@ -1,9 +1,5 @@
 #include "HttpParser.h"
 
-#include <sys/types.h>
-
-#include <sstream>
-
 #include "HttpException.h"
 
 HttpCommonHeader::HttpCommonHeader() : content_length_(0) {}
