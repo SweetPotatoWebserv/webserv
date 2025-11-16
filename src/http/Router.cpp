@@ -67,7 +67,7 @@ HttpResponse Router::create_response(
             find_location(server, request.request_target_.path_);
         resolve_ = ResolveConfig::resolve_config(config_, server, location);
     } catch (HttpException& e) {
-        // render_error(e.status_code());
+        return HttpResponse::render_default_error_page(e.status_code());
     }
 
     // パースエラー
