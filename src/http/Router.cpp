@@ -58,32 +58,29 @@ const LocationConfig& Router::find_location(const ServerConfig& server,
     return *location;
 }
 
-HttpResponse Router::create_response(const HttpRequest& request) {  // NOLINT
+HttpResponse Router::create_response(
+    const HttpRequest& request, const HttpException& exception) {  // NOLINT
     HttpResponse response;
-    // 対象の server を見つける
     const ServerConfig& server = find_server(request);
-    // config に server が1つもなければ、NULLになる
-    // 1つでもあればマッチするものがなくても初めのサーバーがデフォルトサーバーとして設定される
     try {
         const LocationConfig& location =
             find_location(server, request.request_target_.path_);
         resolve_ = ResolveConfig::resolve_config(config_, server, location);
     } catch (HttpException& e) {
         // render_error(e.status_code());
-        std::cerr << e.what() << '\n';
     }
 
-    // if (response.status_code_ > 0) {
-    //     return HttpResponse::render_error(response.status_code_,
-    //     resolve_.error_page_, server);
-    // }
-    //
-    // // 許可されてないメソッド
-    // if (std::find(resolve_.allowed_methods_.begin(),
-    //               resolve_.allowed_methods_.end(),
-    //               request.method_) == resolve_.allowed_methods_.end())
-    //     return HttpResponse::render_error(HttpStatus::MethodNotAllowed,
-    //     resolve_.error_page_, server);
+    // パースエラー
+    if (exception.status_code() != HttpStatus::OK) {
+        return HttpResponse::render_error(exception.status_code(),
+                                          resolve_.error_page_, server);
+    }
+
+    if (std::find(resolve_.allowed_methods_.begin(),
+                  resolve_.allowed_methods_.end(),
+                  request.method_) == resolve_.allowed_methods_.end())
+        return HttpResponse::render_error(HttpStatus::MethodNotAllowed,
+                                          resolve_.error_page_, server);
 
     std::string path_name;
     for (std::vector<std::string>::const_iterator index_files =

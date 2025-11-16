@@ -87,12 +87,13 @@ void ClientHandler::on_readable() {  // NOLINT
     }
     buffer_.append(buf, len);
     if (ClientHandler::is_request_ready(buffer_)) {
+        HttpException exception(HttpStatus::OK);
         try {
             request_ = HttpParser::http_request_parse(buffer_);
         } catch (const HttpException& e) {
-            response_.status_code_ = e.status_code();
+            exception = e;
         }
-        response_ = router_.create_response(request_);
+        response_ = router_.create_response(request_, exception);
         event_.mod(fd_, EPOLLOUT);
     }
 }

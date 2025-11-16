@@ -1,5 +1,6 @@
 #pragma once
 #include "../config/HttpConfig.h"
+#include "HttpException.h"
 #include "HttpParser.h"
 #include "HttpResponse.h"
 #include "ResolveConfig.h"
@@ -8,7 +9,8 @@
 class Router {
    public:
     explicit Router(const HttpConfig& config);
-    HttpResponse create_response(const HttpRequest& request);
+    HttpResponse create_response(const HttpRequest& request,
+                                 const HttpException& exception);
     static const LocationConfig& find_location(const ServerConfig& server,
                                                const std::string& path);
 
