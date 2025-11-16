@@ -64,7 +64,8 @@ class LocationConfig {
         common_config_.client_max_body_size_ = size;
     }
     void addErrorPage(int status, const ErrorPageDirective& ep) {
-        common_config_.addErrorPage(status, ep);
+        //修正: structのmapに直接アクセス
+        common_config_.error_page_[status] = ep;
     }
 
     void addAllowedMethod(const Method& m) { allowed_methods_.push_back(m); }
@@ -108,7 +109,8 @@ class ServerConfig {
         return server_names_;
     }
     void addErrorPage(int status, const ErrorPageDirective& ep) {
-        common_config_.addErrorPage(status, ep);
+        //修正: structのmapに直接アクセス
+        common_config_.error_page_[status] = ep;
     }
 
     // Parserから呼ぶために、common_config_ のゲッターが必要なら追加
@@ -130,7 +132,20 @@ class HttpConfig {
     // ---setter---
     // (パーサーが addServerConfig と呼んでいるため名前を合わせる)
     void addServerConfig(const ServerConfig& s) { servers_.push_back(s); }
-    void setDefaults(const CommonConfig& c) { common_config_ = c; }
+    //修正:setDefaultsは不要になるが、
+    // parseCommonDirectiveテンプレートから呼ばれるため、
+    // 共通設定用のセッター群をすべてここに追加する。
+    void setRoot(const std::string& r) { common_config_.root_ = r; }
+    void addIndexFile(const std::string& file) {
+        common_config_.index_files_.push_back(file);
+    }
+    void setAutoindex(bool on) { common_config_.autoindex_ = on; }
+    void setClientMaxBodySize(off_t size) {
+        common_config_.client_max_body_size_ = size;
+    }
+    void addErrorPage(int status, const ErrorPageDirective& ep) {
+        common_config_.error_page_[status] = ep;
+    }
     // parserが使うため追加
     const CommonConfig& getCommonConfig() const { return common_config_; }
     const std::vector<ServerConfig>& getservers() const { return servers_; }

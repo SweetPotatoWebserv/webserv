@@ -116,7 +116,6 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
     }
 
     // http ブロックの中身をパース
-    CommonConfig http_common_config;  // httpレベルの共通設定をここに溜める
     bool found_closing_brace = false;
 
     while (!isEof(tokens, index)) {
@@ -132,8 +131,8 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
             // "server" が来たら、parserServer に任せる
             // (※ parserServerの中で config.addServerConfig される)
             HttpConfigParser::parserServer(config, tokens, index);
-        } else if (HttpConfigParser::parseCommonDirective(
-                       http_common_config, token, tokens, index)) {
+        } else if (HttpConfigParser::parseCommonDirective(config, token, tokens,
+                                                          index)) {
             continue;
 
         } else {
@@ -146,8 +145,6 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
         throw std::runtime_error("Error: Expected '}' to close http block");
     }
 
-    //読み取った http レベルの設定を、config 全体のデフォルトとして保存
-    config.setDefaults(http_common_config);
     return config;
 }
 
