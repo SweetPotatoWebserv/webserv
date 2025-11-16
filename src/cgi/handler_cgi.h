@@ -7,9 +7,6 @@
 
 class CgiProcess {
    public:
-    CgiProcess();
-    ~CgiProcess();
-
     bool run(const HttpRequest& request, HttpResponse& response);
 
    private:
