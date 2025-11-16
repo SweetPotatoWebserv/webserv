@@ -4,6 +4,7 @@
 #include "HttpResponse.h"
 #include "ResolveConfig.h"
 
+// TODO HttpConfig をメンバにもつ
 class Router {
    public:
     explicit Router(const HttpConfig& config);
