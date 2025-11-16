@@ -5,6 +5,7 @@
 #include <ctime>
 #include <sstream>
 
+#include "../config/HttpConfig.h"
 #include "../core/Common.h"
 #include "../core/String.h"
 
@@ -51,6 +52,10 @@ struct HttpResponse {
     std::string version_;
     static ssize_t send_response(int client_fd, HttpResponse& response);
     void clear();
+    static HttpResponse render_default_error_page(int status_code);
+    static HttpResponse render_error(
+        int status_code, const std::map<int, ErrorPageDirective>& error_pages,
+        const ServerConfig& servers);
 };
 
 class HttpParser {

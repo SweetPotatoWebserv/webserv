@@ -1,12 +1,15 @@
 #include "Router.h"
 
 #include <fcntl.h>
+#include <sys/fcntl.h>
 
 #include <stdexcept>
 #include <vector>
 
 #include "../core/Common.h"
+#include "../http/HttpParser.h"
 #include "HttpException.h"
+#include "HttpParser.h"
 #include "MimeTypes.h"
 
 Router::Router(const HttpConfig& config) : config_(config) {}
@@ -93,12 +96,12 @@ ResolveConfig Router::resolve_config(const ServerConfig& server,  // NOLINT
 }
 
 const LocationConfig& Router::find_location(const ServerConfig& server,
-                                            const HttpRequest& request) {
+                                            const std::string& path) {
     const LocationConfig* location = NULL;
     for (std::vector<LocationConfig>::const_iterator locations =
              server.getLocations().begin();
          locations != server.getLocations().end(); ++locations) {
-        if (request.request_target_.path_ == locations->getPath()) {
+        if (path == locations->getPath()) {
             location = &(*locations);
             break;
         }
@@ -109,23 +112,59 @@ const LocationConfig& Router::find_location(const ServerConfig& server,
     return *location;
 }
 
-// static HttpResponse render_error(int status_code, const ErrorPageDirective&
-// error_page) {
-//     HttpResponse response;
-//     response.status_code_ = status_code;
-//     response.message_ = HttpStatus::reason(status_code);
-//     if (std::find(error_page.statuses.begin(), error_page.statuses.end(),
-//     status_code) == error_page.statuses.end())
-// return default error page
-// }
-// 403 エラー
-// HTTP/1.1 403 Forbidden
-// Server: nginx/1.29.3
-// Date: Sat, 15 Nov 2025 03:49:49 GMT
-// Content-Type: text/html
-// Content-Length: 153
-// Connection: keep-alive
-// }
+HttpResponse HttpResponse::render_default_error_page(int status_code) {
+    HttpResponse response;
+    std::stringstream ss;
+    ss << "<!DOCTYPE html>\n"
+       << "<html>\n"
+       << "<head>\n"
+       << "<title>" << status_code << "</title>\n"
+       << "</head>\n"
+       << "<body>" << HttpStatus::reason(status_code) << "</body>\n"
+       << "</html>\n";
+    response.body_ = ss.str();
+    response.header_.content_type_ = "text/html";
+    response.header_.content_length_ = response.body_.size();
+    return response;
+}
+
+HttpResponse HttpResponse::render_error(
+    int status_code, const std::map<int, ErrorPageDirective>& error_pages,
+    const ServerConfig& servers) {
+    HttpResponse response;
+    response.status_code_ = status_code;
+    response.message_ = HttpStatus::reason(status_code);
+    const std::map<int, ErrorPageDirective>::const_iterator error_page =
+        error_pages.find(status_code);
+    if (error_page == error_pages.end()) {
+        return render_default_error_page(status_code);
+    }
+
+    const LocationConfig& location =
+        Router::find_location(servers, error_page->second.target);
+    int fd;
+    for (std::vector<std::string>::const_iterator index_file =
+             location.getCommonConfig().index_files_.begin();
+         index_file != location.getCommonConfig().index_files_.end();
+         ++index_file) {
+        fd = open((error_page->second.target +
+                   location.getCommonConfig().root_ + *index_file)
+                      .c_str(),
+                  O_RDONLY);
+        if (fd == -1) continue;
+        break;
+    }
+    char buf[1024];  // NOLINT
+    std::string buffer;
+    while (true) {
+        ssize_t len = read(fd, buf, sizeof(buf));
+        if (len == -1) throw std::runtime_error("read() failed");
+        if (len == 0) break;
+        buffer.append(buf);
+    }
+    response.body_ = buffer;
+    return response;
+}
 
 HttpResponse Router::create_response(const HttpRequest& request) {  // NOLINT
     HttpResponse response;
@@ -134,7 +173,8 @@ HttpResponse Router::create_response(const HttpRequest& request) {  // NOLINT
     // config に server が1つもなければ、NULLになる
     // 1つでもあればマッチするものがなくても初めのサーバーがデフォルトサーバーとして設定される
     try {
-        const LocationConfig& location = find_location(server, request);
+        const LocationConfig& location =
+            find_location(server, request.request_target_.path_);
         resolve_ = resolve_config(server, location);
     } catch (HttpException& e) {
         // render_error(e.status_code());
@@ -142,19 +182,16 @@ HttpResponse Router::create_response(const HttpRequest& request) {  // NOLINT
     }
 
     // if (response.status_code_ > 0) {
-    //     // return render_error();
-    //     // TODO resolve_.error_page の内容を元にレスポンスを返す
-    //     // なければデフォルトのエラーページを返す
-    //     // resolve_.error_page_
+    //     return HttpResponse::render_error(response.status_code_,
+    //     resolve_.error_page_, server);
     // }
-
-    // 許可されてないメソッド
+    //
+    // // 許可されてないメソッド
     // if (std::find(resolve_.allowed_methods_.begin(),
     //               resolve_.allowed_methods_.end(),
     //               request.method_) == resolve_.allowed_methods_.end())
-    //     // return render_error();
-    //     throw HttpException(HttpStatus::MethodNotAllowed,
-    //                         HttpStatus::reason(HttpStatus::MethodNotAllowed));
+    //     return HttpResponse::render_error(HttpStatus::MethodNotAllowed,
+    //     resolve_.error_page_, server);
 
     std::string path_name;
     for (std::vector<std::string>::const_iterator index_files =
