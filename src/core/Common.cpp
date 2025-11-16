@@ -27,6 +27,12 @@ const int HTTP_LINE_END_LEN = 2;
 const int HTTP_HEADER_END_LEN = 4;
 const char* const QUESTION_MARK = "?";
 const int DECIMAL = 10;
+const int MIN_PORT_NUMBER = 0;
+const int MAX_PORT_NUMBER = 65535;
+const int MIN_ERROR_STATUS_CODE = 300;
+const int MAX_ERROR_STATUS_CODE = 599;
+const int MIN_OVERRIDE_STATUS_CODE = 200;
+const int MAX_OVERRIDE_STATUS_CODE = 599;
 
 std::map<int, std::string> HttpStatus::createReasonMap() {
     std::map<int, std::string> m;
