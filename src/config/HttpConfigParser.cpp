@@ -134,18 +134,18 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
         } else if (token == DIRECTIVE_ROOT) {  // --- ↓↓ http
                                                // レベルのディレクティブ↓↓ ---
             std::string r = parseRoot(tokens, index);
-            http_common_config.setRoot(r);
+            http_common_config.root_ = r;
         } else if (token == DIRECTIVE_INDEX) {
             std::vector<std::string> files = parseIndex(tokens, index);
             for (size_t i = 0; i < files.size(); ++i) {
-                http_common_config.addIndexFile(files[i]);
+                http_common_config.index_files_.push_back(files[i]);
             }
         } else if (token == DIRECTIVE_AUTOINDEX) {
             bool ai = parseAutoindex(tokens, index);
-            http_common_config.setAutoindex(ai);
+            http_common_config.autoindex_ = ai;
         } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
             off_t size = parseClientMaxBodySize(tokens, index);
-            http_common_config.setClientMaxBodySize(size);
+            http_common_config.client_max_body_size_ = size;
         } else {
             throw std::runtime_error(
                 "Error: Unknown directive in http block: " + token);
