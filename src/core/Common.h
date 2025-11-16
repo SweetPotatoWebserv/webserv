@@ -41,6 +41,13 @@ extern const int DECIMAL;
 extern const char* const COLON;
 extern const std::vector<std::string>::size_type HEADER_FIELD_NUM;
 
+static const int MIN_PORT_NUMBER = 0;
+static const int MAX_PORT_NUMBER = 65535;
+static const int MIN_ERROR_STATUS_CODE = 300;
+static const int MAX_ERROR_STATUS_CODE = 599;
+static const int MIN_OVERRIDE_STATUS_CODE = 200;
+static const int MAX_OVERRIDE_STATUS_CODE = 599;  // 上書き用の上限を定義
+
 class HttpStatus {
    public:
     enum Code {  // NOLINT

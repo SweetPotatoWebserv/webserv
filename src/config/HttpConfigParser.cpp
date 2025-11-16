@@ -337,6 +337,10 @@ uint16_t HttpConfigParser::validateAndConvertPort(
         throw std::runtime_error("Error: Port number out of range: " +
                                  error_value);
     }
+    if (temp_port < MIN_PORT_NUMBER || temp_port > MAX_PORT_NUMBER) {
+        throw std::runtime_error("Error: Port number out of range: " +
+                                 error_value);
+    }
     return static_cast<uint16_t>(temp_port);
 }
 
@@ -519,7 +523,7 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
         std::stringstream ss(token);
         if (!(ss >> pep.directive.override_status) || !ss.eof() ||
             pep.directive.override_status < MIN_OVERRIDE_STATUS_CODE ||
-            pep.directive.override_status > MAX_ERROR_STATUS_CODE) {
+            pep.directive.override_status > MAX_OVERRIDE_STATUS_CODE) {
             throw std::runtime_error(
                 "Error: Invalid new status code in error_page: " + token);
         }
