@@ -32,17 +32,6 @@ struct HttpRequest {
     std::string version_;
 };
 
-struct HttpResponse {
-    HttpCommonHeader header_;
-    int status_code_;
-    std::string message_;
-    HttpDate date_;
-    std::string location_;
-    std::string body_;
-    std::string version_;
-    static ssize_t send_response(int client_fd, HttpResponse& response);
-};
-
 class HttpParser {
    public:
     static HttpRequest http_request_parse(const std::string& buffer);
