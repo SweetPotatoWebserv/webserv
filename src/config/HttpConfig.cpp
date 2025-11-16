@@ -1,8 +1,16 @@
 #include "HttpConfig.h"
 
-CommonConfig::CommonConfig() : autoindex_(false), client_max_body_size_(0) {}
+const int CommonConfig::INVALID_NUM;
 
-ErrorPageDirective::ErrorPageDirective() : override_status(-1) {}
+CommonConfig::CommonConfig()
+    : client_max_body_size_(CommonConfig::INVALID_NUM) {}
+AutoIndexDirective::AutoIndexDirective() : is_set_(false), value_(false) {}
+ReturnDirective::ReturnDirective() : status(CommonConfig::INVALID_NUM) {}
+RootDirective::RootDirective() : is_set_(false) {}
+UploadStoreDirective::UploadStoreDirective() : is_set_(false) {}
+
+ErrorPageDirective::ErrorPageDirective()
+    : override_status(CommonConfig::INVALID_NUM) {}
 ErrorPageDirective::ErrorPageDirective(std::string& t, int o)
     : target(t), override_status(o) {}
 
