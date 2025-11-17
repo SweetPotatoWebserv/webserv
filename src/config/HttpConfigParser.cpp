@@ -247,6 +247,12 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
         if (token == DIRECTIVE_RETURN) {
             ReturnDirective rd = parseReturn(tokens, index);
             location_config.setRedirect(rd);
+        } else if (token == DIRECTIVE_ALLOW_METHODS) {
+            std::vector<Method> methods = parseAllowedMethods(tokens, index);
+            // location_config にパース結果をセットする
+            for (size_t i = 0; i < methods.size(); ++i) {
+                location_config.addAllowedMethod(methods[i]);
+            }
         } else if (HttpConfigParser::parseCommonDirective(
                        location_config, token, tokens, index)) {
             continue;
