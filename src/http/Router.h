@@ -14,10 +14,10 @@ typedef struct RouteInfo {
 class Router {
    public:
     explicit Router(const HttpConfig& config);
-    RouteInfo route(const HttpRequest& request);
+    RouteInfo route(const HttpRequest& request) const;
 
    private:
-    const ServerConfig& find_server(const HttpRequest& request);
+    const ServerConfig& find_server(const HttpRequest& request) const;
     static const LocationConfig& find_location(const ServerConfig& server,
                                                const std::string& path);
     HttpConfig config_;

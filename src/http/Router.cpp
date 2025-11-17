@@ -2,7 +2,7 @@
 
 Router::Router(const HttpConfig& config) : config_(config) {}
 
-const ServerConfig& Router::find_server(const HttpRequest& request) {
+const ServerConfig& Router::find_server(const HttpRequest& request) const {
     // パスを探索
     const ServerConfig* matched = NULL;
     const std::vector<ServerConfig>& servers = config_.getservers();
@@ -45,7 +45,7 @@ const LocationConfig& Router::find_location(const ServerConfig& server,
     return *location;
 }
 
-RouteInfo Router::route(const HttpRequest& request) {
+RouteInfo Router::route(const HttpRequest& request) const {
     RouteInfo info;
 
     info.server_ = &find_server(request);
