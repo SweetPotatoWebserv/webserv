@@ -608,6 +608,37 @@ ReturnDirective HttpConfigParser::parseReturn(
     } else {
         rd.text = next_token;  // Plain text
     }
+    bool is_redirect_status = (rd.status >= MIN_REDIRECT_STATUS_CODE &&
+                               rd.status <= MAX_REDIRECT_STATUS_CODE);
+    bool has_target = !rd.target.empty();
+    bool has_text = !rd.text.empty();
+
+    // 301-308 (リダイレクト) の場合
+    if (is_redirect_status) {
+        if (!has_target) {
+            // エラー: リダイレクトステータスなのに、URL/パスが指定されていない
+            throw std::runtime_error(
+                "Error: return directive with redirect status " + status_str +
+                " requires a URL/path.");
+        }
+        if (has_text) {
+            // エラー: リダイレクトステータスなのに、テキストが指定されている
+            throw std::runtime_error(
+                "Error: return directive with redirect status " + status_str +
+                " cannot have a text body.");
+        }
+    }
+    // 301-308 以外 (404など) の場合
+    else {
+        if (has_target) {
+            // エラー: 非リダイレクトステータスなのに、URL/パスが指定されている
+            throw std::runtime_error(
+                "Error: return directive with non-redirect status " +
+                status_str + " cannot have a URL/path target.");
+        }
+        // has_text はあってもなくてもOK (例: return 404; や return 404 "hello
+        // world";)
+    }
 
     return rd;
 }
