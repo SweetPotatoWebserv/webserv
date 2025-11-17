@@ -259,6 +259,14 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
             for (size_t i = 0; i < methods.size(); ++i) {
                 location_config.addAllowedMethod(methods[i]);
             }
+        } else if (token == DIRECTIVE_CGI_PATH) {
+            // "cgi_path /path/to/cgi_binary;" をパースする
+            std::string path = parseStringDirective(tokens, index);
+            location_config.setCgiPath(path);
+        } else if (token == DIRECTIVE_CGI_EXTENSION) {
+            // "cgi_extension .php;" をパースする
+            std::string ext = parseStringDirective(tokens, index);
+            location_config.setCgiExtension(ext);
         } else if (HttpConfigParser::parseCommonDirective(
                        location_config, token, tokens, index)) {
             continue;
