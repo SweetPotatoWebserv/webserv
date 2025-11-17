@@ -197,13 +197,14 @@ void CgiExecutor::executeChildProcess(const std::string &scriptPath,
     if (execve(basename.c_str(), argv, envp) == -1) {
         std::cerr << "CGI Error: execve failed for " << basename
                   << ". errno: " << strerror(errno) << "\n";
-    }
-    if (errno == EACCES) {
-        exit(EXIT_CODE_PERMISSION_DENIED);
-    } else if (errno == ENOENT) {
-        exit(EXIT_CODE_COMMAND_NOT_FOUND);
-    } else {
-        exit(EXIT_FAILURE);
+
+        if (errno == EACCES) {
+            exit(EXIT_CODE_PERMISSION_DENIED);
+        } else if (errno == ENOENT) {
+            exit(EXIT_CODE_COMMAND_NOT_FOUND);
+        } else {
+            exit(EXIT_FAILURE);
+        }
     }
 }
 
