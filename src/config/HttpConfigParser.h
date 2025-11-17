@@ -136,12 +136,40 @@ class HttpConfigParser {
     static const off_t BYTES_PER_MB = static_cast<off_t>(1024) * 1024;
     static const off_t BYTES_PER_GB = static_cast<off_t>(1024) * 1024 * 1024;
 
-    static const int MAX_PORT_NUMBER = 65535;
-    // error pageの範囲
-    static const int MIN_ERROR_STATUS_CODE = 300;
-    static const int MAX_ERROR_STATUS_CODE = 599;
     static const int MIN_OVERRIDE_STATUS_CODE = 200;
-    // returnで使用するステータスコードの境界(0-999)
+    static const int MAX_OVERRIDE_STATUS_CODE = 599;
     static const int MIN_RETURN_STATUS_CODE = 0;
     static const int MAX_RETURN_STATUS_CODE = 999;
+
+    template <typename T>
+    static bool parseCommonDirective(T& config, const std::string& token,
+                                     const std::vector<std::string>& tokens,
+                                     size_t& index) {
+        if (token == DIRECTIVE_ROOT) {
+            std::string r = parseRoot(tokens, index);
+            config.setRoot(r);
+        } else if (token == DIRECTIVE_INDEX) {
+            std::vector<std::string> files = parseIndex(tokens, index);
+            for (size_t i = 0; i < files.size(); ++i) {
+                config.addIndexFile(files[i]);
+            }
+        } else if (token == DIRECTIVE_AUTOINDEX) {
+            bool ai = parseAutoindex(tokens, index);
+            config.setAutoindex(ai);
+        } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
+            off_t size = parseClientMaxBodySize(tokens, index);
+            config.setClientMaxBodySize(size);
+        } else if (token == DIRECTIVE_ERROR_PAGE) {
+            ParsedErrorPage pep = parseErrorPage(tokens, index);
+            // 取得した全てのステータスコードについて、map に登録
+            for (size_t i = 0; i < pep.status_codes.size(); ++i) {
+                config.addErrorPage(pep.status_codes[i], pep.directive);
+            }
+        } else {
+            // 共通ディレクティブではなかった
+            return false;
+        }
+        // 共通ディレクティブのどれかとして処理が成功した
+        return true;
+    }
 };

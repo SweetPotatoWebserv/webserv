@@ -13,15 +13,6 @@ struct UriPath {
     std::string query_string_;
 };
 
-class HttpDate {
-   public:
-    HttpDate from_string(const std::string& s) const;
-    std::string to_string() const;
-
-   private:
-    std::time_t timestamp_;
-};
-
 struct HttpCommonHeader {
     // Content-Length: 512
     std::size_t content_length_;
@@ -39,17 +30,6 @@ struct HttpRequest {
     UriPath request_target_;
     std::string body_;
     std::string version_;
-};
-
-struct HttpResponse {
-    HttpCommonHeader header_;
-    int status_code_;
-    std::string message_;
-    HttpDate date_;
-    std::string location_;
-    std::string body_;
-    std::string version_;
-    static ssize_t send_response(int client_fd, HttpResponse& response);
 };
 
 class HttpParser {
