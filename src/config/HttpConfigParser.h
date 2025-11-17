@@ -86,6 +86,18 @@ class HttpConfigParser {
     static uint16_t validateAndConvertPort(uint64_t temp_port,
                                            const std::string& error_value);
 
+    // parseErrorPage は複数の引数を返す必要があるため、
+    // 専用のヘルパー構造体を定義
+    struct ParsedErrorPage {
+        std::vector<int> status_codes;
+        ErrorPageDirective directive;
+    };
+
+    ///@brief error_page ディレクティブをパースする
+    ///@return ParsedErrorPage (ステータスコードのリストと、設定内容)
+    static ParsedErrorPage parseErrorPage(
+        const std::vector<std::string>& tokens, size_t& index);
+
     // 特殊文字リスト（トークン分割用）構文解析用
     static const char* const SPECIAL_CHARS;
     static const char HASH_CHAR;
@@ -102,6 +114,7 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_INDEX;
     static const char* const DIRECTIVE_AUTOINDEX;
     static const char* const DIRECTIVE_CLIENT_MAX_BODY_SIZE;
+    static const char* const DIRECTIVE_ERROR_PAGE;
     // parserlisten defult
     static const char* const KEYWORD_DEFAULT_SERVER;
     // on,off
@@ -119,4 +132,40 @@ class HttpConfigParser {
 
     // 最大値のポート番号を定数化
     static const int MAX_PORT_NUMBER = 65535;
+    // error pageの範囲
+    static const int MIN_ERROR_STATUS_CODE = 300;
+    static const int MAX_ERROR_STATUS_CODE = 599;
+    static const int MIN_OVERRIDE_STATUS_CODE = 200;
+
+    template <typename T>
+    static bool parseCommonDirective(T& config, const std::string& token,
+                                     const std::vector<std::string>& tokens,
+                                     size_t& index) {
+        if (token == DIRECTIVE_ROOT) {
+            std::string r = parseRoot(tokens, index);
+            config.setRoot(r);
+        } else if (token == DIRECTIVE_INDEX) {
+            std::vector<std::string> files = parseIndex(tokens, index);
+            for (size_t i = 0; i < files.size(); ++i) {
+                config.addIndexFile(files[i]);
+            }
+        } else if (token == DIRECTIVE_AUTOINDEX) {
+            bool ai = parseAutoindex(tokens, index);
+            config.setAutoindex(ai);
+        } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
+            off_t size = parseClientMaxBodySize(tokens, index);
+            config.setClientMaxBodySize(size);
+        } else if (token == DIRECTIVE_ERROR_PAGE) {
+            ParsedErrorPage pep = parseErrorPage(tokens, index);
+            // 取得した全てのステータスコードについて、map に登録
+            for (size_t i = 0; i < pep.status_codes.size(); ++i) {
+                config.addErrorPage(pep.status_codes[i], pep.directive);
+            }
+        } else {
+            // 共通ディレクティブではなかった
+            return false;
+        }
+        // 共通ディレクティブのどれかとして処理が成功した
+        return true;
+    }
 };

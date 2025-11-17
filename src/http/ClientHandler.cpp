@@ -95,6 +95,8 @@ void ClientHandler::on_readable() {  // NOLINT
         } catch (const HttpException& e) {
             exception = e;
         }
+        // TODO 例外処理する
+        // parserエラーかつ、server エラーの時の処理をどうするか考える
         RouteInfo info = router_.route(request_);
         response_ = ResponseFactory::make(request_, info, exception);
         event_.mod(fd_, EPOLLOUT);

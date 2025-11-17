@@ -2,8 +2,7 @@
 
 Router::Router(const HttpConfig& config) : config_(config) {}
 
-const ServerConfig& Router::find_server(const HttpRequest& request) {
-    // パスを探索
+const ServerConfig& Router::find_server(const HttpRequest& request) const {
     const ServerConfig* matched = NULL;
     const std::vector<ServerConfig>& servers = config_.getservers();
     for (std::vector<ServerConfig>::const_iterator servers_itr =
@@ -25,6 +24,9 @@ const ServerConfig& Router::find_server(const HttpRequest& request) {
         if (matched) break;
     }
     if (!matched && !servers.empty()) matched = &servers.front();
+    if (!matched)
+        throw HttpException(HttpStatus::NotFound,
+                            HttpStatus::reason(HttpStatus::NotFound));
     return *matched;
 }
 
@@ -45,11 +47,13 @@ const LocationConfig& Router::find_location(const ServerConfig& server,
     return *location;
 }
 
-RouteInfo Router::route(const HttpRequest& request) {
+RouteInfo Router::route(const HttpRequest& request) const {
     RouteInfo info;
 
     info.server_ = &find_server(request);
-    info.location_ = &find_location(*info.server_, request.request_target_.path_);
-    info.resolve_ = ResolveConfig::resolve_config(config_, *info.server_, *info.location_);
+    info.location_ =
+        &find_location(*info.server_, request.request_target_.path_);
+    info.resolve_ =
+        ResolveConfig::resolve_config(config_, *info.server_, *info.location_);
     return info;
 }

@@ -20,6 +20,7 @@ const char* const HttpConfigParser::DIRECTIVE_INDEX = "index";
 const char* const HttpConfigParser::DIRECTIVE_AUTOINDEX = "autoindex";
 const char* const HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE =
     "client_max_body_size";
+const char* const HttpConfigParser::DIRECTIVE_ERROR_PAGE = "error_page";
 // parseListen
 const char* const HttpConfigParser::KEYWORD_DEFAULT_SERVER = "default_server";
 // on,off->autoindex
@@ -40,7 +41,7 @@ bool HttpConfigParser::isEof(const std::vector<std::string>& tokens,
 std::string HttpConfigParser::getNextToken(
     const std::vector<std::string>& tokens, size_t& index) {
     if (isEof(tokens, index)) {
-        throw std::runtime_error("Error: Unexpected end of EOF");
+        throw std::runtime_error("Error: Unexpected end of file");
     }
     return tokens[index++];
 }
@@ -108,14 +109,13 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
             "Error: Expected 'http' block at the beginning");
     }
 
-    // 3. 次のトークンが "{" であることを確認
+    // 次のトークンが "{" であることを確認
     if (isEof(tokens, index) ||
         getNextToken(tokens, index) != BRACE_OPEN) {  //{
         throw std::runtime_error("Error: Expected '{' after http directive");
     }
 
-    // 4. http ブロックの中身をパース
-    CommonConfig http_common_config;  // httpレベルの共通設定をここに溜める
+    // http ブロックの中身をパース
     bool found_closing_brace = false;
 
     while (!isEof(tokens, index)) {
@@ -131,23 +131,9 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
             // "server" が来たら、parserServer に任せる
             // (※ parserServerの中で config.addServerConfig される)
             HttpConfigParser::parserServer(config, tokens, index);
-        } else if (token == DIRECTIVE_ROOT) {  // --- ↓↓ http
-                                               // レベルのディレクティブ↓↓ ---
-            std::string r = parseRoot(tokens, index);
-            http_common_config.root_.value_ = r;
-            http_common_config.root_.is_set_ = true;
-        } else if (token == DIRECTIVE_INDEX) {
-            std::vector<std::string> files = parseIndex(tokens, index);
-            for (size_t i = 0; i < files.size(); ++i) {
-                http_common_config.index_files_.push_back(files[i]);
-            }
-        } else if (token == DIRECTIVE_AUTOINDEX) {
-            bool ai = parseAutoindex(tokens, index);
-            http_common_config.autoindex_.value_ = ai;
-            http_common_config.autoindex_.is_set_ = true;
-        } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
-            off_t size = parseClientMaxBodySize(tokens, index);
-            http_common_config.client_max_body_size_ = size;
+        } else if (HttpConfigParser::parseCommonDirective(config, token, tokens,
+                                                          index)) {
+            continue;
         } else {
             throw std::runtime_error(
                 "Error: Unknown directive in http block: " + token);
@@ -158,8 +144,6 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
         throw std::runtime_error("Error: Expected '}' to close http block");
     }
 
-    //読み取った http レベルの設定を、config 全体のデフォルトとして保存
-    config.setDefaults(http_common_config);
     return config;
 }
 
@@ -198,23 +182,9 @@ void HttpConfigParser::parserServer(HttpConfig& config,
         } else if (token == DIRECTIVE_LISTEN) {  // DIRECTIVE_LISTEN=="listen"
             ListenDirective ld = HttpConfigParser::parseListen(tokens, index);
             server_config.setListen(ld);
-        } else if (token == DIRECTIVE_ROOT) {  // DIRECTIVE_ROOT== "root"
-            std::string r = HttpConfigParser::parseRoot(tokens, index);
-            server_config.setRoot(r);
-        } else if (token == DIRECTIVE_INDEX) {  // DIRECTIVE_INDEX=="index"
-            std::vector<std::string> files =
-                HttpConfigParser::parseIndex(tokens, index);
-            for (size_t i = 0; i < files.size(); ++i) {
-                server_config.addIndexFile(files[i]);
-            }
-        } else if (token ==
-                   DIRECTIVE_AUTOINDEX) {  // DIRECTIVE_AUTOINDEX=="autoindex"
-            bool ai = HttpConfigParser::parseAutoindex(tokens, index);
-            server_config.setAutoindex(ai);
-        } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
-            off_t size =
-                HttpConfigParser::parseClientMaxBodySize(tokens, index);
-            server_config.setClientMaxBodySize(size);
+        } else if (HttpConfigParser::parseCommonDirective(server_config, token,
+                                                          tokens, index)) {
+            continue;
         } else {
             //知らないディレクティブはエラー
             throw std::runtime_error(
@@ -265,27 +235,13 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
             found_closing_brace = true;
             break;
         }
-        if (token == DIRECTIVE_ROOT) {
-            std::string r = HttpConfigParser::parseRoot(tokens, index);
-            location_config.setRoot(r);
-        } else if (token == DIRECTIVE_INDEX) {
-            std::vector<std::string> files =
-                HttpConfigParser::parseIndex(tokens, index);
-            for (size_t i = 0; i < files.size(); ++i) {
-                location_config.addIndexFile(files[i]);
-            }
-        } else if (token == DIRECTIVE_AUTOINDEX) {
-            bool ai = HttpConfigParser::parseAutoindex(tokens, index);
-            location_config.setAutoindex(ai);
-        } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
-            off_t size =
-                HttpConfigParser::parseClientMaxBodySize(tokens, index);
-            location_config.setClientMaxBodySize(size);
-        } else {
-            //知らないディレクティブはエラー
-            throw std::runtime_error(
-                "Error: Unknown directive in location block: " + token);
+        if (HttpConfigParser::parseCommonDirective(location_config, token,
+                                                   tokens, index)) {
+            continue;
         }
+        //知らないディレクティブはエラー
+        throw std::runtime_error(
+            "Error: Unknown directive in location block: " + token);
     }
     if (!found_closing_brace) {
         // ループを抜けたのに閉じ括弧が見つからなかった場合
@@ -505,4 +461,104 @@ off_t HttpConfigParser::parseClientMaxBodySize(
     }
 
     return size;
+}
+
+//-----------------------------------------------------------------
+//------------------error_pageディレクティブパーサー---------------
+//-----------------------------------------------------------------
+///@brief error_page ディレクティブをパースする
+///       (例: error_page 404 500 /50x.html;)
+///       (例: error_page 403 =200 /index.html;)
+HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
+    const std::vector<std::string>& tokens, size_t& index) {
+    ParsedErrorPage pep;
+    std::string token;
+
+    // ステータスコードを読み込む (数値が続く限り)
+    while (!isEof(tokens, index)) {
+        token = getNextToken(tokens, index);
+
+        // トークンが数値 (ステータスコード) かどうかをチェック
+        std::stringstream ss(token);
+        int status_code;
+        // (ss >> status_code) で変換を試み、
+        // ss.eof() で "404foo" のような余計な文字がないことを確認
+        // 課題の要件ではエラーページは 300-599 の範囲が妥当
+        if ((ss >> status_code) && ss.eof() &&
+            status_code >= MIN_ERROR_STATUS_CODE &&
+            status_code <= MAX_ERROR_STATUS_CODE) {
+            pep.status_codes.push_back(status_code);
+        } else {
+            // 数値でなければ、ループを抜ける
+            // この 'token' は、'=' か ターゲットパス (e.g., "/50x.html") のはず
+            break;
+        }
+    }
+
+    // ループがEOFで抜けた場合、ターゲットURIや'='がない
+    if (isEof(tokens, index) && !pep.status_codes.empty()) {
+        // (status_codesが空の場合は、次のempty()チェックでエラーになるのでここではじかない)
+        throw std::runtime_error(
+            "Error: Expected target URI or '=' after status code(s)");
+    }
+
+    if (pep.status_codes.empty()) {
+        throw std::runtime_error(
+            "Error: Expected status code(s) for error_page");
+    }
+
+    // オプションの '=' (ステータスコード上書き) をチェック
+    if (token == "=") {
+        if (isEof(tokens, index)) {
+            throw std::runtime_error(
+                "Error: Expected new status code after '=' in error_page");
+        }
+        token = getNextToken(tokens, index);
+
+        std::stringstream ss(token);
+        if (!(ss >> pep.directive.override_status) || !ss.eof() ||
+            pep.directive.override_status < MIN_OVERRIDE_STATUS_CODE ||
+            pep.directive.override_status > MAX_ERROR_STATUS_CODE) {
+            throw std::runtime_error(
+                "Error: Invalid new status code in error_page: " + token);
+        }
+
+        // 最後の引数 (ターゲットURI) を取得
+        if (isEof(tokens, index)) {
+            throw std::runtime_error(
+                "Error: Expected target URI after status code in error_page");
+        }
+        pep.directive.target = getNextToken(tokens, index);
+        // URI検証
+        if (pep.directive.target.empty() ||
+            pep.directive.target[0] !=
+                '/') {  //ターゲットURIは'/'で始まらなければならない：500がターゲットに入った×
+            throw std::runtime_error(
+                "Error: Invalid target URI in error_page, must start with "
+                "'/': " +
+                pep.directive.target);
+        }
+
+    } else {
+        // '=' がなかった場合
+        pep.directive.override_status = -1;  // -1 を「上書きなし」とする
+
+        // ここで検証を追加
+        // ターゲットURIは '/' で始まらなければならない
+        if (token.empty() || token[0] != '/') {
+            throw std::runtime_error(
+                "Error: Invalid target URI in error_page, must start with "
+                "'/': " +
+                token);
+        }
+        pep.directive.target = token;  // 検証OK
+    }
+
+    //最後にセミコロンがあるか確認
+    if (getNextToken(tokens, index) != SEMICOLON) {
+        throw std::runtime_error(
+            "Error: Expected ';' after error_page directive");
+    }
+
+    return pep;
 }

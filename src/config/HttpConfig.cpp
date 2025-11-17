@@ -9,7 +9,7 @@ UploadStoreDirective::UploadStoreDirective() : is_set_(false) {}
 
 ErrorPageDirective::ErrorPageDirective()
     : override_status(CommonConfig::INVALID_NUM) {}
-ErrorPageDirective::ErrorPageDirective(std::string& t, int o)
+ErrorPageDirective::ErrorPageDirective(const std::string& t, int o)
     : target(t), override_status(o) {}
 
 ListenDirective::ListenDirective()
