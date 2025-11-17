@@ -596,20 +596,16 @@ ReturnDirective HttpConfigParser::parseReturn(
         return rd;
     }
 
-    //"return 301 /path;" または "return 404 "text";" の形式
-    std::string const& text_or_target = next_token;
-
     //セミコロンを確認
     if (getNextToken(tokens, index) != SEMICOLON) {
         throw std::runtime_error("Error: Expected ';' after return directive");
     }
-
-    // 2番目の引数が URL/パス か、ただのテキストかを判定
-    if (text_or_target.find('/') == 0 || text_or_target.find("http://") == 0 ||
-        text_or_target.find("https://") == 0) {
-        rd.target = text_or_target;  // URL or Path
+    // 5. 2番目の引数が URL/パス か、ただのテキストかを判定
+    if (next_token.find('/') == 0 || next_token.find("http://") == 0 ||
+        next_token.find("https://") == 0) {
+        rd.target = next_token;  // URL or Path
     } else {
-        rd.text = text_or_target;  // Plain text
+        rd.text = next_token;  // Plain text
     }
 
     return rd;
