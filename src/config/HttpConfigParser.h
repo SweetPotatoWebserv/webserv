@@ -49,11 +49,6 @@ class HttpConfigParser {
     static void parserServer(HttpConfig& config,
                              const std::vector<std::string>& tokens,
                              size_t& index);
-    // ifelse分岐が多すぎるためそれを処理するヘルパー関数
-    static void parseServerDirective(const std::string& token,
-                                     ServerConfig& server_config,
-                                     const std::vector<std::string>& tokens,
-                                     size_t& index);
     //@brief locationブロックをパースする
     //@param server_config ServerConfigオブジェクト（パース結果を格納）
     //@param tokens トークンリスト
@@ -61,10 +56,6 @@ class HttpConfigParser {
     static void parserLocation(ServerConfig& server_config,
                                const std::vector<std::string>& tokens,
                                size_t& index);
-    static void
-    parseLocationDirective(  // ifelse分岐が多すぎるためそれを処理するヘルパー関数
-        const std::string& token, LocationConfig& location_config,
-        const std::vector<std::string>& tokens, size_t& index);
 
     ///@brief listen ディレクティブをパースする
     ///@return 完成した ListenDirective オブジェクト
@@ -111,7 +102,6 @@ class HttpConfigParser {
     ///@return 完成した ReturnDirective オブジェクト
     static ReturnDirective parseReturn(const std::vector<std::string>& tokens,
                                        size_t& index);
-
     ///@brief allow_methodsディレクティブのパース
     static std::vector<Method> parseAllowedMethods(
         const std::vector<std::string>& tokens, size_t& index);
@@ -120,6 +110,7 @@ class HttpConfigParser {
     /// upload_store などで使い回す)
     static std::string parseStringDirective(
         const std::vector<std::string>& tokens, size_t& index);
+
     ///@brief server_name ディレクティブをパースする
     static std::vector<std::string> parseServerName(
         const std::vector<std::string>& tokens, size_t& index);
@@ -157,17 +148,50 @@ class HttpConfigParser {
     static const char SUFFIX_MEGABYTE;
     static const char SUFFIX_GIGABYTE;
 
+    static const char* HTTP_PREFIX;
+    static const char* HTTPS_PREFIX;
+
     // マジックナンバー定数に
     static const off_t BYTES_PER_KB = 1024;
     static const off_t BYTES_PER_MB = static_cast<off_t>(1024) * 1024;
     static const off_t BYTES_PER_GB = static_cast<off_t>(1024) * 1024 * 1024;
 
-    static const int MAX_PORT_NUMBER = 65535;
-    // error pageの範囲
-    static const int MIN_ERROR_STATUS_CODE = 300;
-    static const int MAX_ERROR_STATUS_CODE = 599;
     static const int MIN_OVERRIDE_STATUS_CODE = 200;
-    // returnで使用するステータスコードの境界(0-999)
-    static const int MIN_RETURN_STATUS_CODE = 0;
-    static const int MAX_RETURN_STATUS_CODE = 999;
+    static const int MAX_OVERRIDE_STATUS_CODE = 501;
+    static const int MIN_RETURN_STATUS_CODE = 200;
+    static const int MAX_RETURN_STATUS_CODE = 501;
+    static const int MIN_REDIRECT_STATUS_CODE = 301;
+    static const int MAX_REDIRECT_STATUS_CODE = 308;
+
+    template <typename T>
+    static bool parseCommonDirective(T& config, const std::string& token,
+                                     const std::vector<std::string>& tokens,
+                                     size_t& index) {
+        if (token == DIRECTIVE_ROOT) {
+            std::string r = parseRoot(tokens, index);
+            config.setRoot(r);
+        } else if (token == DIRECTIVE_INDEX) {
+            std::vector<std::string> files = parseIndex(tokens, index);
+            for (size_t i = 0; i < files.size(); ++i) {
+                config.addIndexFile(files[i]);
+            }
+        } else if (token == DIRECTIVE_AUTOINDEX) {
+            bool ai = parseAutoindex(tokens, index);
+            config.setAutoindex(ai);
+        } else if (token == DIRECTIVE_CLIENT_MAX_BODY_SIZE) {
+            off_t size = parseClientMaxBodySize(tokens, index);
+            config.setClientMaxBodySize(size);
+        } else if (token == DIRECTIVE_ERROR_PAGE) {
+            ParsedErrorPage pep = parseErrorPage(tokens, index);
+            // 取得した全てのステータスコードについて、map に登録
+            for (size_t i = 0; i < pep.status_codes.size(); ++i) {
+                config.addErrorPage(pep.status_codes[i], pep.directive);
+            }
+        } else {
+            // 共通ディレクティブではなかった
+            return false;
+        }
+        // 共通ディレクティブのどれかとして処理が成功した
+        return true;
+    }
 };
