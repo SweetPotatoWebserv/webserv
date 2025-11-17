@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "../http/HttpParser.h"
+#include "../http/HttpResponse.h"
 #include "executor_cgi.h"
 
 class CgiProcess {
