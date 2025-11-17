@@ -23,21 +23,6 @@ const int BUFFER_SIZE = 100000;
 const int EXIT_CODE_PERMISSION_DENIED = 126;
 const int EXIT_CODE_COMMAND_NOT_FOUND = 127;
 
-void safeClose(int &fd) {
-    if (fd == -1) {
-        return;
-    }
-
-    int tmp_fd = fd;
-    fd = -1;
-
-    if (close(tmp_fd) == -1) {
-        std::stringstream ss;
-        ss << "Failed CgiExecutor close(" << tmp_fd << ")";
-
-        perror(ss.str().c_str());
-    }
-}
 }  // namespace
 
 CgiExecutor::CgiExecutor() {
@@ -177,29 +162,7 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
                                     HttpStatus::RequestTimeout);
     }
 
-    if (WIFEXITED(status)) {
-        int exit_code = WEXITSTATUS(status);
-        if (exit_code == 0) {
-            return cgi_output;
-        }
-
-        if (exit_code == EXIT_CODE_PERMISSION_DENIED) {
-            std::cerr << "CGI Error: Permission denied (403)\n";
-            throw CgiExecutionException("CGI permission denied",
-                                        HttpStatus::Forbidden);
-        }
-        if (exit_code == EXIT_CODE_COMMAND_NOT_FOUND) {
-            std::cerr << "CGI Error: Script not found (404)\n";
-            throw CgiExecutionException("CGI script not found",
-                                        HttpStatus::NotFound);
-        }
-
-        std::cerr << "CGI warning: child process failed (Status: " << exit_code
-                  << ")\n";
-        throw CgiExecutionException("CGI script execution failed",
-                                    HttpStatus::InternalServerError);
-    }
-
+    checkChildExitStatus(status);
     throw CgiExecutionException("CGI script crashed",
                                 HttpStatus::InternalServerError);
 }
@@ -237,6 +200,43 @@ void CgiExecutor::executeChildProcess(const std::string &scriptPath,
     if (execve(basename.c_str(), argv, envp) == -1) {
         std::cerr << "CGI Error: execve failed for " << basename
                   << ". errno: " << strerror(errno) << "\n";
+    }
+}
+
+void CgiExecutor::checkChildExitStatus(int status) {
+    if (WIFEXITED(status)) {
+        int exit_code = WEXITSTATUS(status);
+        if (exit_code == EXIT_CODE_PERMISSION_DENIED) {
+            throw CgiExecutionException("Permission denied",
+                                        HttpStatus::Forbidden);
+        }
+        if (exit_code == EXIT_CODE_COMMAND_NOT_FOUND) {
+            throw CgiExecutionException("Command not found",
+                                        HttpStatus::NotFound);
+        }
+        if (exit_code != 0) {
+            throw CgiExecutionException("CGI script error",
+                                        HttpStatus::InternalServerError);
+        }
+    } else {
+        throw CgiExecutionException("CGI crashed",
+                                    HttpStatus::InternalServerError);
+    }
+}
+
+void safeClose(int &fd) {
+    if (fd == -1) {
+        return;
+    }
+
+    int tmp_fd = fd;
+    fd = -1;
+
+    if (close(tmp_fd) == -1) {
+        std::stringstream ss;
+        ss << "Failed CgiExecutor close(" << tmp_fd << ")";
+
+        perror(ss.str().c_str());
     }
 }
 

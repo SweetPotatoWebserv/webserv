@@ -42,6 +42,9 @@ class CgiExecutor {
     void executeChildProcess(const std::string &scriptPath, char *const argv[],
                              char *const envp[]);
     std::string readParentProcess(const std::string &requestBody);
+
+    void safeClose(int &fd);
+    static void checkChildExitStatus(int status);
     static std::string getScriptDirectory(const std::string &scriptPath);
     static std::string getScriptBasename(const std::string &scriptPath);
 };
