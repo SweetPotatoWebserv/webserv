@@ -110,7 +110,7 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
 
     std::string cgi_output;
     struct epoll_event events[MAX_EPOLL_EVENTS];
-    bool timeout_occured = false;
+    bool timeout_occurred = false;
 
     while (true) {
         int num_events =
@@ -125,7 +125,7 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
         }
 
         if (num_events == 0) {
-            timeout_occured = true;
+            timeout_occurred = true;
             kill(pid_, SIGKILL);
             std::cerr << "CGI Error: script timed out\n";
             break;
@@ -157,7 +157,7 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
     int status;
     waitpid(pid_, &status, 0);
 
-    if (timeout_occured) {
+    if (timeout_occurred) {
         throw CgiExecutionException("CGI script timed out",
                                     HttpStatus::RequestTimeout);
     }
