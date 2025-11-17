@@ -518,7 +518,7 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
         std::stringstream ss(token);
         if (!(ss >> pep.directive.override_status) || !ss.eof() ||
             pep.directive.override_status < MIN_OVERRIDE_STATUS_CODE ||
-            pep.directive.override_status > MAX_ERROR_STATUS_CODE) {
+            pep.directive.override_status > MAX_OVERRIDE_STATUS_CODE) {
             throw std::runtime_error(
                 "Error: Invalid new status code in error_page: " + token);
         }
