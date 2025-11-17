@@ -131,6 +131,9 @@ class HttpConfigParser {
     static const char SUFFIX_MEGABYTE;
     static const char SUFFIX_GIGABYTE;
 
+    static const char* HTTP_PREFIX;
+    static const char* HTTPS_PREFIX;
+
     // マジックナンバー定数に
     static const off_t BYTES_PER_KB = 1024;
     static const off_t BYTES_PER_MB = static_cast<off_t>(1024) * 1024;

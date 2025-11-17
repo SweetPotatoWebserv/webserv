@@ -31,7 +31,8 @@ const char* const HttpConfigParser::VALUE_OFF = "off";
 const char HttpConfigParser::SUFFIX_KILOBYTE = 'k';
 const char HttpConfigParser::SUFFIX_MEGABYTE = 'm';
 const char HttpConfigParser::SUFFIX_GIGABYTE = 'g';
-
+const char* HttpConfigParser::HTTP_PREFIX = "http://";
+const char* HttpConfigParser::HTTPS_PREFIX = "https://";
 //終端に来たかどうか
 bool HttpConfigParser::isEof(const std::vector<std::string>& tokens,
                              size_t index) {
@@ -601,8 +602,8 @@ ReturnDirective HttpConfigParser::parseReturn(
         throw std::runtime_error("Error: Expected ';' after return directive");
     }
     // 5. 2番目の引数が URL/パス か、ただのテキストかを判定
-    if (next_token.find('/') == 0 || next_token.find("http://") == 0 ||
-        next_token.find("https://") == 0) {
+    if (next_token.find('/') == 0 || next_token.find(HTTP_PREFIX) == 0 ||
+        next_token.find(HTTPS_PREFIX) == 0) {
         rd.target = next_token;  // URL or Path
     } else {
         rd.text = next_token;  // Plain text
