@@ -231,7 +231,7 @@ void CgiExecutor::checkChildExitStatus(int status) {
     }
 }
 
-void safeClose(int &fd) {
+void CgiExecutor::safeClose(int &fd) {
     if (fd == -1) {
         return;
     }
