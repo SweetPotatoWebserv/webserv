@@ -19,6 +19,7 @@ TEST_SRC = $(addprefix $(TEST_DIR)/, test_main.cpp \
             test_http_request_parse.cpp \
             test_http_exception.cpp \
             test_mime_types.cpp \
+            test_resolve_config.cpp \
             )
 
 HEADERS = # you can add *.h files here

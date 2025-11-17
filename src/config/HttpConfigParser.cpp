@@ -134,7 +134,6 @@ HttpConfig HttpConfigParser::parse(const std::string& filename) {
         } else if (HttpConfigParser::parseCommonDirective(config, token, tokens,
                                                           index)) {
             continue;
-
         } else {
             throw std::runtime_error(
                 "Error: Unknown directive in http block: " + token);
