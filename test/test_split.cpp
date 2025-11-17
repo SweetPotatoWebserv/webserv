@@ -74,3 +74,11 @@ TEST(StringSplit, QueryStringEqual) {
     EXPECT_EQ(parts[0], "name");
     EXPECT_EQ(parts[1], "tarou");
 }
+
+TEST(StringSplit, QueryStringQuestion) {
+    std::string s = "?";
+    std::vector<std::string> parts = split(s, "?");
+    ASSERT_EQ(parts.size(), 2u);
+    EXPECT_EQ(parts[0], "");
+    EXPECT_EQ(parts[1], "");
+}

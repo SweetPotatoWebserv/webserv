@@ -39,7 +39,7 @@ extern const int HTTP_HEADER_END_LEN;
 extern const char* const QUESTION_MARK;
 extern const int DECIMAL;
 extern const char* const COLON;
-extern const int HEADER_FIELD_NUM;
+extern const std::vector<std::string>::size_type HEADER_FIELD_NUM;
 
 class HttpStatus {
    public:
