@@ -141,7 +141,7 @@ class HttpConfigParser {
 
     static const int MIN_OVERRIDE_STATUS_CODE = 200;
     static const int MAX_OVERRIDE_STATUS_CODE = 501;
-    static const int MIN_RETURN_STATUS_CODE = 0;
+    static const int MIN_RETURN_STATUS_CODE = 200;
     static const int MAX_RETURN_STATUS_CODE = 501;
     static const int MIN_REDIRECT_STATUS_CODE = 301;
     static const int MAX_REDIRECT_STATUS_CODE = 308;
