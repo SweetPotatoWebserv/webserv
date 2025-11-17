@@ -1,5 +1,8 @@
 #include "HttpResponse.h"
 
+#include <fcntl.h>
+
+#include "MimeTypes.h"
 #include "Router.h"
 
 ssize_t HttpResponse::send_response(int client_fd, HttpResponse& response) {
@@ -67,40 +70,44 @@ HttpResponse HttpResponse::render_default_error_page(int status_code) {
     return response;
 }
 
-// HttpResponse HttpResponse::render_error(
-//     int status_code, const std::map<int, ErrorPageDirective>& error_pages,
-//     const ServerConfig& servers) {
-//     HttpResponse response;
-//     response.status_code_ = status_code;
-//     response.message_ = HttpStatus::reason(status_code);
-//     const std::map<int, ErrorPageDirective>::const_iterator error_page =
-//         error_pages.find(status_code);
-//     if (error_page == error_pages.end()) {
-//         return render_default_error_page(status_code);
-//     }
-//
-//     const LocationConfig& location =
-//         Router::find_location(servers, error_page->second.target);
-//     int fd;
-//     for (std::vector<std::string>::const_iterator index_file =
-//              location.getCommonConfig().index_files_.begin();
-//          index_file != location.getCommonConfig().index_files_.end();
-//          ++index_file) {
-//         fd = open((error_page->second.target +
-//                    location.getCommonConfig().root_.value_ + *index_file)
-//                       .c_str(),
-//                   O_RDONLY);
-//         if (fd == -1) continue;
-//         break;
-//     }
-//     char buf[1024];  // NOLINT
-//     std::string buffer;
-//     while (true) {
-//         ssize_t len = read(fd, buf, sizeof(buf));
-//         if (len == -1) throw std::runtime_error("read() failed");
-//         if (len == 0) break;
-//         buffer.append(buf);
-//     }
-//     response.body_ = buffer;
-//     return response;
-// }
+HttpResponse HttpResponse::render_error(int status_code,
+                                        const RouteInfo& route) {
+    HttpResponse response;
+    int out_status = status_code;
+    if (route.resolve_.error_page_.empty())
+        return render_default_error_page(status_code);
+
+    std::map<int, ErrorPageDirective>::const_iterator target_error_page =
+        route.resolve_.error_page_.find(status_code);
+    if (target_error_page == route.resolve_.error_page_.end())
+        return render_default_error_page(status_code);
+
+    const ErrorPageDirective& error_page_directive = target_error_page->second;
+    if (error_page_directive.override_status != CommonConfig::INVALID_NUM) {
+        out_status = error_page_directive.override_status;
+    }
+
+    int fd = open(error_page_directive.target.c_str(), O_RDONLY);
+    if (fd == -1) return render_default_error_page(status_code);
+
+    std::vector<char> buffer;
+    char buf[DEFAULT_BUFFER_SIZE];
+    while (true) {
+        ssize_t len = read(fd, buf, sizeof(buf));
+        if (len == -1) {
+            close(fd);
+            throw std::runtime_error("read() failed");
+        }
+        if (len == 0) break;
+        buffer.insert(buffer.end(), buf, buf + len);
+    }
+    close(fd);
+
+    response.status_code_ = out_status;
+    response.message_ = HttpStatus::reason(out_status);
+    response.body_.assign(buffer.begin(), buffer.end());
+    response.header_.content_length_ = response.body_.size();
+    response.header_.content_type_ =
+        MimeTypes::get_mime_type(error_page_directive.target);
+    return response;
+}
