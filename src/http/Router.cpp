@@ -24,6 +24,9 @@ const ServerConfig& Router::find_server(const HttpRequest& request) const {
         if (matched) break;
     }
     if (!matched && !servers.empty()) matched = &servers.front();
+    if (!matched)
+        throw HttpException(HttpStatus::NotFound,
+                            HttpStatus::reason(HttpStatus::NotFound));
     return *matched;
 }
 
