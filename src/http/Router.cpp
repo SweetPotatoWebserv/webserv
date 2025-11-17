@@ -3,7 +3,6 @@
 Router::Router(const HttpConfig& config) : config_(config) {}
 
 const ServerConfig& Router::find_server(const HttpRequest& request) const {
-    // パスを探索
     const ServerConfig* matched = NULL;
     const std::vector<ServerConfig>& servers = config_.getservers();
     for (std::vector<ServerConfig>::const_iterator servers_itr =
