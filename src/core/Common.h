@@ -41,12 +41,10 @@ extern const int DECIMAL;
 extern const char* const COLON;
 extern const std::vector<std::string>::size_type HEADER_FIELD_NUM;
 
-extern const int MIN_PORT_NUMBER;
-extern const int MAX_PORT_NUMBER;
+extern const uint16_t MIN_PORT_NUMBER;
+extern const uint16_t MAX_PORT_NUMBER;
 extern const int MIN_ERROR_STATUS_CODE;
 extern const int MAX_ERROR_STATUS_CODE;
-extern const int MIN_OVERRIDE_STATUS_CODE;
-extern const int MAX_OVERRIDE_STATUS_CODE;
 
 class HttpStatus {
    public:
