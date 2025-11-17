@@ -32,13 +32,20 @@ const ServerConfig& Router::find_server(const HttpRequest& request) const {
 
 const LocationConfig& Router::find_location(const ServerConfig& server,
                                             const std::string& path) {
+    const std::vector<LocationConfig>& locations = server.getLocations();
     const LocationConfig* location = NULL;
-    for (std::vector<LocationConfig>::const_iterator locations =
-             server.getLocations().begin();
-         locations != server.getLocations().end(); ++locations) {
-        if (path == locations->getPath()) {
-            location = &(*locations);
-            break;
+    size_t match_len = 0;
+
+    for (std::vector<LocationConfig>::const_iterator locations_itr =
+             locations.begin();
+         locations_itr != locations.end(); ++locations_itr) {
+        const std::string& location_path = locations_itr->getPath();
+
+        if (path.find(location_path) == 0) {
+            if (location_path.size() > match_len) {
+                location = &(*locations_itr);
+                match_len = location_path.size();
+            }
         }
     }
     if (!location)
