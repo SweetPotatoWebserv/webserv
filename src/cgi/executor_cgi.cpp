@@ -63,18 +63,18 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
     }
 
     if (pipe(pipeOut_) == -1) {
-        close(pipeIn_[0]);
-        close(pipeIn_[1]);
+        safeClose(pipeIn_[0]);
+        safeClose(pipeIn_[1]);
         throw CgiExecutionException("Failed to create stdout pipe",
                                     HttpStatus::InternalServerError);
     }
 
     pid_ = fork();
     if (pid_ == -1) {
-        close(pipeIn_[0]);
-        close(pipeIn_[1]);
-        close(pipeOut_[0]);
-        close(pipeOut_[1]);
+        safeClose(pipeIn_[0]);
+        safeClose(pipeIn_[1]);
+        safeClose(pipeOut_[0]);
+        safeClose(pipeOut_[1]);
         throw CgiExecutionException("Failed to fork",
                                     HttpStatus::InternalServerError);
     }
@@ -84,8 +84,8 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
         exit(EXIT_FAILURE);
     }
 
-    close(pipeIn_[0]);
-    close(pipeOut_[1]);
+    safeClose(pipeIn_[0]);
+    safeClose(pipeOut_[1]);
     try {
         return readParentProcess(requestBody);
     } catch (const std::exception &e) {
@@ -104,11 +104,11 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
             std::cerr << "CGI warning: failed to write cgi stdin\n";
         }
     }
-    close(pipeIn_[1]);
+    safeClose(pipeIn_[1]);
 
     int epoll_fd = epoll_create(1);
     if (epoll_fd == -1) {
-        close(pipeOut_[0]);
+        safeClose(pipeOut_[0]);
         throw CgiExecutionException("epoll_create failed",
                                     HttpStatus::InternalServerError);
     }
@@ -117,8 +117,8 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
     ev.events = EPOLLIN;
     ev.data.fd = pipeOut_[0];
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, pipeOut_[0], &ev) == -1) {
-        close(pipeOut_[0]);
-        close(epoll_fd);
+        safeClose(pipeOut_[0]);
+        safeClose(epoll_fd);
         throw CgiExecutionException("epoll_ctl failed",
                                     HttpStatus::InternalServerError);
     }
@@ -166,8 +166,8 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
         }
     }
 
-    close(epoll_fd);
-    close(pipeOut_[0]);
+    safeClose(epoll_fd);
+    safeClose(pipeOut_[0]);
 
     int status;
     waitpid(pid_, &status, 0);
@@ -206,25 +206,25 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
 
 void CgiExecutor::executeChildProcess(const std::string &scriptPath,
                                       char *const argv[], char *const envp[]) {
-    close(pipeIn_[1]);
+    safeClose(pipeIn_[1]);
     if (dup2(pipeIn_[0], STDIN_FILENO) == -1) {
         std::cerr << "CGI Error: dup2 failed for stdin\n";
-        close(pipeIn_[0]);
-        close(pipeOut_[0]);
-        close(pipeOut_[1]);
+        safeClose(pipeIn_[0]);
+        safeClose(pipeOut_[0]);
+        safeClose(pipeOut_[1]);
         return;
     }
-    close(pipeIn_[0]);
+    safeClose(pipeIn_[0]);
 
-    close(pipeOut_[0]);
+    safeClose(pipeOut_[0]);
     if (dup2(pipeOut_[1], STDOUT_FILENO) == -1) {
         std::cerr << "CGI Error: dup2 failed for stdout\n";
-        close(pipeIn_[0]);
-        close(pipeIn_[1]);
-        close(pipeOut_[1]);
+        safeClose(pipeIn_[0]);
+        safeClose(pipeIn_[1]);
+        safeClose(pipeOut_[1]);
         return;
     }
-    close(pipeOut_[1]);
+    safeClose(pipeOut_[1]);
 
     std::string dir = getScriptDirectory(scriptPath);
     if (chdir(dir.c_str()) == -1) {
