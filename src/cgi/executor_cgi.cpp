@@ -163,8 +163,7 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
     }
 
     checkChildExitStatus(status);
-    throw CgiExecutionException("CGI script crashed",
-                                HttpStatus::InternalServerError);
+    return cgi_output;
 }
 
 void CgiExecutor::executeChildProcess(const std::string &scriptPath,
@@ -211,6 +210,9 @@ void CgiExecutor::executeChildProcess(const std::string &scriptPath,
 void CgiExecutor::checkChildExitStatus(int status) {
     if (WIFEXITED(status)) {
         int exit_code = WEXITSTATUS(status);
+        if (exit_code == 0) {
+            return;
+        }
         if (exit_code == EXIT_CODE_PERMISSION_DENIED) {
             throw CgiExecutionException("Permission denied",
                                         HttpStatus::Forbidden);
