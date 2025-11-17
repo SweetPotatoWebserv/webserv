@@ -196,6 +196,10 @@ class HttpConfig {
     void addErrorPage(int status, const ErrorPageDirective& ep) {
         common_config_.error_page_[status] = ep;
     }
+    void setUploadStore(const std::string& path) {
+        common_config_.upload_store_.value_ = path;
+        common_config_.upload_store_.is_set_ = true;
+    }
     // parserが使うため追加
     const CommonConfig& getCommonConfig() const { return common_config_; }
     const std::vector<ServerConfig>& getservers() const { return servers_; }

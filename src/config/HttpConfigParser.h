@@ -187,6 +187,9 @@ class HttpConfigParser {
             for (size_t i = 0; i < pep.status_codes.size(); ++i) {
                 config.addErrorPage(pep.status_codes[i], pep.directive);
             }
+        } else if (token == DIRECTIVE_UPLOAD_STORE) {
+            std::string path = parseStringDirective(tokens, index);
+            config.setUploadStore(path);
         } else {
             // 共通ディレクティブではなかった
             return false;
