@@ -1,5 +1,9 @@
 #include "ResponseFactory.h"
 
+#include <fcntl.h>
+
+#include <sstream>
+
 #include "HttpParser.h"
 #include "MimeTypes.h"
 #include "Router.h"
@@ -40,10 +44,50 @@ HttpResponse ResponseFactory::response_get(const HttpRequest& request,
     return response;
 }
 
-// HttpResponse ResponseFactory::response_post() {
+HttpResponse ResponseFactory::response_post(const HttpRequest& request,
+                                            const RouteInfo& route) {
+    if (!route.resolve_.upload_store_.is_set_)
+        return HttpResponse::render_error(HttpStatus::InternalServerError,
+                                          route);
+    const std::string& store_dir = route.resolve_.upload_store_.value_;
+    std::string dir = store_dir;
+    if (dir[dir.size() - 1] != '/') dir += "/";
+
+    std::stringstream ss;
+    ss << "upload_" << time(NULL);
+    std::string filename = ss.str();
+    std::string fullpath = dir + filename;
+    int fd =
+        open(fullpath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);  // NOLINT
+    if (fd == -1)
+        return HttpResponse::render_error(HttpStatus::InternalServerError,
+                                          route);
+
+    const std::string& body = request.body_;
+    size_t total = body.size();
+    ssize_t sent = 0;
+
+    while (sent < static_cast<ssize_t>(total)) {
+        ssize_t len = write(fd, body.c_str() + sent, total - sent);
+        if (len == -1)
+            return HttpResponse::render_error(HttpStatus::InternalServerError,
+                                              route);
+        sent += len;
+    }
+    close(fd);
+    HttpResponse response;
+    response.status_code_ = HttpStatus::Created;
+    response.message_ = HttpStatus::reason(HttpStatus::Created);
+    response.header_.content_type_ = "text/plain";
+    std::string message = "Uploaded to " + filename + "\n";
+    response.body_ = message;
+    response.header_.content_length_ = message.size();
+    return response;
+}
+
+// HttpResponse ResponseFactory::response_delete(const HttpRequest& request,
+// const RouteInfo& route) {
 //
-// }
-// HttpResponse ResponseFactory::response_delete() {
 //
 // }
 
@@ -69,10 +113,10 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
             response.body_.clear();
             return response;
         }
-        // case MethodPOST:
-        //     return response_post();
+        case MethodPOST:
+            return response_post(request, route);
         // case MethodDELETE:
-        //     return response_delete();
+        //     return response_delete(request, route);
         default:
             throw std::runtime_error(
                 "パースの時点で例外を投げてるため、入らないはず。入った時はなん"
