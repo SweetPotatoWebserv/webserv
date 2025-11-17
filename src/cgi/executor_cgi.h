@@ -33,6 +33,7 @@ class CgiExecutor {
 
     std::string execute(const std::string &scriptPath, char *const argv[],
                         char *const envp[], const std::string &requestBody);
+    static void safeClose(int &fd);
 
    private:
     pid_t pid_;
@@ -43,7 +44,6 @@ class CgiExecutor {
                              char *const envp[]);
     std::string readParentProcess(const std::string &requestBody);
 
-    static void safeClose(int &fd);
     static void checkChildExitStatus(int status);
     static std::string getScriptDirectory(const std::string &scriptPath);
     static std::string getScriptBasename(const std::string &scriptPath);
