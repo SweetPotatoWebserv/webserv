@@ -1,15 +1,19 @@
 #include "ResponseFactory.h"
-#include "HttpParser.h"
-#include "Router.h"
-#include "MimeTypes.h"
 
-HttpResponse ResponseFactory::response_get(const RouteInfo& route) {
+#include "HttpParser.h"
+#include "MimeTypes.h"
+#include "Router.h"
+
+HttpResponse ResponseFactory::response_get(const HttpRequest& request,
+                                           const RouteInfo& route) {
     HttpResponse response;
     std::string path_name;
     bool found = false;
-    for (std::vector<std::string>::const_iterator index_files = route.resolve_.index_files_.begin();
+    for (std::vector<std::string>::const_iterator index_files =
+             route.resolve_.index_files_.begin();
          index_files != route.resolve_.index_files_.end(); ++index_files) {
-        path_name =  route.resolve_.root_.value_ + route.location_->getPath() + *index_files;
+        path_name = route.resolve_.root_.value_ +
+                    request.request_target_.path_ + *index_files;
         int fd = open(path_name.c_str(), O_RDONLY);
         if (fd == -1) {
             continue;
@@ -26,10 +30,8 @@ HttpResponse ResponseFactory::response_get(const RouteInfo& route) {
         found = true;
         break;
     }
-    //TODO 404 エラーを返す
     if (!found) {
-        std::cout << "404\n";
-        // render_error_page()
+        return HttpResponse::render_error(HttpStatus::NotFound, route);
     }
     response.status_code_ = HttpStatus::OK;
     response.message_ = HttpStatus::reason(HttpStatus::OK);
@@ -45,12 +47,13 @@ HttpResponse ResponseFactory::response_get(const RouteInfo& route) {
 //
 // }
 
-HttpResponse ResponseFactory::make(const HttpRequest& request, const RouteInfo& route, const HttpException& parse_error) {
-    (void)parse_error;
+HttpResponse ResponseFactory::make(const HttpRequest& request,
+                                   const RouteInfo& route,
+                                   const HttpException& parse_error) {
     // パースエラー
-    // if (parse_error.status_code() != HttpStatus::OK) {
-    //     return HttpResponse::render_error(parse_error.status_code(), route);
-    // }
+    if (parse_error.status_code() != HttpStatus::OK) {
+        return HttpResponse::render_error(parse_error.status_code(), route);
+    }
     // TODO allowedメソッドがまだ実装されてないため、コメントアウト
     // if (std::find(resolve_.allowed_methods_.begin(),
     //               resolve_.allowed_methods_.end(),
@@ -59,7 +62,7 @@ HttpResponse ResponseFactory::make(const HttpRequest& request, const RouteInfo& 
     //     return HttpResponse::render_error(HttpStatus::MethodNotAllowed,
     switch (request.method_) {
         case MethodGET:
-            return response_get(route);
+            return response_get(request, route);
         // case MethodHEAD:
         //     HttpResponse response = response_get();
         //     // responseからbodyを削除
@@ -69,7 +72,9 @@ HttpResponse ResponseFactory::make(const HttpRequest& request, const RouteInfo& 
         // case MethodDELETE:
         //     return response_delete();
         default:
-            throw std::runtime_error("パースの時点で例外を投げてるため、入らないはず。入った時はなんかおかしいから例外を投げて気づけるようにする");
+            throw std::runtime_error(
+                "パースの時点で例外を投げてるため、入らないはず。入った時はなん"
+                "かおかしいから例外を投げて気づけるようにする");
             break;
     }
 }
