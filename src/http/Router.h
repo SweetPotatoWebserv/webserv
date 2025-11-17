@@ -5,18 +5,20 @@
 #include "HttpResponse.h"
 #include "ResolveConfig.h"
 
-// TODO HttpConfig をメンバにもつ
+typedef struct RouteInfo {
+    const ServerConfig* server_;
+    const LocationConfig* location_;
+    ResolveConfig resolve_;
+} RouteInfo;
+
 class Router {
    public:
     explicit Router(const HttpConfig& config);
-    HttpResponse create_response(const HttpRequest& request,
-                                 const HttpException& exception);
-    static const LocationConfig& find_location(const ServerConfig& server,
-                                               const std::string& path);
+    RouteInfo route(const HttpRequest& request);
 
    private:
     const ServerConfig& find_server(const HttpRequest& request);
-    ResolveConfig resolve_;
+    static const LocationConfig& find_location(const ServerConfig& server,
+            const std::string& path);
     HttpConfig config_;
-    static const int DEFAULT_BUFFER_LEN = 1024;
 };

@@ -11,6 +11,7 @@
 
 #include "../core/String.h"
 #include "HttpException.h"
+#include "Router.h"
 
 const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
 
@@ -93,7 +94,7 @@ void ClientHandler::on_readable() {  // NOLINT
         } catch (const HttpException& e) {
             exception = e;
         }
-        response_ = router_.create_response(request_, exception);
+        RouteInfo info = router_.route(request_);
         event_.mod(fd_, EPOLLOUT);
     }
 }
