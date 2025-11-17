@@ -182,8 +182,6 @@ void CgiExecutor::executeChildProcess(const std::string &scriptPath,
     safeClose(pipeOut_[0]);
     if (dup2(pipeOut_[1], STDOUT_FILENO) == -1) {
         std::cerr << "CGI Error: dup2 failed for stdout\n";
-        safeClose(pipeIn_[0]);
-        safeClose(pipeIn_[1]);
         safeClose(pipeOut_[1]);
         return;
     }
