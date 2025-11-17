@@ -192,6 +192,12 @@ void HttpConfigParser::parserServer(HttpConfig& config,
         } else if (token == DIRECTIVE_RETURN) {
             ReturnDirective rd = parseReturn(tokens, index);
             server_config.setRedirect(rd);
+        } else if (token == DIRECTIVE_SERVER_NAME) {
+            std::vector<std::string> names = parseServerName(tokens, index);
+            // server_config にパース結果をセットする
+            for (size_t i = 0; i < names.size(); ++i) {
+                server_config.addServerName(names[i]);
+            }
         } else if (HttpConfigParser::parseCommonDirective(server_config, token,
                                                           tokens, index)) {
             continue;
