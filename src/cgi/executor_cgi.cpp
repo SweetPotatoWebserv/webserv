@@ -18,7 +18,7 @@
 namespace {
 const int CGI_TIMEOUT_MS = 5000;
 const int MAX_EPOLL_EVENTS = 1;
-const int BUFFER_SIZE = 100000;
+const int BUFFER_SIZE = 4096;
 
 const int EXIT_CODE_PERMISSION_DENIED = 126;
 const int EXIT_CODE_COMMAND_NOT_FOUND = 127;
