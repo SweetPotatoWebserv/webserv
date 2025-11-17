@@ -61,12 +61,14 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
     //                                       resolve_.error_page_, server);
     //     return HttpResponse::render_error(HttpStatus::MethodNotAllowed,
     switch (request.method_) {
-        case MethodGET:
+        case MethodGET: {
             return response_get(request, route);
-        // case MethodHEAD:
-        //     HttpResponse response = response_get();
-        //     // responseからbodyを削除
-        //     return response;
+        }
+        case MethodHEAD: {
+            HttpResponse response = response_get(request, route);
+            response.body_.clear();
+            return response;
+        }
         // case MethodPOST:
         //     return response_post();
         // case MethodDELETE:
