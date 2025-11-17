@@ -140,9 +140,9 @@ class HttpConfigParser {
     static const off_t BYTES_PER_GB = static_cast<off_t>(1024) * 1024 * 1024;
 
     static const int MIN_OVERRIDE_STATUS_CODE = 200;
-    static const int MAX_OVERRIDE_STATUS_CODE = 599;
+    static const int MAX_OVERRIDE_STATUS_CODE = 501;
     static const int MIN_RETURN_STATUS_CODE = 0;
-    static const int MAX_RETURN_STATUS_CODE = 999;
+    static const int MAX_RETURN_STATUS_CODE = 501;
 
     template <typename T>
     static bool parseCommonDirective(T& config, const std::string& token,
