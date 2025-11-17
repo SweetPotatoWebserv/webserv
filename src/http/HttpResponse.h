@@ -1,4 +1,5 @@
 #pragma once
+#include "HttpDate.h"
 #include "HttpParser.h"
 
 struct HttpResponse {

@@ -13,15 +13,6 @@ struct UriPath {
     std::string query_string_;
 };
 
-class HttpDate {
-   public:
-    HttpDate from_string(const std::string& s) const;
-    std::string to_string() const;
-
-   private:
-    std::time_t timestamp_;
-};
-
 struct HttpCommonHeader {
     // Content-Length: 512
     std::size_t content_length_;
