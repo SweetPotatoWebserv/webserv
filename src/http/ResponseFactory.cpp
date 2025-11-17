@@ -1,6 +1,7 @@
 #include "ResponseFactory.h"
 
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #include <sstream>
 
@@ -85,11 +86,32 @@ HttpResponse ResponseFactory::response_post(const HttpRequest& request,
     return response;
 }
 
-// HttpResponse ResponseFactory::response_delete(const HttpRequest& request,
-// const RouteInfo& route) {
-//
-//
-// }
+HttpResponse ResponseFactory::response_delete(const HttpRequest& request,
+                                              const RouteInfo& route) {
+    if (!route.resolve_.root_.is_set_)
+        return HttpResponse::render_error(HttpStatus::InternalServerError,
+                                          route);
+    std::string path =
+        route.resolve_.root_.value_ + request.request_target_.path_;
+    struct stat st;
+    if (stat(path.c_str(), &st) == -1)
+        return HttpResponse::render_error(HttpStatus::NotFound, route);
+
+    if (S_ISDIR(st.st_mode))
+        return HttpResponse::render_error(HttpStatus::Forbidden, route);
+    if (unlink(path.c_str()) == -1) {
+        if (errno == EACCES) {
+            return HttpResponse::render_error(HttpStatus::Forbidden, route);
+        }
+        return HttpResponse::render_error(HttpStatus::InternalServerError,
+                                          route);
+    }
+    HttpResponse response;
+    response.status_code_ = HttpStatus::NoContent;
+    response.message_ = HttpStatus::reason(HttpStatus::NoContent);
+    response.header_.content_length_ = 0;
+    return response;
+}
 
 HttpResponse ResponseFactory::make(const HttpRequest& request,
                                    const RouteInfo& route,
@@ -115,8 +137,8 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
         }
         case MethodPOST:
             return response_post(request, route);
-        // case MethodDELETE:
-        //     return response_delete(request, route);
+        case MethodDELETE:
+            return response_delete(request, route);
         default:
             throw std::runtime_error(
                 "パースの時点で例外を投げてるため、入らないはず。入った時はなん"
