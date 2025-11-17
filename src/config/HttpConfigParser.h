@@ -130,12 +130,8 @@ class HttpConfigParser {
     static const off_t BYTES_PER_MB = static_cast<off_t>(1024) * 1024;
     static const off_t BYTES_PER_GB = static_cast<off_t>(1024) * 1024 * 1024;
 
-    // 最大値のポート番号を定数化
-    static const int MAX_PORT_NUMBER = 65535;
-    // error pageの範囲
-    static const int MIN_ERROR_STATUS_CODE = 300;
-    static const int MAX_ERROR_STATUS_CODE = 599;
     static const int MIN_OVERRIDE_STATUS_CODE = 200;
+    static const int MAX_OVERRIDE_STATUS_CODE = 599;
 
     template <typename T>
     static bool parseCommonDirective(T& config, const std::string& token,
