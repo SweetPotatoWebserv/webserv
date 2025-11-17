@@ -20,5 +20,5 @@ class Router {
     const ServerConfig& find_server(const HttpRequest& request) const;
     static const LocationConfig& find_location(const ServerConfig& server,
                                                const std::string& path);
-    HttpConfig config_;
+    const HttpConfig& config_;
 };
