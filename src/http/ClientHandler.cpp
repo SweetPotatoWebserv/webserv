@@ -11,10 +11,11 @@
 
 #include "../core/String.h"
 #include "HttpException.h"
+#include "Router.h"
 
 const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
 
-ClientHandler::ClientHandler(int fd, Event& event, const Router& router)
+ClientHandler::ClientHandler(int fd, Event& event, Router& router)
     : fd_(fd), event_(event), router_(router) {}
 
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
@@ -83,11 +84,13 @@ void ClientHandler::on_readable() {  // NOLINT
     }
     buffer_.append(buf, len);
     if (ClientHandler::is_request_ready(buffer_)) {
-        request_ = HttpParser::http_request_parse(buffer_);
-        // try {
-        // } catch (const HttpException& e) {
-        //     sendErrorResponse(e.status_code());
-        // }
+        HttpException exception(HttpStatus::OK);
+        try {
+            request_ = HttpParser::http_request_parse(buffer_);
+        } catch (const HttpException& e) {
+            exception = e;
+        }
+        RouteInfo info = router_.route(request_);
         event_.mod(fd_, EPOLLOUT);
     }
 }
