@@ -31,6 +31,10 @@ const uint16_t MIN_PORT_NUMBER = 0;
 const uint16_t MAX_PORT_NUMBER = 65535;
 const int MIN_ERROR_STATUS_CODE = 300;
 const int MAX_ERROR_STATUS_CODE = 599;
+const int MIN_VALID_STATUS_CODE = 200;
+const int MAX_VALID_STATUS_CODE = 501;
+const int MIN_REDIRECT_STATUS_CODE = 301;
+const int MAX_REDIRECT_STATUS_CODE = 308;
 
 std::map<int, std::string> HttpStatus::createReasonMap() {
     std::map<int, std::string> m;

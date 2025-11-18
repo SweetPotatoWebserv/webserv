@@ -546,8 +546,8 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
 
         std::stringstream ss(token);
         if (!(ss >> pep.directive.override_status) || !ss.eof() ||
-            pep.directive.override_status < MIN_OVERRIDE_STATUS_CODE ||
-            pep.directive.override_status > MAX_OVERRIDE_STATUS_CODE) {
+            pep.directive.override_status < MIN_VALID_STATUS_CODE ||
+            pep.directive.override_status > MAX_VALID_STATUS_CODE) {
             throw std::runtime_error(
                 "Error: Invalid new status code in error_page: " + token);
         }
@@ -604,8 +604,9 @@ ReturnDirective HttpConfigParser::parseReturn(
     std::stringstream ss(status_str);
 
     // マジックナンバーを定数でチェック
-    if (!(ss >> rd.status) || !ss.eof() || rd.status < MIN_RETURN_STATUS_CODE ||
-        rd.status > MAX_RETURN_STATUS_CODE) {
+    if (!(ss >> rd.status) || !ss.eof() ||
+        rd.status < MIN_REDIRECT_STATUS_CODE ||
+        rd.status > MAX_REDIRECT_STATUS_CODE) {
         throw std::runtime_error(
             "Error: Invalid status code for return directive: " + status_str);
     }
