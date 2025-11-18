@@ -39,6 +39,25 @@ CgiExecutor::~CgiExecutor() {
     safeClose(pipeOut_[1]);
 }
 
+void CgiExecutor::writeAll(int fd, const char *buffer, size_t size) {
+    size_t total_written = 0;
+    while (total_written < size) {
+        ssize_t written =
+            write(fd, buffer + total_written, size - total_written);
+
+        if (written < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            std::cerr << "CGI warning: failed to write cgi stdin fully. errno: "
+                      << strerror(errno) << "\n";
+            return;
+        }
+
+        total_written += written;
+    }
+}
+
 std::string CgiExecutor::execute(const std::string &scriptPath,
                                  char *const argv[], char *const envp[],
                                  const std::string &requestBody) {
@@ -83,11 +102,7 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
 
 std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
     if (!requestBody.empty()) {
-        ssize_t written =
-            write(pipeIn_[1], requestBody.c_str(), requestBody.size());
-        if (written < 0) {
-            std::cerr << "CGI warning: failed to write cgi stdin\n";
-        }
+        writeAll(pipeIn_[1], requestBody.c_str(), requestBody.size());
     }
     safeClose(pipeIn_[1]);
 
