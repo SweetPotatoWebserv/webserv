@@ -29,7 +29,7 @@ void parseCgiHeaderLine(const std::string& line, HttpResponse& response) {
     std::string::size_type colon_pos = line.find(':');
 
     if (colon_pos == std::string::npos || colon_pos == 0) {
-        return;  // 不正なヘッダー
+        return;
     }
 
     std::string header_name = line.substr(0, colon_pos);
@@ -43,7 +43,7 @@ void parseCgiHeaderLine(const std::string& line, HttpResponse& response) {
     }
 
     std::transform(header_name.begin(), header_name.end(), header_name.begin(),
-                   ::tolower);  // 大文字小文字の両方に対応するため(区別される)
+                   ::tolower);
 
     if (header_name == STATUS_HEADER_LOWER) {
         std::stringstream ss_status(header_value);
@@ -76,9 +76,7 @@ void parseCgiResponse(HttpResponse& response, const std::string& raw_output) {
         response.body_ = raw_output.substr(body_start_pos);
     } else {
         // CGIスクリプトがプロトコル違反の応答をした
-        response.status_code_ =
-            HttpStatus::InternalServerError;  // BadGateway is better which is
-                                              // 502
+        response.status_code_ = HttpStatus::InternalServerError;
         response.body_ = "CGI script returned malformed response";
         return;
     }
