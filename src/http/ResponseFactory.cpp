@@ -165,6 +165,10 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
     if (route.resolve_.redirect_.status != CommonConfig::INVALID_NUM)
         return response_redirect(route);
 
+    if (route.resolve_.client_max_body_size_ <
+        static_cast<off_t>(request.body_.size()))
+        return HttpResponse::render_error(HttpStatus::PayloadTooLarge, route);
+
     switch (request.method_) {
         case MethodGET: {
             return response_get(request, route);
