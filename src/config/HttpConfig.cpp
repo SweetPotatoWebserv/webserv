@@ -18,7 +18,7 @@ ReturnDirective::ReturnDirective() : status(CommonConfig::INVALID_NUM) {}
 
 LocationConfig::LocationConfig() {
     allowed_methods_.push_back(MethodGET);
+    allowed_methods_.push_back(MethodHEAD);
     allowed_methods_.push_back(MethodPOST);
     allowed_methods_.push_back(MethodDELETE);
-    allowed_methods_.push_back(MethodHEAD);
 }
