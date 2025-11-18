@@ -16,8 +16,12 @@
 
 const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
 
-ClientHandler::ClientHandler(int fd, Event& event, Router& router)
-    : fd_(fd), event_(event), router_(router) {}
+ClientHandler::ClientHandler(int fd, Event& event, Router& router,
+                             ServerConfig server_config)
+    : fd_(fd),
+      event_(event),
+      router_(router),
+      server_config_(server_config) {}  // NOLINT
 
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
     static_cast<void>(fd);
@@ -96,8 +100,8 @@ void ClientHandler::on_readable() {  // NOLINT
             exception = e;
         }
         // TODO 例外処理する
-        // parserエラーかつ、server エラーの時の処理をどうするか考える
-        RouteInfo info = router_.route(request_);
+        // parse エラーかつ、server エラーの時の処理をどうするか考える
+        RouteInfo info = router_.route(server_config_, request_);
         response_ = ResponseFactory::make(request_, info, exception);
         event_.mod(fd_, EPOLLOUT);
     }

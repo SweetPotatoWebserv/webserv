@@ -6,7 +6,8 @@
 
 class ClientHandler {
    public:
-    ClientHandler(int fd, Event& event, Router& router);
+    ClientHandler(int fd, Event& event, Router& router,
+                  ServerConfig server_config);
     static void on_event(int fd, uint32_t event, void* self);
     void on_close();
     void on_readable();
@@ -22,9 +23,10 @@ class ClientHandler {
 
    private:
     int fd_;
-    std::string buffer_;
     Event& event_;
     Router& router_;
+    ServerConfig server_config_;
+    std::string buffer_;
     HttpRequest request_;
     HttpResponse response_;
     static const int BUFFER_SIZE = 4096;
