@@ -22,6 +22,7 @@ std::string methodToString(Method method) {
     if (method == MethodPOST) return "POST";
     if (method == MethodDELETE) return "DELETE";
     if (method == MethodHEAD) return "HEAD";
+    if (method == MethodUNKNOWN) return "UNKNOWN";
     return "";
 }
 
