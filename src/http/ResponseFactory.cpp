@@ -113,6 +113,39 @@ HttpResponse ResponseFactory::response_delete(const HttpRequest& request,
     return response;
 }
 
+HttpResponse ResponseFactory::response_redirect(const RouteInfo& route) {
+    HttpResponse response;
+    response.status_code_ = route.resolve_.redirect_.status;
+    response.message_ = HttpStatus::reason(response.status_code_);
+    // TODO Config で定義してる定数を Common に移動したらここも置き換える
+    if (response.status_code_ >= 302 &&  // NOLINT
+        response.status_code_ <= 308) {  // NOLINT
+        // TODO パス補完する必要あるかも
+        response.location_ = route.resolve_.redirect_.target;
+        response.header_.content_type_ = "text/html";
+        std::stringstream oss;
+        oss << "<html>\n"
+            << "<head>"
+            << "<title>" << response.status_code_ << " "
+            << HttpStatus::reason(response.status_code_) << "</title>"
+            << "</head>\n"
+            << "<body>\n"
+            << "<center><h1>" << response.status_code_ << " "
+            << HttpStatus::reason(response.status_code_) << "</h1></center>\n"
+            << "<hr><center>webserv</center>\n"
+            << "</body>"
+            << "</html>\n";
+        response.body_ = oss.str();
+        response.header_.content_length_ = response.body_.size();
+        return response;
+    }
+
+    response.header_.content_type_ = "application/octet-stream";
+    response.body_ = route.resolve_.redirect_.text;
+    response.header_.content_length_ = response.body_.size();
+    return response;
+}
+
 HttpResponse ResponseFactory::make(const HttpRequest& request,
                                    const RouteInfo& route,
                                    const HttpException& parse_error) {
@@ -129,6 +162,9 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
     // TODO cgi が追加されたら追加する
     // if (is_cgi(request, route))
     //     return response cgi;
+    if (route.resolve_.redirect_.status != CommonConfig::INVALID_NUM)
+        return response_redirect(route);
+
     switch (request.method_) {
         case MethodGET: {
             return response_get(request, route);
