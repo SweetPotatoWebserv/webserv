@@ -26,16 +26,6 @@ std::string methodToString(Method method) {
     return "";
 }
 
-std::string extractQueryString(const std::string& uri) {
-    std::string::size_type pos = uri.find('?');
-
-    if (pos == std::string::npos) {
-        return "";
-    }
-
-    return uri.substr(pos + 1);
-}
-
 char** createArgv(const std::string& script_path) {
     char** argv = new char*[2];
     argv[0] = strdup(script_path.c_str());
@@ -54,10 +44,7 @@ char** createEnvp(const HttpRequest& request) {
     env_map["CONTENT_LENGTH"] = numToString(request.header_.content_length_);
     env_map["CONTENT_TYPE"] = request.header_.content_type_;
     env_map["SCRIPT_NAME"] = request.request_target_.path_;
-
-    std::string query =
-        extractQueryString(request.request_target_.query_string_);
-    env_map["QUERY_STRING"] = query;
+    env_map["QUERY_STRING"] = request.request_target_.query_string_;
 
     env_map["SERVER_NAME"] = request.host_.getAddress();
     env_map["SERVER_PORT"] = numToString(request.host_.getPort());
