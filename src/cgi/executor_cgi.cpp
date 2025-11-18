@@ -237,14 +237,10 @@ void CgiExecutor::checkChildExitStatus(int status) {
             throw CgiExecutionException("Command not found",
                                         HttpStatus::NotFound);
         }
-        if (exit_code != 0) {
-            throw CgiExecutionException("CGI script error",
-                                        HttpStatus::InternalServerError);
-        }
-    } else {
-        throw CgiExecutionException("CGI crashed",
+        throw CgiExecutionException("CGI script error",
                                     HttpStatus::InternalServerError);
     }
+    throw CgiExecutionException("CGI crashed", HttpStatus::InternalServerError);
 }
 
 void CgiExecutor::safeClose(int &fd) {
