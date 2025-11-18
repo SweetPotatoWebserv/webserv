@@ -50,8 +50,6 @@ char** createEnvp(const HttpRequest& request) {
     env_map["SERVER_NAME"] = request.host_.getAddress();
     env_map["SERVER_PORT"] = numToString(request.host_.getPort());
 
-    // env_map["HTTP_HOST"] = request.host_.toString();
-
     env_map["SERVER_PROTOCOL"] = "HTTP/1.1";
     env_map["SERVER_SOFTWARE"] = "webserv/1.0";
     env_map["GATEWAY_INTERFACE"] = "CGI/1.1";
