@@ -91,7 +91,6 @@ class LocationConfig {
         common_config_.client_max_body_size_ = size;
     }
     void addErrorPage(int status, const ErrorPageDirective& ep) {
-        //修正: structのmapに直接アクセス
         common_config_.error_page_[status] = ep;
     }
     void setRedirect(const ReturnDirective& ret) {
@@ -103,6 +102,9 @@ class LocationConfig {
     }
 
     void addAllowedMethod(const Method& m) { allowed_methods_.push_back(m); }
+    void setAllowedMethods(const std::vector<Method>& methods) {
+        allowed_methods_ = methods;  // ベクター全体を代入（上書き）
+    }
     void setCgiPath(const std::string& p) { cgi_path_ = p; }
     void setCgiExtension(const std::string& e) { cgi_extension_ = e; }
     const CommonConfig& getCommonConfig() const { return common_config_; }

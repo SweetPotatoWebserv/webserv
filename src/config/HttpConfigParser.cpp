@@ -255,10 +255,7 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
             location_config.setRedirect(rd);
         } else if (token == DIRECTIVE_ALLOW_METHODS) {
             std::vector<Method> methods = parseAllowedMethods(tokens, index);
-            // location_config にパース結果をセットする
-            for (size_t i = 0; i < methods.size(); ++i) {
-                location_config.addAllowedMethod(methods[i]);
-            }
+            location_config.setAllowedMethods(methods);
         } else if (token == DIRECTIVE_CGI_PATH) {
             // "cgi_path /path/to/cgi_binary;" をパースする
             std::string path = parseStringDirective(tokens, index);
