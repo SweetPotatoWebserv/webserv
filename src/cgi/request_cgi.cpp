@@ -63,6 +63,13 @@ char** createEnvp(const HttpRequest& request) {
          it != env_map.end(); ++it) {
         std::string env_line = it->first + "=" + it->second;
         envp[i] = strdup(env_line.c_str());
+        if (envp[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(envp[j]);
+            }
+            delete[] envp;
+            return NULL;
+        }
         i++;
     }
     envp[i] = NULL;
