@@ -126,6 +126,9 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
     //               request.method_) == resolve_.allowed_methods_.end())
     //                                       resolve_.error_page_, server);
     //     return HttpResponse::render_error(HttpStatus::MethodNotAllowed,
+    // TODO cgi が追加されたら追加する
+    // if (is_cgi(request, route))
+    //     return response cgi;
     switch (request.method_) {
         case MethodGET: {
             return response_get(request, route);
