@@ -1,5 +1,6 @@
 #include "ResponseFactory.h"
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 
@@ -36,6 +37,16 @@ HttpResponse ResponseFactory::response_get(const HttpRequest& request,
         break;
     }
     if (!found) {
+        std::string file_path =
+            route.resolve_.root_.value_ + request.request_target_.path_;
+        struct stat status;
+        if (stat(file_path.c_str(), &status) == 0 && S_ISDIR(status.st_mode)) {
+            if (route.resolve_.autoindex_.is_set_ &&
+                route.resolve_.autoindex_.value_) {
+                return response_autoindex(request, route);
+            }
+            return HttpResponse::render_error(HttpStatus::Forbidden, route);
+        }
         return HttpResponse::render_error(HttpStatus::NotFound, route);
     }
     response.status_code_ = HttpStatus::OK;
@@ -86,6 +97,75 @@ HttpResponse ResponseFactory::response_post(const HttpRequest& request,
     return response;
 }
 
+HttpResponse ResponseFactory::response_autoindex(const HttpRequest& request,
+                                                 const RouteInfo& route) {
+    HttpResponse response;
+
+    std::string file_path =
+        route.resolve_.root_.value_ + request.request_target_.path_;
+
+    DIR* directory = opendir(file_path.c_str());
+    if (directory == NULL) {
+        return HttpResponse::render_error(HttpStatus::InternalServerError,
+                                          route);
+    }
+
+    std::string request_path = request.request_target_.path_;
+    if (!request_path.empty() && request_path[request_path.size() - 1] != '/')
+        request_path += "/";
+
+    std::vector<std::string> entries;
+    while (true) {
+        errno = 0;
+        struct dirent* directory_entry = readdir(directory);
+        if (directory_entry == NULL) break;
+        std::string name = directory_entry->d_name;
+        if (name == ".") continue;
+        if (name == "..") continue;
+        entries.push_back(name);
+    }
+    int saved_errno = errno;
+    closedir(directory);
+    if (saved_errno != 0) {
+        return HttpResponse::render_error(HttpStatus::InternalServerError,
+                                          route);
+    }
+
+    std::sort(entries.begin(), entries.end());
+
+    std::ostringstream body;
+    body << "<!DOCTYPE html>\n"
+         << "<html>\n<head>\n<title>Index of " << request_path
+         << "</title>\n</head>\n<body>\n";
+    body << "<h1>Index of " << request_path << "</h1>\n<hr><pre>\n";
+    if (request_path != "/") {
+        body << "<a href=\"../\">../</a>\n";
+    }
+
+    for (std::vector<std::string>::iterator entry = entries.begin();
+         entry != entries.end(); ++entry) {
+        std::string fs_path = file_path + *entry;
+        struct stat status;
+        std::string display = *entry;
+        std::string href = request_path + *entry;
+        if (stat(fs_path.c_str(), &status) == 0 && S_ISDIR(status.st_mode)) {
+            display += "/";
+            href += "/";
+        }
+        body << "<a href=\"" << href << "\">" << display << "</a>\n";
+    }
+
+    body << "</pre><hr>\n";
+    body << "</body>\n</html>\n";
+
+    response.status_code_ = HttpStatus::OK;
+    response.message_ = HttpStatus::reason(HttpStatus::OK);
+    response.header_.content_type_ = "text/html";
+    response.body_ = body.str();
+    response.header_.content_length_ = response.body_.size();
+    return response;
+}
+
 HttpResponse ResponseFactory::response_delete(const HttpRequest& request,
                                               const RouteInfo& route) {
     if (!route.resolve_.root_.is_set_)
@@ -120,7 +200,6 @@ HttpResponse ResponseFactory::response_redirect(const RouteInfo& route) {
     // TODO Config で定義してる定数を Common に移動したらここも置き換える
     if (response.status_code_ >= 302 &&  // NOLINT
         response.status_code_ <= 308) {  // NOLINT
-        // TODO パス補完する必要あるかも
         response.location_ = route.resolve_.redirect_.target;
         response.header_.content_type_ = "text/html";
         std::stringstream oss;
@@ -165,8 +244,9 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
     if (route.resolve_.redirect_.status != CommonConfig::INVALID_NUM)
         return response_redirect(route);
 
-    if (route.resolve_.client_max_body_size_ <
-        static_cast<off_t>(request.body_.size()))
+    if (route.resolve_.client_max_body_size_ != CommonConfig::INVALID_NUM &&
+        route.resolve_.client_max_body_size_ <
+            static_cast<off_t>(request.body_.size()))
         return HttpResponse::render_error(HttpStatus::PayloadTooLarge, route);
 
     switch (request.method_) {
