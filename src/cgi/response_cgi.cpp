@@ -11,6 +11,7 @@
 #include <string>
 
 #include "../core/Common.h"
+#include "../core/String.h"
 #include "../http/HttpParser.h"
 
 namespace {
@@ -35,13 +36,7 @@ void parseCgiHeaderLine(const std::string& line, HttpResponse& response) {
     std::string header_name = line.substr(0, colon_pos);
     std::string header_value = line.substr(colon_pos + 1);
 
-    std::string::size_type value_start = header_value.find_first_not_of(" \t");
-    if (value_start != std::string::npos) {
-        header_value = header_value.substr(value_start);
-    } else {
-        header_value = "";
-    }
-
+    header_value = trim(header_value);
     std::transform(header_name.begin(), header_name.end(), header_name.begin(),
                    ::tolower);
 
