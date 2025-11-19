@@ -82,6 +82,7 @@ void parseCgiResponse(HttpResponse& response, const std::string& raw_output) {
     response.status_code_ = HttpStatus::OK;
 
     while (std::getline(ss, line)) {
+        line = trim(line);
         if (line.empty()) {
             continue;
         }
