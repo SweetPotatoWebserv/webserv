@@ -1,12 +1,7 @@
 #include "response_cgi.h"
 
-#include <sys/types.h>
-#include <sys/wait.h>
-
 #include <algorithm>
 #include <cctype>
-#include <cstdlib>
-#include <cstring>
 #include <sstream>
 #include <string>
 
@@ -37,6 +32,7 @@ void parseCgiHeaderLine(const std::string& line, HttpResponse& response) {
     std::string header_value = line.substr(colon_pos + 1);
 
     header_value = trim(header_value);
+    header_name = trim(header_name);
     std::transform(header_name.begin(), header_name.end(), header_name.begin(),
                    ::tolower);
 
