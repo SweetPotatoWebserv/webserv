@@ -29,7 +29,6 @@ elif query == "location_only=true":
     print("Location: /test/new_resource") 
     print("") # ヘッダーセクションの終了
     print("Implicit 302 redirecting to /test/new_resource")
-# -------------------------------------------------------------
 
 else:
     print("Content-Type: text/plain")
