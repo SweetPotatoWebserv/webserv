@@ -88,6 +88,15 @@ void parseCgiResponse(HttpResponse& response, const std::string& raw_output) {
         parseCgiHeaderLine(line, response);
     }
 
+    if (!response.location_.empty() &&
+        response.status_code_ == HttpStatus::OK) {
+        response.status_code_ = HttpStatus::Found;
+    }
+
+    if (response.status_code_ == HttpStatus::NoContent) {
+        return;
+    }
+
     if ((response.status_code_ == HttpStatus::OK ||
          response.status_code_ == HttpStatus::Created) &&
         response.location_.empty() &&  // リダイレクトでもない
