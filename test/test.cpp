@@ -7,6 +7,8 @@
 
 #include "../src/cgi/handler_cgi.h"
 #include "../src/core/Common.h"
+#include "../src/http/HttpParser.h"
+#include "../src/http/HttpResponse.h"
 
 /**
  * @brief アサーションヘルパー。失敗時に例外を投げる。

@@ -14,6 +14,10 @@
 #include "request_cgi.h"
 #include "response_cgi.h"
 
+CgiProcess::CgiProcess() {}
+
+CgiProcess::~CgiProcess() {}
+
 bool CgiProcess::validateCgiScript(const std::string& script_path,
                                    HttpResponse& response) {
     struct stat st;
