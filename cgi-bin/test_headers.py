@@ -26,7 +26,7 @@ elif query == "status=bad_header":
 
 elif query == "location_only=true":
     # Status を出力しないことで、サーバーが 302 (Found) を暗黙的に設定することをテスト
-    print("Location: /test/new_resource") 
+    print("Location: /test/new_resource")
     print("") # ヘッダーセクションの終了
     print("Implicit 302 redirecting to /test/new_resource")
 
