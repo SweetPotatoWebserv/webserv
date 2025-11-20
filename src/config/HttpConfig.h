@@ -74,6 +74,7 @@ struct CommonConfig {
 
 class LocationConfig {
    public:
+    LocationConfig();
     // ---setter---
     void setPath(const std::string& p) { path_ = p; }
     void setRoot(const std::string& r) {
@@ -91,10 +92,21 @@ class LocationConfig {
         common_config_.client_max_body_size_ = size;
     }
     void addErrorPage(int status, const ErrorPageDirective& ep) {
-        //修正: structのmapに直接アクセス
         common_config_.error_page_[status] = ep;
     }
+    void setRedirect(const ReturnDirective& ret) {
+        common_config_.redirect_ = ret;
+    }
+    void setUploadStore(const std::string& path) {
+        common_config_.upload_store_.value_ = path;
+        common_config_.upload_store_.is_set_ = true;
+    }
+
     void addAllowedMethod(const Method& m) { allowed_methods_.push_back(m); }
+    void setAllowedMethods(const std::vector<Method>& methods) {
+        allowed_methods_ = methods;  // ベクター全体を代入（上書き）
+    }
+
     void setCgiPath(const std::string& p) { cgi_path_ = p; }
     void setCgiExtension(const std::string& e) { cgi_extension_ = e; }
     const CommonConfig& getCommonConfig() const { return common_config_; }
@@ -142,6 +154,13 @@ class ServerConfig {
     void addErrorPage(int status, const ErrorPageDirective& ep) {
         common_config_.error_page_[status] = ep;
     }
+    void setRedirect(const ReturnDirective& ret) {
+        common_config_.redirect_ = ret;
+    }
+    void setUploadStore(const std::string& path) {
+        common_config_.upload_store_.value_ = path;
+        common_config_.upload_store_.is_set_ = true;
+    }
 
     // Parserから呼ぶために、common_config_ のゲッターが必要なら追加
     // (今回は内部で処理しているので不要、念のため)//testなどで使うかもしれない
@@ -180,6 +199,10 @@ class HttpConfig {
     }
     void addErrorPage(int status, const ErrorPageDirective& ep) {
         common_config_.error_page_[status] = ep;
+    }
+    void setUploadStore(const std::string& path) {
+        common_config_.upload_store_.value_ = path;
+        common_config_.upload_store_.is_set_ = true;
     }
     // parserが使うため追加
     const CommonConfig& getCommonConfig() const { return common_config_; }

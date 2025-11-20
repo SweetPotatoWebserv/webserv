@@ -33,7 +33,10 @@ CGI_TEST_SRC = test/test.cpp \
            src/cgi/request_cgi.cpp \
            src/cgi/response_cgi.cpp \
            src/cgi/executor_cgi.cpp \
-           src/core/Common.cpp
+           src/core/Common.cpp \
+           src/http/HttpParser.cpp \
+           src/core/String.cpp \
+           src/http/HttpException.cpp
 
 CGI_TEST_OBJ = $(CGI_TEST_SRC:.cpp=.o)
 
@@ -53,10 +56,24 @@ test_cgi: build
 		-w /src $(DEV_IMAGE_NAME) \
 		make internal_test_cgi
 
-internal_test_cgi: $(CGI_TEST_NAME)
+internal_test_cgi:
+	@make clean
+	
+	@make $(CGI_TEST_NAME)
+
+	@echo "--- Setting up test permissions (inside container) ---"
+	@chmod 644 ./cgi-bin/no_execute.py
+	@chmod 755 ./cgi-bin/test.py
+	@chmod 755 ./cgi-bin/error.py
+	@chmod 755 ./cgi-bin/test_headers.py
+	@chmod 755 ./cgi-bin/timeout.py
+	
+	@echo "--- Verifying permissions in ./cgi-bin/ ---"
+	@ls -la ./cgi-bin/
+
 	@echo "---Run CGI TEST (inside container)---"
 	./$(CGI_TEST_NAME)
-
+	
 $(CGI_TEST_NAME): $(CGI_TEST_OBJ)
 	$(CXX) $(CXXFLAGS) -o $(CGI_TEST_NAME) $(CGI_TEST_OBJ)
 

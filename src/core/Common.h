@@ -46,6 +46,10 @@ extern const uint16_t MIN_PORT_NUMBER;
 extern const uint16_t MAX_PORT_NUMBER;
 extern const int MIN_ERROR_STATUS_CODE;
 extern const int MAX_ERROR_STATUS_CODE;
+extern const int MIN_VALID_STATUS_CODE;
+extern const int MAX_VALID_STATUS_CODE;
+extern const int MIN_REDIRECT_STATUS_CODE;
+extern const int MAX_REDIRECT_STATUS_CODE;
 
 class HttpStatus {
    public:
