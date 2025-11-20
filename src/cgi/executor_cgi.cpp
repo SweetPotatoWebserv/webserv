@@ -127,6 +127,7 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
     struct epoll_event events[MAX_EPOLL_EVENTS];
     bool timeout_occurred = false;
 
+    bool hup_occurred = false;
     while (true) {
         int num_events =
             epoll_wait(epoll_fd, events, MAX_EPOLL_EVENTS, CGI_TIMEOUT_MS);
@@ -153,15 +154,23 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
             if (bytes_read > 0) {
                 cgi_output.append(buffer, bytes_read);
             } else if (bytes_read == 0) {
+                // 正常終了: データが尽きた。
                 break;
             } else {
                 std::cerr << "CGI warning: failed to read from cgi stdout\n";
                 break;
             }
         }
-        // EPOLLIN が無かった場合のみ、HUP や ERR をチェックする
-        else if (events[0].events & (EPOLLHUP | EPOLLERR)) {
-            std::cerr << "CGI warning: EPOLLHUP/EPOLLERR without EPOLLIN.\n";
+
+        if (events[0].events & (EPOLLHUP | EPOLLERR)) {
+            if (!(events[0].events & EPOLLIN)) {
+                std::cerr
+                    << "CGI warning: EPOLLHUP/EPOLLERR without EPOLLIN.\n";
+            }
+            hup_occurred = true;
+        }
+
+        if (hup_occurred && !(events[0].events & EPOLLIN)) {
             break;
         }
     }
