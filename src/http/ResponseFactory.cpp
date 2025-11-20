@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 
 #include <sstream>
+#include <stdexcept>
 
 #include "HttpParser.h"
 #include "MimeTypes.h"
@@ -86,8 +87,14 @@ HttpResponse ResponseFactory::response_get(const HttpRequest& request,
         // std::stringだと画像データなどバイナリに対応できないため、vectorを使用する
         std::vector<char> buffer;
         char buf[DEFAULT_BUFFER_LEN];
-        ssize_t len;
-        while ((len = read(fd, buf, DEFAULT_BUFFER_LEN)) > 0) {
+        while (true) {
+            ssize_t len = read(fd, buf, DEFAULT_BUFFER_LEN);
+            if (len == -1) {
+                throw std::runtime_error("failed to read: " +
+                                         std::string(std::strerror(errno)));
+                close(fd);
+            }
+            if (len == 0) break;
             buffer.insert(buffer.end(), buf, buf + len);
         }
         close(fd);
