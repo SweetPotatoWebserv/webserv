@@ -2,7 +2,6 @@
 
 #include <fcntl.h>
 #include <netdb.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #include <algorithm>
