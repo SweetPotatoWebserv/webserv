@@ -21,7 +21,7 @@ int main(void) {
         }
         ev.run();
     } catch (std::exception& e) {
-        std::cerr << "Failed to server server: " << e.what() << '\n';
+        std::cerr << "Failed to start server: " << e.what() << '\n';
         return 1;
     }
     return 0;
