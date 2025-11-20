@@ -55,10 +55,11 @@ HttpResponse CgiProcess::run(const HttpRequest& request) {
     char** envp = NULL;
     HttpResponse response;
     try {
-        const std::string& script_path = request.request_target_.path_;
+        const std::string& script_path = "/src" + request.request_target_.path_;
 
         response = validateCgiScript(script_path);
         if (response.status_code_ != HttpStatus::OK) {
+            response.header_.content_length_ = response.body_.size();
             return response;
         }
 
@@ -77,14 +78,14 @@ HttpResponse CgiProcess::run(const HttpRequest& request) {
 
             response.status_code_ = e.getStatusCode();
             response.body_ = e.what();
-
+            response.header_.content_length_ = response.body_.size();
             freeArray(argv);
             freeArray(envp);
             return response;
         }
 
         parseCgiResponse(response, raw_output);
-
+        response.header_.content_length_ = response.body_.size();
         freeArray(argv);
         freeArray(envp);
         return response;
@@ -93,6 +94,7 @@ HttpResponse CgiProcess::run(const HttpRequest& request) {
         freeArray(argv);
         freeArray(envp);
 
+        response.header_.content_length_ = response.body_.size();
         // エラーページすら生成できなかった時のみエラーを返す
         return response;
     }

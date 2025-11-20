@@ -9,6 +9,8 @@ class ResponseFactory {
                              const HttpException& parse_error);
 
    private:
+    static bool is_cgi(const HttpRequest& request, const RouteInfo& route);
+    static HttpResponse response_cgi(const HttpRequest& request);
     static HttpResponse response_get(const HttpRequest& request,
                                      const RouteInfo& route);
     static HttpResponse response_post(const HttpRequest& request,

@@ -7,6 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "../cgi/handler_cgi.h"
 #include "HttpParser.h"
 #include "MimeTypes.h"
 #include "Router.h"
@@ -284,6 +285,43 @@ HttpResponse ResponseFactory::response_redirect(const RouteInfo& route) {
     return response;
 }
 
+bool ResponseFactory::is_cgi(const HttpRequest& request,
+                             const RouteInfo& route) {
+    std::cerr << "--- [CGI Check] ---\n";
+    std::cerr << "Path: " << request.request_target_.path_ << "\n";
+    std::cerr << "Config Ext: " << route.resolve_.cgi_extension_ << "\n";
+    std::cerr << "Config Path: " << route.resolve_.cgi_path_ << "\n";
+
+    if (route.resolve_.cgi_extension_.empty() ||
+        route.resolve_.cgi_path_.empty()) {
+        std::cerr << "Result: FALSE (Config missing)\n";
+        return false;
+    }
+
+    const std::string& path = request.request_target_.path_;
+    const std::string& ext = route.resolve_.cgi_extension_;
+
+    if (path.size() >= ext.size() &&
+        path.compare(path.size() - ext.size(), ext.size(), ext) == 0) {
+        std::cerr << "Result: TRUE (Path matches extension)\n";
+        return true;
+    }
+
+    std::cerr << "Result: FALSE (No extension match)\n";
+    return false;
+}
+
+HttpResponse ResponseFactory::response_cgi(const HttpRequest& request) {
+    CgiProcess cgi_processor;
+    HttpResponse response = cgi_processor.run(request);
+
+    std::cerr << "\n--- [CGI Response Output] ---\n";
+    std::cerr << "Status Code: " << response.status_code_ << "\n";
+    std::cerr << "Content Length: " << response.header_.content_length_ << "\n";
+    std::cerr << "--- [End CGI Response Output] ---\n";
+
+    return response;
+}
 HttpResponse ResponseFactory::make(const HttpRequest& request,
                                    const RouteInfo& route,
                                    const HttpException& parse_error) {
@@ -298,8 +336,8 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
     //                                       resolve_.error_page_, server);
     //     return HttpResponse::render_error(HttpStatus::MethodNotAllowed,
     // TODO cgi が追加されたら追加する
-    // if (is_cgi(request, route))
-    //     return response cgi;
+    if (ResponseFactory::is_cgi(request, route))
+        return ResponseFactory::response_cgi(request);
     if (route.resolve_.redirect_.status != CommonConfig::INVALID_NUM)
         return response_redirect(route);
 
