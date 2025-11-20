@@ -320,9 +320,7 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
         case MethodDELETE:
             return response_delete(request, route);
         default:
-            throw std::runtime_error(
-                "パースの時点で例外を投げてるため、入らないはず。入った時はなん"
-                "かおかしいから例外を投げて気づけるようにする");
+            throw std::runtime_error("Unsupported HTTP method");
             break;
     }
 }
