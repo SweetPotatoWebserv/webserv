@@ -94,14 +94,14 @@ void ClientHandler::on_readable() {  // NOLINT
     buffer_.append(buf, len);
     if (ClientHandler::is_request_ready(buffer_)) {
         HttpException exception(HttpStatus::OK);
+        // TODO RouterInfo が適切に初期化されるか確認する
+        RouteInfo info;
         try {
             request_ = HttpParser::http_request_parse(buffer_);
+            info = router_.route(server_config_, request_);
         } catch (const HttpException& e) {
             exception = e;
         }
-        // TODO 例外処理する
-        // parse エラーかつ、server エラーの時の処理をどうするか考える
-        RouteInfo info = router_.route(server_config_, request_);
         response_ = ResponseFactory::make(request_, info, exception);
         event_.mod(fd_, EPOLLOUT);
     }
