@@ -608,8 +608,8 @@ ReturnDirective HttpConfigParser::parseReturn(
     //    (ss >> rd.status) が成功し、かつ余計な文字がない(ss.eof)ならステータスコード指定
     if ((ss >> rd.status) && ss.eof()) {
         // ステータスコードの検証
-        if (rd.status < MIN_REDIRECT_STATUS_CODE ||
-            rd.status > MAX_REDIRECT_STATUS_CODE) {
+        if (rd.status < MIN_VALID_STATUS_CODE ||
+            rd.status > MAX_VALID_STATUS_CODE) {
             throw std::runtime_error(
                 "Error: Invalid status code for return directive: " + status_str);
         }
@@ -674,9 +674,7 @@ ReturnDirective HttpConfigParser::parseReturn(
         if (rd.target.find(HTTP_PREFIX) != 0 && 
             rd.target.find(HTTPS_PREFIX) != 0 &&
             rd.target.find("/") != 0) {
-             // URLっぽくない場合はエラーにするか、テキストとして扱うかですが、
-             // Nginxは "return URL" はリダイレクト用なので、URL形式を要求するのが安全です。
-             // ここでは厳しめにエラーにしていますが、要件に合わせて緩和可能です。
+             // Nginxは "return URL" はリダイレクト用なので、URL形式を要求するのが安全
              throw std::runtime_error("Error: Invalid URL for implicit 302 return: " + status_str);
         }
 
