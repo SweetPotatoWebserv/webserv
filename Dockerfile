@@ -24,4 +24,6 @@ RUN cmake -S /usr/src/googletest -B /tmp/gtest-build -DCMAKE_BUILD_TYPE=Release 
 COPY . /src
 WORKDIR /src
 
+RUN make re
+
 CMD ["./webserv"]
