@@ -144,8 +144,10 @@ HttpResponse ResponseFactory::response_post(const HttpRequest& request,
 
     while (sent < static_cast<ssize_t>(total)) {
         ssize_t len = write(fd, body.c_str() + sent, total - sent);
-        if (len == -1)
+        if (len == -1) {
+            close(fd);
             return render_error(HttpStatus::InternalServerError, route);
+        }
         sent += len;
     }
     close(fd);
