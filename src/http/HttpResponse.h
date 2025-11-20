@@ -13,9 +13,4 @@ struct HttpResponse {
     std::string version_;
     void clear();
     static ssize_t send_response(int client_fd, HttpResponse& response);
-    static HttpResponse render_default_error_page(int status_code);
-    static HttpResponse render_error(int status_code, const RouteInfo& route);
-
-   private:
-    static const int DEFAULT_BUFFER_SIZE = 1024;
 };

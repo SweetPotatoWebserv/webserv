@@ -10,6 +10,65 @@
 #include "MimeTypes.h"
 #include "Router.h"
 
+HttpResponse ResponseFactory::render_default_error_page(int status_code) {
+    HttpResponse response;
+    std::stringstream ss;
+    ss << "<!DOCTYPE html>\n"
+       << "<html>\n"
+       << "<head>\n"
+       << "<title>" << status_code << "</title>\n"
+       << "</head>\n"
+       << "<body>" << HttpStatus::reason(status_code) << "</body>\n"
+       << "</html>\n";
+    response.status_code_ = status_code;
+    response.body_ = ss.str();
+    response.header_.content_type_ = "text/html";
+    response.header_.content_length_ = response.body_.size();
+    return response;
+}
+
+HttpResponse ResponseFactory::render_error(int status_code,
+                                           const RouteInfo& route) {
+    HttpResponse response;
+    int out_status = status_code;
+    if (route.resolve_.error_page_.empty())
+        return render_default_error_page(status_code);
+
+    std::map<int, ErrorPageDirective>::const_iterator target_error_page =
+        route.resolve_.error_page_.find(status_code);
+    if (target_error_page == route.resolve_.error_page_.end())
+        return render_default_error_page(status_code);
+
+    const ErrorPageDirective& error_page_directive = target_error_page->second;
+    if (error_page_directive.override_status != CommonConfig::INVALID_NUM) {
+        out_status = error_page_directive.override_status;
+    }
+
+    int fd = open(error_page_directive.target.c_str(), O_RDONLY);
+    if (fd == -1) return render_default_error_page(status_code);
+
+    std::vector<char> buffer;
+    char buf[DEFAULT_BUFFER_LEN];
+    while (true) {
+        ssize_t len = read(fd, buf, sizeof(buf));
+        if (len == -1) {
+            close(fd);
+            throw std::runtime_error("read() failed");
+        }
+        if (len == 0) break;
+        buffer.insert(buffer.end(), buf, buf + len);
+    }
+    close(fd);
+
+    response.status_code_ = out_status;
+    response.message_ = HttpStatus::reason(out_status);
+    response.body_.assign(buffer.begin(), buffer.end());
+    response.header_.content_length_ = response.body_.size();
+    response.header_.content_type_ =
+        MimeTypes::get_mime_type(error_page_directive.target);
+    return response;
+}
+
 HttpResponse ResponseFactory::response_get(const HttpRequest& request,
                                            const RouteInfo& route) {
     HttpResponse response;
@@ -45,9 +104,9 @@ HttpResponse ResponseFactory::response_get(const HttpRequest& request,
                 route.resolve_.autoindex_.value_) {
                 return response_autoindex(request, route);
             }
-            return HttpResponse::render_error(HttpStatus::Forbidden, route);
+            return render_error(HttpStatus::Forbidden, route);
         }
-        return HttpResponse::render_error(HttpStatus::NotFound, route);
+        return render_error(HttpStatus::NotFound, route);
     }
     response.status_code_ = HttpStatus::OK;
     response.message_ = HttpStatus::reason(HttpStatus::OK);
@@ -59,8 +118,7 @@ HttpResponse ResponseFactory::response_get(const HttpRequest& request,
 HttpResponse ResponseFactory::response_post(const HttpRequest& request,
                                             const RouteInfo& route) {
     if (!route.resolve_.upload_store_.is_set_)
-        return HttpResponse::render_error(HttpStatus::InternalServerError,
-                                          route);
+        return render_error(HttpStatus::InternalServerError, route);
     const std::string& store_dir = route.resolve_.upload_store_.value_;
     std::string dir = store_dir;
     if (dir[dir.size() - 1] != '/') dir += "/";
@@ -71,9 +129,7 @@ HttpResponse ResponseFactory::response_post(const HttpRequest& request,
     std::string fullpath = dir + filename;
     int fd =
         open(fullpath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);  // NOLINT
-    if (fd == -1)
-        return HttpResponse::render_error(HttpStatus::InternalServerError,
-                                          route);
+    if (fd == -1) return render_error(HttpStatus::InternalServerError, route);
 
     const std::string& body = request.body_;
     size_t total = body.size();
@@ -82,8 +138,7 @@ HttpResponse ResponseFactory::response_post(const HttpRequest& request,
     while (sent < static_cast<ssize_t>(total)) {
         ssize_t len = write(fd, body.c_str() + sent, total - sent);
         if (len == -1)
-            return HttpResponse::render_error(HttpStatus::InternalServerError,
-                                              route);
+            return render_error(HttpStatus::InternalServerError, route);
         sent += len;
     }
     close(fd);
@@ -106,8 +161,7 @@ HttpResponse ResponseFactory::response_autoindex(const HttpRequest& request,
 
     DIR* directory = opendir(file_path.c_str());
     if (directory == NULL) {
-        return HttpResponse::render_error(HttpStatus::InternalServerError,
-                                          route);
+        return render_error(HttpStatus::InternalServerError, route);
     }
 
     std::string request_path = request.request_target_.path_;
@@ -127,8 +181,7 @@ HttpResponse ResponseFactory::response_autoindex(const HttpRequest& request,
     int saved_errno = errno;
     closedir(directory);
     if (saved_errno != 0) {
-        return HttpResponse::render_error(HttpStatus::InternalServerError,
-                                          route);
+        return render_error(HttpStatus::InternalServerError, route);
     }
 
     std::sort(entries.begin(), entries.end());
@@ -169,22 +222,19 @@ HttpResponse ResponseFactory::response_autoindex(const HttpRequest& request,
 HttpResponse ResponseFactory::response_delete(const HttpRequest& request,
                                               const RouteInfo& route) {
     if (!route.resolve_.root_.is_set_)
-        return HttpResponse::render_error(HttpStatus::InternalServerError,
-                                          route);
+        return render_error(HttpStatus::InternalServerError, route);
     std::string path =
         route.resolve_.root_.value_ + request.request_target_.path_;
     struct stat st;
     if (stat(path.c_str(), &st) == -1)
-        return HttpResponse::render_error(HttpStatus::NotFound, route);
+        return render_error(HttpStatus::NotFound, route);
 
-    if (S_ISDIR(st.st_mode))
-        return HttpResponse::render_error(HttpStatus::Forbidden, route);
+    if (S_ISDIR(st.st_mode)) return render_error(HttpStatus::Forbidden, route);
     if (unlink(path.c_str()) == -1) {
         if (errno == EACCES) {
-            return HttpResponse::render_error(HttpStatus::Forbidden, route);
+            return render_error(HttpStatus::Forbidden, route);
         }
-        return HttpResponse::render_error(HttpStatus::InternalServerError,
-                                          route);
+        return render_error(HttpStatus::InternalServerError, route);
     }
     HttpResponse response;
     response.status_code_ = HttpStatus::NoContent;
@@ -230,7 +280,7 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
                                    const HttpException& parse_error) {
     // パースエラー
     if (parse_error.status_code() != HttpStatus::OK) {
-        return HttpResponse::render_error(parse_error.status_code(), route);
+        return render_error(parse_error.status_code(), route);
     }
     // TODO allowedメソッドがまだ実装されてないため、コメントアウト
     // if (std::find(resolve_.allowed_methods_.begin(),
@@ -247,7 +297,7 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
     if (route.resolve_.client_max_body_size_ != CommonConfig::INVALID_NUM &&
         route.resolve_.client_max_body_size_ <
             static_cast<off_t>(request.body_.size()))
-        return HttpResponse::render_error(HttpStatus::PayloadTooLarge, route);
+        return render_error(HttpStatus::PayloadTooLarge, route);
 
     switch (request.method_) {
         case MethodGET: {
