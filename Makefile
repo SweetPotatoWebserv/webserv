@@ -94,9 +94,8 @@ fclean: clean
 	$(RM) $(NAME) $(CGI_TEST_NAME)
 
 run:
-	docker run -it --rm -p 8080:8080 \
-		--mount type=bind,src="$(CURDIR)",target=/src \
-		-w /src $(DEV_IMAGE_NAME)
+	docker run -it --rm -p 8080:8080 --mount type=bind,src="$(CURDIR)",target=/src $(DEV_IMAGE_NAME)
+
 up: build run
 
 .PHONY: all clean fclean re test run-test build run up
