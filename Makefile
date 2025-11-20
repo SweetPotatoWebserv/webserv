@@ -33,7 +33,10 @@ CGI_TEST_SRC = test/test.cpp \
            src/cgi/request_cgi.cpp \
            src/cgi/response_cgi.cpp \
            src/cgi/executor_cgi.cpp \
-           src/core/Common.cpp
+           src/core/Common.cpp \
+           src/http/HttpParser.cpp \
+           src/core/String.cpp \
+           src/http/HttpException.cpp
 
 CGI_TEST_OBJ = $(CGI_TEST_SRC:.cpp=.o)
 

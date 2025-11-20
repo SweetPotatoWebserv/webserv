@@ -7,6 +7,8 @@
 
 #include "../src/cgi/handler_cgi.h"
 #include "../src/core/Common.h"
+#include "../src/http/HttpParser.h"
+#include "../src/http/HttpResponse.h"
 
 /**
  * @brief アサーションヘルパー。失敗時に例外を投げる。
@@ -24,7 +26,6 @@ void printResponse(const HttpResponse& response) {
     std::cout << "  Status: " << response.status_code_ << "\n";
     std::cout << "  Content-Type: " << response.header_.content_type_ << "\n";
     std::cout << "  Body:\n" << "    " << response.body_ << "\n";
-    // .location_ は response 直下のメンバ
     if (!response.location_.empty()) {
         std::cout << "  Location: " << response.location_ << "\n";
     }
@@ -36,7 +37,7 @@ void printResponse(const HttpResponse& response) {
 HttpRequest createBaseRequest(Method method, const std::string& path,
                               const std::string& query) {
     HttpRequest request;
-    request.method_ = method;  // これで型が一致する
+    request.method_ = method;
     request.request_target_.path_ = path;
     request.request_target_.query_string_ = query;
     request.body_ = "";
@@ -67,12 +68,10 @@ HttpRequest createScriptErrorRequest() {
 }
 
 HttpRequest createForbiddenRequest() {
-    // ./cgi-bin/no_execute.py は chmod -x しておくこと
     return createBaseRequest(MethodGET, "./cgi-bin/no_execute.py", "");
 }
 
 HttpRequest createTimeoutRequest() {
-    // ./cgi-bin/timeout.py は 10秒 sleep する
     return createBaseRequest(MethodGET, "./cgi-bin/timeout.py", "");
 }
 
@@ -86,32 +85,32 @@ HttpRequest createHeaderTestRequest(const std::string& query) {
 void testPostSuccess() {
     CgiProcess process;
     HttpRequest request = createPostRequest();
-    HttpResponse response;
+    HttpResponse response = process.run(request);
 
-    bool success = process.run(request, response);
     printResponse(response);
 
-    check(success == true, "process.run() should return true");
     check(response.status_code_ == HttpStatus::OK, "Status code should be 200");
+    // 【堅牢化】CGIヘッダーの Content-Type が正しくパースされているか
     check(response.header_.content_type_ == "text/plain",
           "Content-Type mismatch");
     check(response.body_.find("body_from_request!!") != std::string::npos,
           "Body missing stdin content");
     check(response.body_.find("Method: POST") != std::string::npos,
           "Missing POST method in env");
+    check(response.body_.find("Content-Type: text/plain") != std::string::npos,
+          "Missing Content-Type environment variable in body");
 }
 
 // 200 OK (GET)
 void testGetSuccess() {
     CgiProcess process;
     HttpRequest request = createGetRequest();
-    HttpResponse response;
+    HttpResponse response = process.run(request);
 
-    bool success = process.run(request, response);
     printResponse(response);
 
-    check(success == true, "process.run() should return true");
     check(response.status_code_ == HttpStatus::OK, "Status code should be 200");
+    // 【堅牢化】CGIヘッダーの Content-Type が正しくパースされているか
     check(response.header_.content_type_ == "text/plain",
           "Content-Type mismatch");
     check(response.body_.find("Method: GET") != std::string::npos,
@@ -125,12 +124,10 @@ void testGetSuccess() {
 void testStatus204NoContent() {
     CgiProcess process;
     HttpRequest request = createHeaderTestRequest("status=204");
-    HttpResponse response;
+    HttpResponse response = process.run(request);
 
-    bool success = process.run(request, response);
     printResponse(response);
 
-    check(success == true, "process.run() should return true");
     check(response.status_code_ == HttpStatus::NoContent,
           "Status code should be 204");
     check(response.body_.empty() == true, "Body should be empty for 204");
@@ -140,31 +137,43 @@ void testStatus204NoContent() {
 void testStatus301Redirect() {
     CgiProcess process;
     HttpRequest request = createHeaderTestRequest("status=301");
-    HttpResponse response;
+    HttpResponse response = process.run(request);
 
-    bool success = process.run(request, response);
     printResponse(response);
 
-    check(success == true, "process.run() should return true");
     check(response.status_code_ == HttpStatus::MovedPermanently,
           "Status code should be 301");
-    // 【修正】 .location_ は response 直下
     check(!response.location_.empty(), "Location header should be set");
     check(response.location_ == "http://www.google.com/",
           "Location header value mismatch");
 }
 
-// 400 Bad Request
+// 302 Found (Implicit)
+void testImplicit302Redirect() {
+    CgiProcess process;
+    HttpRequest request = createHeaderTestRequest("location_only=true");
+
+    const std::string expected_location = "/test/new_resource";
+
+    HttpResponse response = process.run(request);
+
+    printResponse(response);
+
+    check(response.status_code_ == HttpStatus::Found,
+          "Status code should be implicitly 302 Found");
+    check(!response.location_.empty(), "Location header should be set");
+
+    check(response.location_ == expected_location, "Location mismatch");
+}
+
 void testStatus400BadRequest() {
     CgiProcess process;
     HttpRequest request = createHeaderTestRequest("status=400");
-    HttpResponse response;
+    // 【値渡し】
+    HttpResponse response = process.run(request);
 
-    bool success = process.run(request, response);
     printResponse(response);
 
-    check(success == true,
-          "process.run() should return true (generated error page)");
     check(response.status_code_ == HttpStatus::BadRequest,
           "Status code should be 400");
     check(response.body_.find("Bad query parameter.") != std::string::npos,
@@ -175,13 +184,10 @@ void testStatus400BadRequest() {
 void testStatus403Forbidden() {
     CgiProcess process;
     HttpRequest request = createForbiddenRequest();
-    HttpResponse response;
+    HttpResponse response = process.run(request);
 
-    bool success = process.run(request, response);
     printResponse(response);
 
-    check(success == true,
-          "process.run() should return true (generated error page)");
     check(response.status_code_ == HttpStatus::Forbidden,
           "Status code should be 403 Forbidden");
 }
@@ -190,13 +196,10 @@ void testStatus403Forbidden() {
 void testScriptNotFound() {
     CgiProcess process;
     HttpRequest request = createNotFoundRequest();
-    HttpResponse response;
+    HttpResponse response = process.run(request);
 
-    bool success = process.run(request, response);
     printResponse(response);
 
-    check(success == true,
-          "process.run() should return true (generated error page)");
     check(response.status_code_ == HttpStatus::NotFound,
           "Status code should be 404 Not Found");
 }
@@ -205,13 +208,10 @@ void testScriptNotFound() {
 void testStatus408Timeout() {
     CgiProcess process;
     HttpRequest request = createTimeoutRequest();
-    HttpResponse response;
+    HttpResponse response = process.run(request);
 
-    bool success = process.run(request, response);
     printResponse(response);
 
-    check(success == true,
-          "process.run() should return true (generated error page)");
     check(response.status_code_ == HttpStatus::RequestTimeout,
           "Status code should be 408 RequestTimeout");
 }
@@ -220,13 +220,10 @@ void testStatus408Timeout() {
 void testScriptError() {
     CgiProcess process;
     HttpRequest request = createScriptErrorRequest();
-    HttpResponse response;
+    HttpResponse response = process.run(request);
 
-    bool success = process.run(request, response);
     printResponse(response);
 
-    check(success == true,
-          "process.run() should return true (generated error page)");
     check(response.status_code_ == HttpStatus::InternalServerError,
           "Status code should be 500");
 }
@@ -235,13 +232,10 @@ void testScriptError() {
 void testBadCgiHeader() {
     CgiProcess process;
     HttpRequest request = createHeaderTestRequest("status=bad_header");
-    HttpResponse response;
+    HttpResponse response = process.run(request);
 
-    bool success = process.run(request, response);
     printResponse(response);
 
-    check(success == true,
-          "process.run() should return true (generated error page)");
     check(response.status_code_ == HttpStatus::InternalServerError,
           "Status code should be 500");
 }
@@ -258,6 +252,8 @@ int main() {
                                    testStatus204NoContent));
     tests.push_back(std::make_pair("testStatus301Redirect (301 Redirect)",
                                    testStatus301Redirect));
+    tests.push_back(std::make_pair("testImplicit302Redirect (302 Implicit)",
+                                   testImplicit302Redirect));
     tests.push_back(std::make_pair("testStatus400BadRequest (400 Bad Request)",
                                    testStatus400BadRequest));
     tests.push_back(std::make_pair("testStatus403Forbidden (403 Forbidden)",

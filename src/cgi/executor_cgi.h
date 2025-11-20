@@ -44,6 +44,7 @@ class CgiExecutor {
                              char *const envp[]);
     std::string readParentProcess(const std::string &requestBody);
 
+    static int initializeEpoll(int pipe_fd);
     static void writeAll(int fd, const char *buffer, size_t size);
     static void checkChildExitStatus(int status);
     static std::string getScriptDirectory(const std::string &scriptPath);

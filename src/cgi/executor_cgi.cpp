@@ -100,33 +100,39 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
     }
 }
 
+int CgiExecutor::initializeEpoll(int pipe_fd) {
+    int epoll_fd = epoll_create(1);
+    if (epoll_fd == -1) {
+        safeClose(pipe_fd);
+        throw CgiExecutionException("epoll_create failed",
+                                    HttpStatus::InternalServerError);
+    }
+
+    struct epoll_event ev;
+    ev.events = EPOLLIN | EPOLLHUP | EPOLLERR;
+    ev.data.fd = pipe_fd;
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, pipe_fd, &ev) == -1) {
+        safeClose(pipe_fd);
+        safeClose(epoll_fd);
+        throw CgiExecutionException("epoll_ctl failed",
+                                    HttpStatus::InternalServerError);
+    }
+    return epoll_fd;
+}
+
 std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
     if (!requestBody.empty()) {
         writeAll(pipeIn_[1], requestBody.c_str(), requestBody.size());
     }
     safeClose(pipeIn_[1]);
 
-    int epoll_fd = epoll_create(1);
-    if (epoll_fd == -1) {
-        safeClose(pipeOut_[0]);
-        throw CgiExecutionException("epoll_create failed",
-                                    HttpStatus::InternalServerError);
-    }
-
-    struct epoll_event ev;
-    ev.events = EPOLLIN;
-    ev.data.fd = pipeOut_[0];
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, pipeOut_[0], &ev) == -1) {
-        safeClose(pipeOut_[0]);
-        safeClose(epoll_fd);
-        throw CgiExecutionException("epoll_ctl failed",
-                                    HttpStatus::InternalServerError);
-    }
+    int epoll_fd = initializeEpoll(pipeOut_[0]);
 
     std::string cgi_output;
     struct epoll_event events[MAX_EPOLL_EVENTS];
     bool timeout_occurred = false;
 
+    bool hup_occurred = false;
     while (true) {
         int num_events =
             epoll_wait(epoll_fd, events, MAX_EPOLL_EVENTS, CGI_TIMEOUT_MS);
@@ -153,15 +159,23 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
             if (bytes_read > 0) {
                 cgi_output.append(buffer, bytes_read);
             } else if (bytes_read == 0) {
+                // 正常終了: データが尽きた。
                 break;
             } else {
                 std::cerr << "CGI warning: failed to read from cgi stdout\n";
                 break;
             }
         }
-        // EPOLLIN が無かった場合のみ、HUP や ERR をチェックする
-        else if (events[0].events & (EPOLLHUP | EPOLLERR)) {
-            std::cerr << "CGI warning: EPOLLHUP/EPOLLERR without EPOLLIN.\n";
+
+        if (events[0].events & (EPOLLHUP | EPOLLERR)) {
+            if (!(events[0].events & EPOLLIN)) {
+                std::cerr
+                    << "CGI warning: EPOLLHUP/EPOLLERR without EPOLLIN.\n";
+            }
+            hup_occurred = true;
+        }
+
+        if (hup_occurred && !(events[0].events & EPOLLIN)) {
             break;
         }
     }
