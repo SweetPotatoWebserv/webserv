@@ -383,9 +383,9 @@ ListenDirective HttpConfigParser::parseListen(
     if (colon_pos != std::string::npos) {
         // address:port 形式
         ld.address = value.substr(0, colon_pos);
-	if (ld.address == "localhost") {
-		ld.address = "127.0.0.1";
-	}
+		if (ld.address == "localhost") {
+			ld.address = "127.0.0.1";
+		}
         std::string port_str = value.substr(colon_pos + 1);
 
         std::stringstream ss(port_str);
