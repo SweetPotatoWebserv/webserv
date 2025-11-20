@@ -94,6 +94,10 @@ class LocationConfig {
         //修正: structのmapに直接アクセス
         common_config_.error_page_[status] = ep;
     }
+    void setRedirect(const ReturnDirective& ret) {
+        common_config_.redirect_ = ret;
+    }
+
     void addAllowedMethod(const Method& m) { allowed_methods_.push_back(m); }
     void setCgiPath(const std::string& p) { cgi_path_ = p; }
     void setCgiExtension(const std::string& e) { cgi_extension_ = e; }
@@ -141,6 +145,9 @@ class ServerConfig {
     }
     void addErrorPage(int status, const ErrorPageDirective& ep) {
         common_config_.error_page_[status] = ep;
+    }
+    void setRedirect(const ReturnDirective& ret) {
+        common_config_.redirect_ = ret;
     }
 
     // Parserから呼ぶために、common_config_ のゲッターが必要なら追加

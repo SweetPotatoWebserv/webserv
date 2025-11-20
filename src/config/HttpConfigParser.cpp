@@ -21,6 +21,7 @@ const char* const HttpConfigParser::DIRECTIVE_AUTOINDEX = "autoindex";
 const char* const HttpConfigParser::DIRECTIVE_CLIENT_MAX_BODY_SIZE =
     "client_max_body_size";
 const char* const HttpConfigParser::DIRECTIVE_ERROR_PAGE = "error_page";
+const char* const HttpConfigParser::DIRECTIVE_RETURN = "return";
 // parseListen
 const char* const HttpConfigParser::KEYWORD_DEFAULT_SERVER = "default_server";
 // on,off->autoindex
@@ -30,7 +31,8 @@ const char* const HttpConfigParser::VALUE_OFF = "off";
 const char HttpConfigParser::SUFFIX_KILOBYTE = 'k';
 const char HttpConfigParser::SUFFIX_MEGABYTE = 'm';
 const char HttpConfigParser::SUFFIX_GIGABYTE = 'g';
-
+const char* HttpConfigParser::HTTP_PREFIX = "http://";
+const char* HttpConfigParser::HTTPS_PREFIX = "https://";
 //終端に来たかどうか
 bool HttpConfigParser::isEof(const std::vector<std::string>& tokens,
                              size_t index) {
@@ -182,6 +184,9 @@ void HttpConfigParser::parserServer(HttpConfig& config,
         } else if (token == DIRECTIVE_LISTEN) {  // DIRECTIVE_LISTEN=="listen"
             ListenDirective ld = HttpConfigParser::parseListen(tokens, index);
             server_config.setListen(ld);
+        } else if (token == DIRECTIVE_RETURN) {
+            ReturnDirective rd = parseReturn(tokens, index);
+            server_config.setRedirect(rd);
         } else if (HttpConfigParser::parseCommonDirective(server_config, token,
                                                           tokens, index)) {
             continue;
@@ -235,13 +240,16 @@ void HttpConfigParser::parserLocation(ServerConfig& server_config,
             found_closing_brace = true;
             break;
         }
-        if (HttpConfigParser::parseCommonDirective(location_config, token,
-                                                   tokens, index)) {
+        if (token == DIRECTIVE_RETURN) {
+            ReturnDirective rd = parseReturn(tokens, index);
+            location_config.setRedirect(rd);
+        } else if (HttpConfigParser::parseCommonDirective(
+                       location_config, token, tokens, index)) {
             continue;
+        } else {
+            throw std::runtime_error(
+                "Error: Unknown directive in location block: " + token);
         }
-        //知らないディレクティブはエラー
-        throw std::runtime_error(
-            "Error: Unknown directive in location block: " + token);
     }
     if (!found_closing_brace) {
         // ループを抜けたのに閉じ括弧が見つからなかった場合
@@ -561,4 +569,76 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
     }
 
     return pep;
+}
+
+//-----------------------------------------------------------------
+//------------------returnディレクティブパーサー-------------------
+//-----------------------------------------------------------------
+ReturnDirective HttpConfigParser::parseReturn(
+    const std::vector<std::string>& tokens, size_t& index) {
+    ReturnDirective rd;
+
+    //ステータスコードを取得
+    std::string status_str = getNextToken(tokens, index);
+    std::stringstream ss(status_str);
+
+    // マジックナンバーを定数でチェック
+    if (!(ss >> rd.status) || !ss.eof() || rd.status < MIN_RETURN_STATUS_CODE ||
+        rd.status > MAX_RETURN_STATUS_CODE) {
+        throw std::runtime_error(
+            "Error: Invalid status code for return directive: " + status_str);
+    }
+
+    //次のトークンを取得 (テキスト/URL または セミコロン)
+    std::string next_token = getNextToken(tokens, index);
+
+    if (next_token == SEMICOLON) {
+        // "return 404;" の形式
+        return rd;
+    }
+
+    //セミコロンを確認
+    if (getNextToken(tokens, index) != SEMICOLON) {
+        throw std::runtime_error("Error: Expected ';' after return directive");
+    }
+    // 5. 2番目の引数が URL/パス か、ただのテキストかを判定
+    if (next_token.find('/') == 0 || next_token.find(HTTP_PREFIX) == 0 ||
+        next_token.find(HTTPS_PREFIX) == 0) {
+        rd.target = next_token;  // URL or Path
+    } else {
+        rd.text = next_token;  // Plain text
+    }
+    bool is_redirect_status = (rd.status >= MIN_REDIRECT_STATUS_CODE &&
+                               rd.status <= MAX_REDIRECT_STATUS_CODE);
+    bool has_target = !rd.target.empty();
+    bool has_text = !rd.text.empty();
+
+    // 301-308 (リダイレクト) の場合
+    if (is_redirect_status) {
+        if (!has_target) {
+            // エラー: リダイレクトステータスなのに、URL/パスが指定されていない
+            throw std::runtime_error(
+                "Error: return directive with redirect status " + status_str +
+                " requires a URL/path.");
+        }
+        if (has_text) {
+            // エラー: リダイレクトステータスなのに、テキストが指定されている
+            throw std::runtime_error(
+                "Error: return directive with redirect status " + status_str +
+                " cannot have a text body.");
+        }
+    }
+    // 301-308 以外 (404など) の場合
+    else {
+        if (has_target) {
+            // エラー: 非リダイレクトステータスなのに、URL/パスが指定されている
+            throw std::runtime_error(
+                "Error: return directive with non-redirect status " +
+                status_str + " cannot have a URL/path target.");
+        }
+        // has_text はあってもなくてもOK (例: return 404; や return 404 "hello
+        // world";)
+    }
+
+    return rd;
 }

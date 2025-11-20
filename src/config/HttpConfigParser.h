@@ -98,6 +98,11 @@ class HttpConfigParser {
     static ParsedErrorPage parseErrorPage(
         const std::vector<std::string>& tokens, size_t& index);
 
+    ///@brief return ディレクティブをパースする
+    ///@return 完成した ReturnDirective オブジェクト
+    static ReturnDirective parseReturn(const std::vector<std::string>& tokens,
+                                       size_t& index);
+
     // 特殊文字リスト（トークン分割用）構文解析用
     static const char* const SPECIAL_CHARS;
     static const char HASH_CHAR;
@@ -115,6 +120,7 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_AUTOINDEX;
     static const char* const DIRECTIVE_CLIENT_MAX_BODY_SIZE;
     static const char* const DIRECTIVE_ERROR_PAGE;
+    static const char* const DIRECTIVE_RETURN;
     // parserlisten defult
     static const char* const KEYWORD_DEFAULT_SERVER;
     // on,off
@@ -125,13 +131,20 @@ class HttpConfigParser {
     static const char SUFFIX_MEGABYTE;
     static const char SUFFIX_GIGABYTE;
 
+    static const char* HTTP_PREFIX;
+    static const char* HTTPS_PREFIX;
+
     // マジックナンバー定数に
     static const off_t BYTES_PER_KB = 1024;
     static const off_t BYTES_PER_MB = static_cast<off_t>(1024) * 1024;
     static const off_t BYTES_PER_GB = static_cast<off_t>(1024) * 1024 * 1024;
 
     static const int MIN_OVERRIDE_STATUS_CODE = 200;
-    static const int MAX_OVERRIDE_STATUS_CODE = 599;
+    static const int MAX_OVERRIDE_STATUS_CODE = 501;
+    static const int MIN_RETURN_STATUS_CODE = 200;
+    static const int MAX_RETURN_STATUS_CODE = 501;
+    static const int MIN_REDIRECT_STATUS_CODE = 301;
+    static const int MAX_REDIRECT_STATUS_CODE = 308;
 
     template <typename T>
     static bool parseCommonDirective(T& config, const std::string& token,
