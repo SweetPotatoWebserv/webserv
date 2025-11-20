@@ -11,18 +11,28 @@
 
 #include "../core/String.h"
 #include "HttpException.h"
+#include "ResponseFactory.h"
+#include "Router.h"
 
 const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
 
-ClientHandler::ClientHandler(int fd, Event& event, const Router& router)
-    : fd_(fd), event_(event), router_(router) {}
+ClientHandler::ClientHandler(int fd, Event& event, Router& router,
+                             ServerConfig server_config)
+    : fd_(fd),
+      event_(event),
+      router_(router),
+      server_config_(server_config) {}  // NOLINT
 
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
     static_cast<void>(fd);
     ClientHandler* handler = static_cast<ClientHandler*>(self);
-    if (event & EPOLLIN) handler->on_readable();
-    if (event & EPOLLOUT) handler->on_writable();
-    if (event & (EPOLLHUP | EPOLLERR)) handler->on_close();
+    if (event & (EPOLLHUP | EPOLLERR)) {
+        handler->on_close();
+    } else if (event & EPOLLIN) {
+        handler->on_readable();
+    } else if (event & EPOLLOUT) {
+        handler->on_writable();
+    }
 }
 
 void ClientHandler::on_close() {
@@ -83,30 +93,26 @@ void ClientHandler::on_readable() {  // NOLINT
     }
     buffer_.append(buf, len);
     if (ClientHandler::is_request_ready(buffer_)) {
-        request_ = HttpParser::http_request_parse(buffer_);
-        // try {
-        // } catch (const HttpException& e) {
-        //     sendErrorResponse(e.status_code());
-        // }
+        HttpException exception(HttpStatus::OK);
+        // TODO RouterInfo が適切に初期化されるか確認する
+        RouteInfo info;
+        try {
+            request_ = HttpParser::http_request_parse(buffer_);
+            info = router_.route(server_config_, request_);
+        } catch (const HttpException& e) {
+            exception = e;
+        }
+        response_ = ResponseFactory::make(request_, info, exception);
         event_.mod(fd_, EPOLLOUT);
     }
 }
 
 void ClientHandler::on_writable() {  // NOLINT
-    std::cout << "method: " << request_.method_ << '\n';
-    std::cout << "path: " << request_.request_target_.path_ << '\n';
-    // ssize_t ret;
-    // ret = ::write(fd_, buf_ + written_, len_ - written_);
-    // if (ret == -1) {
-    //     if (errno == EAGAIN || errno == EWOULDBLOCK) return;  // try again
-    //     later throw std::runtime_error("write failed: " +
-    //                              std::string(strerror(errno)));
-    // }
-    // written_ += ret;
-    // if (written_ == len_) {
-    //     len_ = 0;
-    //     written_ = 0;
-    //     std::memset(buf_, 0, sizeof(buf_));
-    //     event_.mod(fd_, EPOLLIN);
-    // }
+    ssize_t ret = HttpResponse::send_response(fd_, response_);
+    if (ret == -1) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return;
+    }
+    buffer_.clear();
+    response_.clear();
+    event_.mod(fd_, EPOLLIN);
 }

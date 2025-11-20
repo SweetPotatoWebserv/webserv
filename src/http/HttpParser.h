@@ -5,6 +5,7 @@
 #include <ctime>
 #include <sstream>
 
+#include "../config/HttpConfig.h"
 #include "../core/Common.h"
 #include "../core/String.h"
 

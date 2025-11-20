@@ -29,4 +29,7 @@ struct ResolveConfig {
             target.error_page_[error_page->first] = error_page->second;
         }
     }
+    static void resolve_error_pages_internal(ResolveConfig& resolve,
+                                             const HttpConfig& http,
+                                             const ServerConfig& server);
 };

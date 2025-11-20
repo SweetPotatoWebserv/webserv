@@ -9,7 +9,7 @@
 // 定数
 const char* const HTTP_VERSION = "HTTP/1.1";
 const uint16_t DEFAULT_PORT = 8080;
-const char* const DEFAULT_ADDRESS = "127.0.0.1";
+const char* const DEFAULT_ADDRESS = "0.0.0.0";
 const int SOCKET_DOMAIN = AF_INET;
 const int SOCKET_TYPE = SOCK_STREAM;
 const int SOCKET_PROTOCOL = 0;
@@ -118,6 +118,14 @@ Socket Socket::listen_tcp(const std::string& host, uint16_t port) {
     if (!HostHeader::resolve_ipv4(host, port, addr)) {
         throw std::runtime_error("resolve_ipv4 failed");
     }
+
+    // TODO 後で消す、プロセス終了時にソケットがすぐ消えるようにする
+    int yes = 1;
+    if (setsockopt(server_fd.fd_, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) <
+        0) {
+        throw std::runtime_error("setsockopt(SO_REUSEADDR) failed");
+    }
+
     if (::bind(server_fd.fd_, reinterpret_cast<sockaddr*>(&addr),
                sizeof(addr)) == -1) {
         throw std::runtime_error("bind failed: " +

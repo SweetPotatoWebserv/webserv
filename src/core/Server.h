@@ -12,14 +12,13 @@
 
 class Server {
    public:
-    Server(Event& event, Router& router,
-           const std::string& host = DEFAULT_ADDRESS,
-           uint16_t port = DEFAULT_PORT);
+    Server(Event& event, Router& router, const ServerConfig& config);
     void start();
 
    private:
     Socket listen_;
     Event& event_;
     Router& router_;
+    const ServerConfig server_config_;
     static void on_acceptable(int fd, uint32_t event, void* self);
 };
