@@ -18,20 +18,21 @@ CgiProcess::CgiProcess() {}
 
 CgiProcess::~CgiProcess() {}
 
-bool CgiProcess::validateCgiScript(const std::string& script_path,
-                                   HttpResponse& response) {
+HttpResponse CgiProcess::validateCgiScript(const std::string& script_path) {
+    HttpResponse response;
     struct stat st;
 
+    response.status_code_ = HttpStatus::OK;
     if (stat(script_path.c_str(), &st) == -1) {
         response.status_code_ = HttpStatus::NotFound;
         response.body_ = "CGI script not found.";
-        return false;
+        return response;
     }
 
     if (!S_ISREG(st.st_mode)) {
         response.status_code_ = HttpStatus::Forbidden;
         response.body_ = "CGI target is not a regular file.";
-        return false;
+        return response;
     }
 
     // ファイルのパーミッション(st_mode)から、
@@ -43,19 +44,22 @@ bool CgiProcess::validateCgiScript(const std::string& script_path,
     if (!is_executable) {
         response.status_code_ = HttpStatus::Forbidden;
         response.body_ = "CGI script is not executable (no 'x' bit set)";
-        return false;
+        return response;
     }
 
-    return true;
+    return response;
 }
 
-bool CgiProcess::run(const HttpRequest& request, HttpResponse& response) {
+HttpResponse CgiProcess::run(const HttpRequest& request) {
     char** argv = NULL;
     char** envp = NULL;
+    HttpResponse response;
     try {
         const std::string& script_path = request.request_target_.path_;
-        if (!validateCgiScript(script_path, response)) {
-            return true;
+
+        response = validateCgiScript(script_path);
+        if (response.status_code_ != HttpStatus::OK) {
+            return response;
         }
 
         argv = createArgv(script_path);
@@ -76,20 +80,20 @@ bool CgiProcess::run(const HttpRequest& request, HttpResponse& response) {
 
             freeArray(argv);
             freeArray(envp);
-            return true;
+            return response;
         }
 
         parseCgiResponse(response, raw_output);
 
         freeArray(argv);
         freeArray(envp);
-        return true;
+        return response;
     } catch (const std::exception& e) {
         std::cerr << "CgiProcess FATAL error: " << e.what() << "\n";
         freeArray(argv);
         freeArray(envp);
 
         // エラーページすら生成できなかった時のみエラーを返す
-        return false;
+        return response;
     }
 }
