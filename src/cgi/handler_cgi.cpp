@@ -83,7 +83,6 @@ HttpResponse CgiProcess::run(const HttpRequest& request) {
         }
 
         parseCgiResponse(response, raw_output);
-        response.header_.content_length_ = response.body_.size();
         freeArray(argv);
         freeArray(envp);
         return response;
