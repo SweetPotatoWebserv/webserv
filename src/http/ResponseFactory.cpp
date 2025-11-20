@@ -257,8 +257,8 @@ HttpResponse ResponseFactory::response_redirect(const RouteInfo& route) {
     response.status_code_ = route.resolve_.redirect_.status;
     response.message_ = HttpStatus::reason(response.status_code_);
     // TODO Config で定義してる定数を Common に移動したらここも置き換える
-    if (response.status_code_ >= 302 &&  // NOLINT
-        response.status_code_ <= 308) {  // NOLINT
+    if (response.status_code_ >= MIN_REDIRECT_STATUS_CODE &&  // NOLINT
+        response.status_code_ <= MAX_REDIRECT_STATUS_CODE) {  // NOLINT
         response.location_ = route.resolve_.redirect_.target;
         response.header_.content_type_ = "text/html";
         std::stringstream oss;
