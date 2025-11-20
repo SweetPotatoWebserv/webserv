@@ -102,6 +102,18 @@ class HttpConfigParser {
     ///@return 完成した ReturnDirective オブジェクト
     static ReturnDirective parseReturn(const std::vector<std::string>& tokens,
                                        size_t& index);
+    ///@brief allow_methodsディレクティブのパース
+    static std::vector<Method> parseAllowedMethods(
+        const std::vector<std::string>& tokens, size_t& index);
+
+    ///@brief 文字列を1つ読み取る汎用パーサー(cgi_path, cgi_extension,
+    /// upload_store などで使い回す)
+    static std::string parseStringDirective(
+        const std::vector<std::string>& tokens, size_t& index);
+
+    ///@brief server_name ディレクティブをパースする
+    static std::vector<std::string> parseServerName(
+        const std::vector<std::string>& tokens, size_t& index);
 
     // 特殊文字リスト（トークン分割用）構文解析用
     static const char* const SPECIAL_CHARS;
@@ -121,6 +133,11 @@ class HttpConfigParser {
     static const char* const DIRECTIVE_CLIENT_MAX_BODY_SIZE;
     static const char* const DIRECTIVE_ERROR_PAGE;
     static const char* const DIRECTIVE_RETURN;
+    static const char* const DIRECTIVE_ALLOW_METHODS;
+    static const char* const DIRECTIVE_CGI_PATH;
+    static const char* const DIRECTIVE_CGI_EXTENSION;
+    static const char* const DIRECTIVE_UPLOAD_STORE;
+    static const char* const DIRECTIVE_SERVER_NAME;
     // parserlisten defult
     static const char* const KEYWORD_DEFAULT_SERVER;
     // on,off
@@ -138,13 +155,6 @@ class HttpConfigParser {
     static const off_t BYTES_PER_KB = 1024;
     static const off_t BYTES_PER_MB = static_cast<off_t>(1024) * 1024;
     static const off_t BYTES_PER_GB = static_cast<off_t>(1024) * 1024 * 1024;
-
-    static const int MIN_OVERRIDE_STATUS_CODE = 200;
-    static const int MAX_OVERRIDE_STATUS_CODE = 501;
-    static const int MIN_RETURN_STATUS_CODE = 200;
-    static const int MAX_RETURN_STATUS_CODE = 501;
-    static const int MIN_REDIRECT_STATUS_CODE = 301;
-    static const int MAX_REDIRECT_STATUS_CODE = 308;
 
     template <typename T>
     static bool parseCommonDirective(T& config, const std::string& token,
@@ -170,6 +180,9 @@ class HttpConfigParser {
             for (size_t i = 0; i < pep.status_codes.size(); ++i) {
                 config.addErrorPage(pep.status_codes[i], pep.directive);
             }
+        } else if (token == DIRECTIVE_UPLOAD_STORE) {
+            std::string path = parseStringDirective(tokens, index);
+            config.setUploadStore(path);
         } else {
             // 共通ディレクティブではなかった
             return false;
