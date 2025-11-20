@@ -315,6 +315,7 @@ HttpResponse ResponseFactory::response_cgi(const HttpRequest& request) {
     CgiProcess cgi_processor;
     HttpResponse response = cgi_processor.run(request);
 
+    response.header_.content_length_ = response.body_.size();
     std::cerr << "\n--- [CGI Response Output] ---\n";
     std::cerr << "Status Code: " << response.status_code_ << "\n";
     std::cerr << "Content Length: " << response.header_.content_length_ << "\n";
