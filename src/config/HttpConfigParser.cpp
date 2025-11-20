@@ -1,8 +1,9 @@
 #include "HttpConfigParser.h"
 
-#include <cctype>   // std::isspace
-#include <limits>   // std::numeric_limits を使うために必要
-#include <sstream>  //parseListen用
+#include <algorithm>  // std::findを使うためallowed_methods
+#include <cctype>     // std::isspace
+#include <limits>     // std::numeric_limits を使うために必要
+#include <sstream>    //parseListen用
 
 //構文解析用クラスkeyword
 const char* const HttpConfigParser::SPECIAL_CHARS = "{};";
@@ -37,8 +38,8 @@ const char* const HttpConfigParser::VALUE_OFF = "off";
 const char HttpConfigParser::SUFFIX_KILOBYTE = 'k';
 const char HttpConfigParser::SUFFIX_MEGABYTE = 'm';
 const char HttpConfigParser::SUFFIX_GIGABYTE = 'g';
-const char* HttpConfigParser::HTTP_PREFIX = "http://";
-const char* HttpConfigParser::HTTPS_PREFIX = "https://";
+const char* const HttpConfigParser::HTTP_PREFIX = "http://";
+const char* const HttpConfigParser::HTTPS_PREFIX = "https://";
 //終端に来たかどうか
 bool HttpConfigParser::isEof(const std::vector<std::string>& tokens,
                              size_t index) {
@@ -623,7 +624,7 @@ ReturnDirective HttpConfigParser::parseReturn(
     if (getNextToken(tokens, index) != SEMICOLON) {
         throw std::runtime_error("Error: Expected ';' after return directive");
     }
-    // 5. 2番目の引数が URL/パス か、ただのテキストかを判定
+    // 2番目の引数が URL/パス か、ただのテキストかを判定
     if (next_token.find('/') == 0 || next_token.find(HTTP_PREFIX) == 0 ||
         next_token.find(HTTPS_PREFIX) == 0) {
         rd.target = next_token;  // URL or Path
@@ -676,17 +677,25 @@ std::vector<Method> HttpConfigParser::parseAllowedMethods(
         if (token == SEMICOLON) {
             break;
         }
+
+        // 文字列を Method enum に変換
+        Method m;
         if (token == "GET") {
-            methods.push_back(MethodGET);
+            m = MethodGET;
         } else if (token == "POST") {
-            methods.push_back(MethodPOST);
+            m = MethodPOST;
         } else if (token == "DELETE") {
-            methods.push_back(MethodDELETE);
+            m = MethodDELETE;
         } else if (token == "HEAD") {
-            methods.push_back(MethodHEAD);
+            m = MethodHEAD;
         } else {
             throw std::runtime_error(
                 "Error: Unknown method in allow_methods: " + token);
+        }
+
+        //重複チェックex)[GET,GET]にならないように
+        if (std::find(methods.begin(), methods.end(), m) == methods.end()) {
+            methods.push_back(m);
         }
     }
     if (methods.empty()) {

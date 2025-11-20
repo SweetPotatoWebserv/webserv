@@ -74,6 +74,7 @@ struct CommonConfig {
 
 class LocationConfig {
    public:
+    LocationConfig();
     // ---setter---
     void setPath(const std::string& p) { path_ = p; }
     void setRoot(const std::string& r) {
@@ -105,6 +106,7 @@ class LocationConfig {
     void setAllowedMethods(const std::vector<Method>& methods) {
         allowed_methods_ = methods;  // ベクター全体を代入（上書き）
     }
+
     void setCgiPath(const std::string& p) { cgi_path_ = p; }
     void setCgiExtension(const std::string& e) { cgi_extension_ = e; }
     const CommonConfig& getCommonConfig() const { return common_config_; }
