@@ -365,7 +365,6 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
         }
         default: {
             throw std::runtime_error("Unsupported HTTP method");
-            break;
         }
     }
 }
