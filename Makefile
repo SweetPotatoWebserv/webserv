@@ -67,6 +67,7 @@ internal_test_cgi:
 	@chmod 755 ./cgi-bin/error.py
 	@chmod 755 ./cgi-bin/test_headers.py
 	@chmod 755 ./cgi-bin/timeout.py
+	@chmod 755 ./cgi-bin/cwd_test.py
 	
 	@echo "--- Verifying permissions in ./cgi-bin/ ---"
 	@ls -la ./cgi-bin/
