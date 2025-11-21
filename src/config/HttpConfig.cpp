@@ -22,4 +22,3 @@ LocationConfig::LocationConfig() {
     allowed_methods_.push_back(MethodPOST);
     allowed_methods_.push_back(MethodDELETE);
 }
-
