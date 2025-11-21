@@ -23,6 +23,7 @@ HttpResponse ResponseFactory::render_default_error_page(int status_code) {
        << "<body>" << HttpStatus::reason(status_code) << "</body>\n"
        << "</html>\n";
     response.status_code_ = status_code;
+    response.message_ = HttpStatus::reason(status_code);
     response.body_ = ss.str();
     response.header_.content_type_ = "text/html";
     response.header_.content_length_ = response.body_.size();
