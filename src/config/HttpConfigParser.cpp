@@ -601,7 +601,6 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
 ReturnDirective HttpConfigParser::parseExplicitReturn(
     const std::string& status_str, int status,
     const std::vector<std::string>& tokens, size_t& index) {
-    
     ReturnDirective rd;
     rd.status = status;
 
@@ -609,8 +608,7 @@ ReturnDirective HttpConfigParser::parseExplicitReturn(
     if (rd.status < MIN_VALID_STATUS_CODE ||
         rd.status > MAX_VALID_STATUS_CODE) {
         throw std::runtime_error(
-            "Error: Invalid status code for return directive: " +
-            status_str);
+            "Error: Invalid status code for return directive: " + status_str);
     }
 
     // 次のトークンを取得 (テキスト/URL または セミコロン)
@@ -645,13 +643,13 @@ ReturnDirective HttpConfigParser::parseExplicitReturn(
     if (is_redirect_status) {
         if (!has_target) {
             throw std::runtime_error(
-                "Error: return directive with redirect status " +
-                status_str + " requires a URL/path.");
+                "Error: return directive with redirect status " + status_str +
+                " requires a URL/path.");
         }
         if (has_text) {
             throw std::runtime_error(
-                "Error: return directive with redirect status " +
-                status_str + " cannot have a text body.");
+                "Error: return directive with redirect status " + status_str +
+                " cannot have a text body.");
         }
     } else {
         if (has_target) {
@@ -665,8 +663,8 @@ ReturnDirective HttpConfigParser::parseExplicitReturn(
 
 //  URLのみ: return /index.html;
 ReturnDirective HttpConfigParser::parseImplicitReturn(
-    const std::string& url, const std::vector<std::string>& tokens, size_t& index) {
-    
+    const std::string& url, const std::vector<std::string>& tokens,
+    size_t& index) {
     ReturnDirective rd;
 
     // Nginx仕様: URL指定のみの場合は 302 Found 扱い
@@ -674,8 +672,8 @@ ReturnDirective HttpConfigParser::parseImplicitReturn(
     rd.target = url;
 
     // URLとしての妥当性チェック (http://, https://, または / から始まるか)
-    if (rd.target.find(HTTP_PREFIX) != 0 &&
-        rd.target.find(HTTPS_PREFIX) != 0 && rd.target.find('/') != 0) {
+    if (rd.target.find(HTTP_PREFIX) != 0 && rd.target.find(HTTPS_PREFIX) != 0 &&
+        rd.target.find('/') != 0) {
         throw std::runtime_error(
             "Error: Invalid URL for implicit 302 return: " + url);
     }
@@ -692,14 +690,14 @@ ReturnDirective HttpConfigParser::parseImplicitReturn(
 //本体
 ReturnDirective HttpConfigParser::parseReturn(
     const std::vector<std::string>& tokens, size_t& index) {
-    
     // 最初のトークンを取得 (コード または URL)
     std::string token = getNextToken(tokens, index);
     std::stringstream ss(token);
     int status_code;
 
     // 数値かどうかで分岐
-    // (ss >> rd.status) が成功し、かつ余計な文字がない(ss.eof)ならステータスコード指定
+    // (ss >> rd.status)
+    // が成功し、かつ余計な文字がない(ss.eof)ならステータスコード指定
     if ((ss >> status_code) && ss.eof()) {
         return parseExplicitReturn(token, status_code, tokens, index);
     }
