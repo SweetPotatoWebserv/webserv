@@ -113,7 +113,8 @@ void testPostSuccess() {
           "Body missing stdin content");
     check(response.body_.find("Method: POST") != std::string::npos,
           "Missing POST method in env");
-    check(response.body_.find("CONTENT_TYPE: text/plain") != std::string::npos,
+    check(response.body_.find("<b>CONTENT_TYPE:</b></td><td>text/plain") !=
+              std::string::npos,
           "Missing CONTENT_TYPE environment variable in body");
 }
 
@@ -130,7 +131,8 @@ void testGetSuccess() {
           "Content-Type mismatch");
     check(response.body_.find("Method: GET") != std::string::npos,
           "Missing GET method in env");
-    check(response.body_.find("QUERY_STRING:</td><td>name=Test&amp;test=123") !=
+    check(response.body_.find(
+              "<b>QUERY_STRING:</b></td><td>name=Test&amp;test=123") !=
               std::string::npos,
           "Missing query string in env");
 }
