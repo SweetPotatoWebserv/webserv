@@ -332,10 +332,14 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
         return render_error(parse_error.status_code(), route);
     }
     // 許可されてないメソッド
-    if (std::find(route.resolve_.allowed_methods_.begin(), route.resolve_.allowed_methods_.end(), request.method_) == route.resolve_.allowed_methods_.end())
+    if (std::find(route.resolve_.allowed_methods_.begin(),
+                  route.resolve_.allowed_methods_.end(),
+                  request.method_) == route.resolve_.allowed_methods_.end())
         return render_error(HttpStatus::MethodNotAllowed, route);
     // ボディサイズが大きすぎる
-    if (route.resolve_.client_max_body_size_ != CommonConfig::INVALID_NUM && route.resolve_.client_max_body_size_ < static_cast<off_t>(request.body_.size()))
+    if (route.resolve_.client_max_body_size_ != CommonConfig::INVALID_NUM &&
+        route.resolve_.client_max_body_size_ <
+            static_cast<off_t>(request.body_.size()))
         return render_error(HttpStatus::PayloadTooLarge, route);
     // リダイレクト
     if (route.resolve_.redirect_.status != CommonConfig::INVALID_NUM)
@@ -354,14 +358,14 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
             return response;
         }
         case MethodPOST: {
-             return response_post(request, route);
+            return response_post(request, route);
         }
         case MethodDELETE: {
-           return response_delete(request, route);
+            return response_delete(request, route);
         }
         default: {
-         throw std::runtime_error("Unsupported HTTP method");
-         break;
-         }
+            throw std::runtime_error("Unsupported HTTP method");
+            break;
+        }
     }
 }
