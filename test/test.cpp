@@ -64,7 +64,7 @@ HttpRequest createBaseRequest(Method method, const std::string& path,
 
 HttpRequest createPostRequest() {
     HttpRequest request =
-        createBaseRequest(MethodPOST, "/cgi-bin/test.py", "q=search");
+        createBaseRequest(MethodPOST, "/cgi-bin/test.py", "name=Test");
     request.body_ = "body_from_request!!";
     request.header_.content_length_ = request.body_.length();
     request.header_.content_type_ = "text/plain";
@@ -107,6 +107,8 @@ void testPostSuccess() {
     printResponse(response);
 
     check(response.status_code_ == HttpStatus::OK, "Status code should be 200");
+    check(response.body_.find("<h2>Hello, Test! 👋</h2>") != std::string::npos,
+          "Body missing expected name output.");
     check(response.header_.content_type_ == "text/html; charset=UTF-8",
           "Content-Type mismatch");
     check(response.body_.find("body_from_request!!") != std::string::npos,
