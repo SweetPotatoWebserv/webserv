@@ -9,7 +9,7 @@ class CgiProcess {
    public:
     CgiProcess();
     ~CgiProcess();
-    HttpResponse run(const HttpRequest& request);
+    HttpResponse run(const HttpRequest& request, const RouteInfo& route);
 
    private:
     CgiExecutor executor_;

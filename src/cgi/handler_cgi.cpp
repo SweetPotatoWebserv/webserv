@@ -13,6 +13,7 @@
 #include "executor_cgi.h"
 #include "request_cgi.h"
 #include "response_cgi.h"
+#include "../http/ResponseFactory.h"
 
 CgiProcess::CgiProcess() {}
 
@@ -23,6 +24,7 @@ HttpResponse CgiProcess::validateCgiScript(const std::string& script_path) {
     struct stat st;
 
     response.status_code_ = HttpStatus::OK;
+    std::cout << script_path << '\n';
     if (stat(script_path.c_str(), &st) == -1) {
         response.status_code_ = HttpStatus::NotFound;
         response.body_ = "CGI script not found.";
@@ -50,12 +52,14 @@ HttpResponse CgiProcess::validateCgiScript(const std::string& script_path) {
     return response;
 }
 
-HttpResponse CgiProcess::run(const HttpRequest& request) {
+HttpResponse CgiProcess::run(const HttpRequest& request, const RouteInfo& route) {
     char** argv = NULL;
     char** envp = NULL;
     HttpResponse response;
     try {
-        const std::string& script_path = "/src" + request.request_target_.path_;
+        if (!route.resolve_.root_.is_set_)
+            return ResponseFactory::render_error(HttpStatus::NotFound, route);
+        const std::string& script_path = route.resolve_.root_.value_ + request.request_target_.path_;
 
         response = validateCgiScript(script_path);
         if (response.status_code_ != HttpStatus::OK) {

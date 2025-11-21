@@ -135,8 +135,7 @@ HttpResponse ResponseFactory::response_post(const HttpRequest& request,
     ss << "upload_" << time(NULL);
     std::string filename = ss.str();
     std::string fullpath = dir + filename;
-    int fd =
-        open(fullpath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);  // NOLINT
+    int fd = open(fullpath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);  // NOLINT
     if (fd == -1) return render_error(HttpStatus::InternalServerError, route);
 
     const std::string& body = request.body_;
@@ -311,9 +310,9 @@ bool ResponseFactory::is_cgi(const HttpRequest& request,
     return false;
 }
 
-HttpResponse ResponseFactory::response_cgi(const HttpRequest& request) {
+HttpResponse ResponseFactory::response_cgi(const HttpRequest& request, const RouteInfo& route) {
     CgiProcess cgi_processor;
-    HttpResponse response = cgi_processor.run(request);
+    HttpResponse response = cgi_processor.run(request, route);
 
     response.header_.content_length_ = response.body_.size();
     std::cerr << "\n--- [CGI Response Output] ---\n";
@@ -337,8 +336,6 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
     //                                       resolve_.error_page_, server);
     //     return HttpResponse::render_error(HttpStatus::MethodNotAllowed,
     // TODO cgi が追加されたら追加する
-    if (ResponseFactory::is_cgi(request, route))
-        return ResponseFactory::response_cgi(request);
     if (route.resolve_.redirect_.status != CommonConfig::INVALID_NUM)
         return response_redirect(route);
 
@@ -346,6 +343,12 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
         route.resolve_.client_max_body_size_ <
             static_cast<off_t>(request.body_.size()))
         return render_error(HttpStatus::PayloadTooLarge, route);
+    // リダイレクト
+    if (route.resolve_.redirect_.status != CommonConfig::INVALID_NUM)
+        return response_redirect(route);
+
+    if (ResponseFactory::is_cgi(request, route))
+        return ResponseFactory::response_cgi(request, route);
 
     switch (request.method_) {
         case MethodGET: {
