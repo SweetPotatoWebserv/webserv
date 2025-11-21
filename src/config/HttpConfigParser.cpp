@@ -594,97 +594,116 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
 }
 
 //-----------------------------------------------------------------
-//------------------returnディレクティブパーサー-------------------
+//------------------returnディレクティブパーサー---------------------
 //-----------------------------------------------------------------
-ReturnDirective HttpConfigParser::parseReturn(
+
+//ステータスコード指定ありの場合: return 301 /path;
+ReturnDirective HttpConfigParser::parseExplicitReturn(
+    const std::string& status_str, int status,
     const std::vector<std::string>& tokens, size_t& index) {
+    
+    ReturnDirective rd;
+    rd.status = status;
+
+    // ステータスコードの検証
+    if (rd.status < MIN_VALID_STATUS_CODE ||
+        rd.status > MAX_VALID_STATUS_CODE) {
+        throw std::runtime_error(
+            "Error: Invalid status code for return directive: " +
+            status_str);
+    }
+
+    // 次のトークンを取得 (テキスト/URL または セミコロン)
+    std::string next_token = getNextToken(tokens, index);
+
+    if (next_token == SEMICOLON) {
+        // "return 404;" の形式 (本文なし)
+        return rd;
+    }
+
+    // セミコロンでなければ、next_token は URL または テキスト
+    // さらにその次はセミコロンである必要がある
+    if (getNextToken(tokens, index) != SEMICOLON) {
+        throw std::runtime_error(
+            "Error: Expected ';' after return directive value");
+    }
+
+    // URL か テキスト かの判定
+    if (next_token.find('/') == 0 || next_token.find(HTTP_PREFIX) == 0 ||
+        next_token.find(HTTPS_PREFIX) == 0) {
+        rd.target = next_token;  // URL or Path
+    } else {
+        rd.text = next_token;  // Plain text
+    }
+
+    // ステータスコードと中身の整合性チェック
+    bool is_redirect_status = (rd.status >= MIN_REDIRECT_STATUS_CODE &&
+                               rd.status <= MAX_REDIRECT_STATUS_CODE);
+    bool has_target = !rd.target.empty();
+    bool has_text = !rd.text.empty();
+
+    if (is_redirect_status) {
+        if (!has_target) {
+            throw std::runtime_error(
+                "Error: return directive with redirect status " +
+                status_str + " requires a URL/path.");
+        }
+        if (has_text) {
+            throw std::runtime_error(
+                "Error: return directive with redirect status " +
+                status_str + " cannot have a text body.");
+        }
+    } else {
+        if (has_target) {
+            throw std::runtime_error(
+                "Error: return directive with non-redirect status " +
+                status_str + " cannot have a URL/path target.");
+        }
+    }
+    return rd;
+}
+
+//  URLのみ: return /index.html;
+ReturnDirective HttpConfigParser::parseImplicitReturn(
+    const std::string& url, const std::vector<std::string>& tokens, size_t& index) {
+    
     ReturnDirective rd;
 
-    //  最初のトークンを取得 (コード または URL)
-    std::string status_str = getNextToken(tokens, index);
-    std::stringstream ss(status_str);
+    // Nginx仕様: URL指定のみの場合は 302 Found 扱い
+    rd.status = HttpStatus::Found;  // 302
+    rd.target = url;
 
-    // 数値かどうかで分岐
-    //    (ss >> rd.status) が成功し、かつ余計な文字がない(ss.eof)ならステータスコード指定
-    if ((ss >> rd.status) && ss.eof()) {
-        // ステータスコードの検証
-        if (rd.status < MIN_VALID_STATUS_CODE ||
-            rd.status > MAX_VALID_STATUS_CODE) {
-            throw std::runtime_error(
-                "Error: Invalid status code for return directive: " + status_str);
-        }
+    // URLとしての妥当性チェック (http://, https://, または / から始まるか)
+    if (rd.target.find(HTTP_PREFIX) != 0 &&
+        rd.target.find(HTTPS_PREFIX) != 0 && rd.target.find('/') != 0) {
+        throw std::runtime_error(
+            "Error: Invalid URL for implicit 302 return: " + url);
+    }
 
-        // 次のトークンを取得 (テキスト/URL または セミコロン)
-        std::string next_token = getNextToken(tokens, index);
-
-        if (next_token == SEMICOLON) {
-            // "return 404;" の形式 (本文なし)
-            return rd;
-        }
-
-        // セミコロンでなければ、next_token は URL または テキスト
-        // さらにその次はセミコロンである必要がある
-        if (getNextToken(tokens, index) != SEMICOLON) {
-            throw std::runtime_error("Error: Expected ';' after return directive value");
-        }
-
-        // URL か テキスト かの判定
-        if (next_token.find('/') == 0 || next_token.find(HTTP_PREFIX) == 0 ||
-            next_token.find(HTTPS_PREFIX) == 0) {
-            rd.target = next_token;  // URL or Path
-        } else {
-            rd.text = next_token;    // Plain text
-        }
-
-        // ステータスコードと中身の整合性チェック
-        bool is_redirect_status = (rd.status >= MIN_REDIRECT_STATUS_CODE &&
-                                   rd.status <= MAX_REDIRECT_STATUS_CODE);
-        bool has_target = !rd.target.empty();
-        bool has_text = !rd.text.empty();
-
-        if (is_redirect_status) {
-            if (!has_target) {
-                throw std::runtime_error(
-                    "Error: return directive with redirect status " + status_str +
-                    " requires a URL/path.");
-            }
-            if (has_text) {
-                throw std::runtime_error(
-                    "Error: return directive with redirect status " + status_str +
-                    " cannot have a text body.");
-            }
-        } else {
-            if (has_target) {
-                throw std::runtime_error(
-                    "Error: return directive with non-redirect status " +
-                    status_str + " cannot have a URL/path target.");
-            }
-        }
-
-    } else {
-        //"return URL;"---
-        
-        // 数値ではなかったので、status_str は URL とみなす
-        // Nginx仕様: URL指定のみの場合は 302 Found 扱い
-        rd.status = HttpStatus::Found; // 302
-        rd.target = status_str;
-
-        // URLとしての妥当性チェック (http://, https://, または / から始まるか)
-        // Nginxの厳密な仕様では http/https/$scheme しかし、location内リダイレクト用に / も許可するのが一般的
-        if (rd.target.find(HTTP_PREFIX) != 0 && 
-            rd.target.find(HTTPS_PREFIX) != 0 &&
-            rd.target.find("/") != 0) {
-             // Nginxは "return URL" はリダイレクト用なので、URL形式を要求するのが安全
-             throw std::runtime_error("Error: Invalid URL for implicit 302 return: " + status_str);
-        }
-
-        // 次は必ずセミコロン
-        if (getNextToken(tokens, index) != SEMICOLON) {
-            throw std::runtime_error("Error: Expected ';' after return directive URL");
-        }
+    // 次は必ずセミコロン
+    if (getNextToken(tokens, index) != SEMICOLON) {
+        throw std::runtime_error(
+            "Error: Expected ';' after return directive URL");
     }
 
     return rd;
+}
+
+//本体
+ReturnDirective HttpConfigParser::parseReturn(
+    const std::vector<std::string>& tokens, size_t& index) {
+    
+    // 最初のトークンを取得 (コード または URL)
+    std::string token = getNextToken(tokens, index);
+    std::stringstream ss(token);
+    int status_code;
+
+    // 数値かどうかで分岐
+    // (ss >> rd.status) が成功し、かつ余計な文字がない(ss.eof)ならステータスコード指定
+    if ((ss >> status_code) && ss.eof()) {
+        return parseExplicitReturn(token, status_code, tokens, index);
+    }
+    return parseImplicitReturn(token, tokens, index);
 }
 
 //-----------------------------------------------------------------
