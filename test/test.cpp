@@ -47,6 +47,41 @@ void printResponse(const HttpResponse& response) {
     }
 }
 
+// test.cpp に追加するヘルパー関数 (仮定義)
+ResolveConfig createCgiResolveConfig() {
+    ResolveConfig config;
+
+    // 1. 物理ルートの設定 (CgiProcess が /src/cgi-bin/... を見つけるため)
+    // RouteInfo の resolve_ メンバが CommonConfig を持っていると仮定
+    config.root_.is_set_ = true;
+    config.root_.value_ = "/src";  // Dockerコンテナのルートディレクトリ
+
+    // 2. CGI設定 (is_cgi が true を返すため)
+    config.cgi_extension_ = ".py";
+    config.cgi_path_ = "/usr/bin/python3";
+
+    // 他に必要な設定があればここに追加...
+
+    return config;
+}
+
+// test.cpp 内で RouteInfo を作成する関数 (createGetRequest や testGetSuccess
+// の中で呼び出す)
+
+RouteInfo createCgiRouteInfo() {
+    RouteInfo info;
+
+    // ResolveConfig の構築
+    ResolveConfig resolved_config = createCgiResolveConfig();
+
+    // RouteInfo に値を設定
+    info.server_ = NULL;              // テストでは不要なら NULL
+    info.location_ = NULL;            // テストでは不要なら NULL
+    info.resolve_ = resolved_config;  // 値をコピー
+
+    return info;
+}
+
 /**
  * @brief リクエストのベースを作成する。
  */
@@ -101,7 +136,8 @@ HttpRequest createHeaderTestRequest(const std::string& query) {
 void testPostSuccess() {
     CgiProcess process;
     HttpRequest request = createPostRequest();
-    HttpResponse response = process.run(request);
+    RouteInfo route_info = createCgiRouteInfo();
+    HttpResponse response = process.run(request, route_info);
 
     printResponse(response);
 
@@ -123,7 +159,8 @@ void testPostSuccess() {
 void testGetSuccess() {
     CgiProcess process;
     HttpRequest request = createGetRequest();
-    HttpResponse response = process.run(request);
+    RouteInfo route_info = createCgiRouteInfo();
+    HttpResponse response = process.run(request, route_info);
 
     printResponse(response);
 
@@ -142,7 +179,8 @@ void testGetSuccess() {
 void testStatus204NoContent() {
     CgiProcess process;
     HttpRequest request = createHeaderTestRequest("status=204");
-    HttpResponse response = process.run(request);
+    RouteInfo route_info = createCgiRouteInfo();
+    HttpResponse response = process.run(request, route_info);
 
     printResponse(response);
 
@@ -155,7 +193,8 @@ void testStatus204NoContent() {
 void testStatus301Redirect() {
     CgiProcess process;
     HttpRequest request = createHeaderTestRequest("status=301");
-    HttpResponse response = process.run(request);
+    RouteInfo route_info = createCgiRouteInfo();
+    HttpResponse response = process.run(request, route_info);
 
     printResponse(response);
 
@@ -170,7 +209,8 @@ void testStatus301Redirect() {
 void testImplicit302Redirect() {
     CgiProcess process;
     HttpRequest request = createHeaderTestRequest("location_only=true");
-    HttpResponse response = process.run(request);
+    RouteInfo route_info = createCgiRouteInfo();
+    HttpResponse response = process.run(request, route_info);
 
     printResponse(response);
 
@@ -187,7 +227,8 @@ void testImplicit302Redirect() {
 void testStatus400BadRequest() {
     CgiProcess process;
     HttpRequest request = createHeaderTestRequest("status=400");
-    HttpResponse response = process.run(request);
+    RouteInfo route_info = createCgiRouteInfo();
+    HttpResponse response = process.run(request, route_info);
 
     printResponse(response);
 
@@ -201,7 +242,8 @@ void testStatus400BadRequest() {
 void testStatus403Forbidden() {
     CgiProcess process;
     HttpRequest request = createForbiddenRequest();
-    HttpResponse response = process.run(request);
+    RouteInfo route_info = createCgiRouteInfo();
+    HttpResponse response = process.run(request, route_info);
 
     printResponse(response);
 
@@ -213,7 +255,8 @@ void testStatus403Forbidden() {
 void testScriptNotFound() {
     CgiProcess process;
     HttpRequest request = createNotFoundRequest();
-    HttpResponse response = process.run(request);
+    RouteInfo route_info = createCgiRouteInfo();
+    HttpResponse response = process.run(request, route_info);
 
     printResponse(response);
 
@@ -225,7 +268,8 @@ void testScriptNotFound() {
 void testStatus408Timeout() {
     CgiProcess process;
     HttpRequest request = createTimeoutRequest();
-    HttpResponse response = process.run(request);
+    RouteInfo route_info = createCgiRouteInfo();
+    HttpResponse response = process.run(request, route_info);
 
     printResponse(response);
 
@@ -239,7 +283,8 @@ void testStatus408Timeout() {
 void testScriptError() {
     CgiProcess process;
     HttpRequest request = createScriptErrorRequest();
-    HttpResponse response = process.run(request);
+    RouteInfo route_info = createCgiRouteInfo();
+    HttpResponse response = process.run(request, route_info);
 
     printResponse(response);
 
@@ -253,7 +298,8 @@ void testScriptError() {
 void testBadCgiHeader() {
     CgiProcess process;
     HttpRequest request = createHeaderTestRequest("status=bad_header");
-    HttpResponse response = process.run(request);
+    RouteInfo route_info = createCgiRouteInfo();
+    HttpResponse response = process.run(request, route_info);
 
     printResponse(response);
 
@@ -269,7 +315,8 @@ void testWorkingDirAccess() {
     // cgi-bin/cwd_test.py がカレントディレクトリの情報を出力することを期待
     HttpRequest request =
         createBaseRequest(MethodGET, "/cgi-bin/cwd_test.py", "");
-    HttpResponse response = process.run(request);
+    RouteInfo route_info = createCgiRouteInfo();
+    HttpResponse response = process.run(request, route_info);
 
     printResponse(response);
 

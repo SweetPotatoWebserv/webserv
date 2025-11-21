@@ -36,7 +36,10 @@ CGI_TEST_SRC = test/test.cpp \
            src/core/Common.cpp \
            src/http/HttpParser.cpp \
            src/core/String.cpp \
-           src/http/HttpException.cpp
+           src/http/HttpException.cpp \
+           src/http/ResolveConfig.cpp \
+           src/http/Router.cpp \
+           src/config/HttpConfig.cpp
 
 CGI_TEST_OBJ = $(CGI_TEST_SRC:.cpp=.o)
 
