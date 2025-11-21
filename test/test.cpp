@@ -24,7 +24,6 @@ void testStatus408Timeout();
 void testScriptError();
 void testBadCgiHeader();
 void testWorkingDirAccess();
-void testInfiniteLoopKill();
 // ------------------------------------------
 
 /**
