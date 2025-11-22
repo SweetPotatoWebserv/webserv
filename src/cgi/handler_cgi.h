@@ -3,13 +3,14 @@
 #include <string>
 
 #include "../http/HttpResponse.h"
+#include "../http/ResponseFactory.h"
 #include "executor_cgi.h"
 
 class CgiProcess {
    public:
     CgiProcess();
     ~CgiProcess();
-    HttpResponse run(const HttpRequest& request);
+    HttpResponse run(const HttpRequest& request, const RouteInfo& info);
 
    private:
     CgiExecutor executor_;

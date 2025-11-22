@@ -36,7 +36,10 @@ CGI_TEST_SRC = test/test.cpp \
            src/core/Common.cpp \
            src/http/HttpParser.cpp \
            src/core/String.cpp \
-           src/http/HttpException.cpp
+           src/http/HttpException.cpp \
+           src/http/ResolveConfig.cpp \
+           src/http/Router.cpp \
+           src/config/HttpConfig.cpp
 
 CGI_TEST_OBJ = $(CGI_TEST_SRC:.cpp=.o)
 
@@ -67,6 +70,7 @@ internal_test_cgi:
 	@chmod 755 ./cgi-bin/error.py
 	@chmod 755 ./cgi-bin/test_headers.py
 	@chmod 755 ./cgi-bin/timeout.py
+	@chmod 755 ./cgi-bin/cwd_test.py
 	
 	@echo "--- Verifying permissions in ./cgi-bin/ ---"
 	@ls -la ./cgi-bin/

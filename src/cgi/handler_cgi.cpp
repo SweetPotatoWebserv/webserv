@@ -50,12 +50,14 @@ HttpResponse CgiProcess::validateCgiScript(const std::string& script_path) {
     return response;
 }
 
-HttpResponse CgiProcess::run(const HttpRequest& request) {
+HttpResponse CgiProcess::run(const HttpRequest& request,
+                             const RouteInfo& info) {
     char** argv = NULL;
     char** envp = NULL;
     HttpResponse response;
     try {
-        const std::string& script_path = "/src" + request.request_target_.path_;
+        const std::string& script_path =
+            info.resolve_.root_.value_ + request.request_target_.path_;
 
         response = validateCgiScript(script_path);
         if (response.status_code_ != HttpStatus::OK) {
