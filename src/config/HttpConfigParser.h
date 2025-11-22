@@ -115,6 +115,13 @@ class HttpConfigParser {
     static std::vector<std::string> parseServerName(
         const std::vector<std::string>& tokens, size_t& index);
 
+    static ReturnDirective parseExplicitReturn(
+        const std::string& status_str, int status,
+        const std::vector<std::string>& tokens, size_t& index);
+    static ReturnDirective parseImplicitReturn(
+        const std::string& url, const std::vector<std::string>& tokens,
+        size_t& index);
+
     // 特殊文字リスト（トークン分割用）構文解析用
     static const char* const SPECIAL_CHARS;
     static const char HASH_CHAR;
