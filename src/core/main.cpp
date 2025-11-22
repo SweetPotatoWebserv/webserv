@@ -5,7 +5,6 @@
 #include "Server.h"
 
 int main(int argc, char* argv[]) {
-
     const char* config_path = "default.conf";
 
     if (argc == 2) {
