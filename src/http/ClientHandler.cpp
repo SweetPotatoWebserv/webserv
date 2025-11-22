@@ -77,13 +77,12 @@ bool ClientHandler::is_complete_content_length(
     return buffer.size() >= total_len;
 }
 
-void ClientHandler::on_readable() {  // NOLINT
+void ClientHandler::on_readable() {
     char buf[BUFFER_SIZE];
     ssize_t len = ::recv(fd_, buf, sizeof(buf), RECV_FLG);
-    // recv の失敗
-    if (len < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) return;
+    if (len == -1) {
         on_close();
+        throw std::runtime_error("recv() to failed: " + std::string(strerror(errno)));
         return;
     }
     // 接続が閉じられた
@@ -107,10 +106,10 @@ void ClientHandler::on_readable() {  // NOLINT
     }
 }
 
-void ClientHandler::on_writable() {  // NOLINT
+void ClientHandler::on_writable() {
     ssize_t ret = HttpResponse::send_response(fd_, response_);
     if (ret == -1) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) return;
+        throw std::runtime_error("write() to failed: " + std::string(strerror(errno)));
     }
     buffer_.clear();
     response_.clear();
