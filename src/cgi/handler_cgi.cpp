@@ -66,32 +66,8 @@ HttpResponse CgiProcess::run(const HttpRequest& request,
     char** envp = NULL;
     HttpResponse response;
     try {
-        // const std::string& script_path =
-        //     info.resolve_.root_.value_ + request.request_target_.path_;
-        // Check if strings are empty to avoid segfaults on index access
-        if (base.empty()) {
-            script_path = req_path;
-        } else if (req_path.empty()) {
-            script_path = base;
-        } else {
-            // Check for slashes
-            bool base_ends_slash = (base[base.length() - 1] == '/');
-            bool req_starts_slash = (req_path[0] == '/');
-
-            if (base_ends_slash && req_starts_slash) {
-                // Case 1: Both have slashes (e.g., "/var/www/" + "/index.html")
-                // Remove one slash to avoid "//"
-                script_path = base + req_path.substr(1);
-            } else if (!base_ends_slash && !req_starts_slash) {
-                // Case 2: Neither has a slash (e.g., "/var/www" + "index.html")
-                // Add a slash
-                script_path = base + "/" + req_path;
-            } else {
-                // Case 3: Perfectly formatted (one has slash, one doesn't)
-                // Just concatenate
-                script_path = base + req_path;
-            }
-        }
+        const std::string& script_path =
+            info.resolve_.root_.value_ + request.request_target_.path_;
 
         response = validateCgiScript(script_path);
         if (response.status_code_ != HttpStatus::OK) {
