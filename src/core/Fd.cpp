@@ -45,6 +45,8 @@ void Fd::FwriteAll(const std::string& buf) const {
         if (len == -1)
             throw std::runtime_error("write() failed: " +
                                      std::string(strerror(errno)));
+        if (len == 0)
+            throw std::runtime_error("write() returned 0 unexpectedly");
         total_written += static_cast<std::string::size_type>(len);
     }
 }
