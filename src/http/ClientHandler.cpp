@@ -109,6 +109,7 @@ void ClientHandler::on_readable() {
 void ClientHandler::on_writable() {
     ssize_t ret = HttpResponse::send_response(fd_, response_);
     if (ret == -1) {
+        on_close();
         throw std::runtime_error("write() failed: " +
                                  std::string(strerror(errno)));
     }
