@@ -8,6 +8,7 @@
 #include <stdexcept>
 
 #include "../cgi/handler_cgi.h"
+#include "../core/Fd.h"
 #include "HttpParser.h"
 #include "MimeTypes.h"
 #include "Router.h"
@@ -47,22 +48,14 @@ HttpResponse ResponseFactory::render_error(int status_code,
         out_status = error_page_directive.override_status;
     }
 
-    int fd = open(error_page_directive.target.c_str(), O_RDONLY);
-    if (fd == -1) return render_default_error_page(status_code);
-
     std::vector<char> buffer;
-    char buf[DEFAULT_BUFFER_LEN];
-    while (true) {
-        ssize_t len = read(fd, buf, sizeof(buf));
-        if (len == -1) {
-            close(fd);
-            throw std::runtime_error("read() failed");
-        }
-        if (len == 0) break;
-        buffer.insert(buffer.end(), buf, buf + len);
+    try {
+        Fd fd(error_page_directive.target.c_str(), O_RDONLY);
+        buffer = fd.FreadAll();
+    } catch (const OpenException& e) {
+        std::cerr << e.what() << '\n';
+        return render_default_error_page(status_code);
     }
-    close(fd);
-
     response.status_code_ = out_status;
     response.message_ = HttpStatus::reason(out_status);
     response.body_.assign(buffer.begin(), buffer.end());
@@ -82,24 +75,14 @@ HttpResponse ResponseFactory::response_get(const HttpRequest& request,
          index_files != route.resolve_.index_files_.end(); ++index_files) {
         path_name = route.resolve_.root_.value_ +
                     request.request_target_.path_ + *index_files;
-        int fd = open(path_name.c_str(), O_RDONLY);
-        if (fd == -1) {
+        std::vector<char> buffer;
+        try {
+            Fd fd(path_name.c_str(), O_RDONLY);
+            buffer = fd.FreadAll();
+        } catch (const OpenException& e) {
+            std::cerr << e.what() << '\n';
             continue;
         }
-        // std::stringだと画像データなどバイナリに対応できないため、vectorを使用する
-        std::vector<char> buffer;
-        char buf[DEFAULT_BUFFER_LEN];
-        while (true) {
-            ssize_t len = read(fd, buf, DEFAULT_BUFFER_LEN);
-            if (len == -1) {
-                throw std::runtime_error("failed to read: " +
-                                         std::string(std::strerror(errno)));
-                close(fd);
-            }
-            if (len == 0) break;
-            buffer.insert(buffer.end(), buf, buf + len);
-        }
-        close(fd);
         response.body_.assign(buffer.begin(), buffer.end());
         found = true;
         break;
@@ -136,23 +119,13 @@ HttpResponse ResponseFactory::response_post(const HttpRequest& request,
     ss << "upload_" << time(NULL);
     std::string filename = ss.str();
     std::string fullpath = dir + filename;
-    int fd =
-        open(fullpath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);  // NOLINT
-    if (fd == -1) return render_error(HttpStatus::InternalServerError, route);
-
-    const std::string& body = request.body_;
-    size_t total = body.size();
-    ssize_t sent = 0;
-
-    while (sent < static_cast<ssize_t>(total)) {
-        ssize_t len = write(fd, body.c_str() + sent, total - sent);
-        if (len == -1) {
-            close(fd);
-            return render_error(HttpStatus::InternalServerError, route);
-        }
-        sent += len;
+    try {
+        Fd fd(fullpath.c_str(), O_CREAT | O_WRONLY | O_TRUNC);
+        fd.FwriteAll(request.body_);
+    } catch (const std::runtime_error& e) {
+        std::cerr << e.what() << '\n';
+        return render_error(HttpStatus::InternalServerError, route);
     }
-    close(fd);
     HttpResponse response;
     response.status_code_ = HttpStatus::Created;
     response.message_ = HttpStatus::reason(HttpStatus::Created);

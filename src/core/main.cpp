@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
         }
         ev.run();
     } catch (std::exception& e) {
-        std::cerr << "Failed to start server: " << e.what() << '\n';
+        std::cerr << e.what() << '\n';
         return 1;
     }
     return 0;
