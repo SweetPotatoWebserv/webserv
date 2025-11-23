@@ -19,10 +19,6 @@ namespace {
 const int CGI_TIMEOUT_MS = 5000;
 const int MAX_EPOLL_EVENTS = 1;
 const int BUFFER_SIZE = 4096;
-
-const int EXIT_CODE_PERMISSION_DENIED = 126;
-const int EXIT_CODE_COMMAND_NOT_FOUND = 127;
-
 }  // namespace
 
 CgiExecutor::CgiExecutor() {
@@ -46,9 +42,6 @@ void CgiExecutor::writeAll(int fd, const char *buffer, size_t size) {
             write(fd, buffer + total_written, size - total_written);
 
         if (written < 0) {
-            if (errno == EINTR) {
-                continue;
-            }
             std::cerr << "CGI warning: failed to write cgi stdin fully. errno: "
                       << strerror(errno) << "\n";
             return;
@@ -138,9 +131,6 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
             epoll_wait(epoll_fd, events, MAX_EPOLL_EVENTS, CGI_TIMEOUT_MS);
 
         if (num_events == -1) {
-            if (errno == EINTR) {
-                continue;
-            }
             std::cerr << "CGI Error: epoll_wait failed\n";
             break;
         }
@@ -223,13 +213,7 @@ void CgiExecutor::executeChildProcess(const std::string &scriptPath,
         std::cerr << "CGI Error: execve failed for " << basename
                   << ". errno: " << strerror(errno) << "\n";
 
-        if (errno == EACCES) {
-            exit(EXIT_CODE_PERMISSION_DENIED);
-        } else if (errno == ENOENT) {
-            exit(EXIT_CODE_COMMAND_NOT_FOUND);
-        } else {
-            exit(EXIT_FAILURE);
-        }
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -238,14 +222,6 @@ void CgiExecutor::checkChildExitStatus(int status) {
         int exit_code = WEXITSTATUS(status);
         if (exit_code == 0) {
             return;
-        }
-        if (exit_code == EXIT_CODE_PERMISSION_DENIED) {
-            throw CgiExecutionException("Permission denied",
-                                        HttpStatus::Forbidden);
-        }
-        if (exit_code == EXIT_CODE_COMMAND_NOT_FOUND) {
-            throw CgiExecutionException("Command not found",
-                                        HttpStatus::NotFound);
         }
         throw CgiExecutionException("CGI script error",
                                     HttpStatus::InternalServerError);

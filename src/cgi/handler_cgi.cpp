@@ -35,15 +35,10 @@ HttpResponse CgiProcess::validateCgiScript(const std::string& script_path) {
         return response;
     }
 
-    // ファイルのパーミッション(st_mode)から、
-    // ユーザー(S_IXUSR)、グループ(S_IXGRP)、その他(S_IXOTH)の
-    // いずれかに実行権限('x'ビット)があるかを確認する。
-    bool is_executable = ((st.st_mode & S_IXUSR) != 0) ||
-                         ((st.st_mode & S_IXGRP) != 0) ||
-                         ((st.st_mode & S_IXOTH) != 0);
-    if (!is_executable) {
+    if (access(script_path.c_str(), X_OK) != 0 ||
+        access(script_path.c_str(), R_OK) != 0) {
         response.status_code_ = HttpStatus::Forbidden;
-        response.body_ = "CGI script is not executable (no 'x' bit set)";
+        response.body_ = "CGI script is not executable or readable";
         return response;
     }
 
@@ -56,8 +51,13 @@ HttpResponse CgiProcess::run(const HttpRequest& request,
     char** envp = NULL;
     HttpResponse response;
     try {
-        const std::string& script_path =
-            info.resolve_.root_.value_ + request.request_target_.path_;
+        std::string path_str = request.request_target_.path_;
+
+        if (!path_str.empty() && path_str[0] == '/') {
+            path_str = path_str.substr(1);
+        }
+
+        std::string script_path = info.resolve_.root_.value_ + path_str;
 
         response = validateCgiScript(script_path);
         if (response.status_code_ != HttpStatus::OK) {
