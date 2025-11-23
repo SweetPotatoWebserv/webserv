@@ -23,6 +23,7 @@ HttpResponse ResponseFactory::render_default_error_page(int status_code) {
        << "<body>" << HttpStatus::reason(status_code) << "</body>\n"
        << "</html>\n";
     response.status_code_ = status_code;
+    response.message_ = HttpStatus::reason(status_code);
     response.body_ = ss.str();
     response.header_.content_type_ = "text/html";
     response.header_.content_length_ = response.body_.size();
@@ -317,22 +318,22 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
     if (parse_error.status_code() != HttpStatus::OK) {
         return render_error(parse_error.status_code(), route);
     }
-    // TODO allowedメソッドがまだ実装されてないため、コメントアウト
-    // if (std::find(resolve_.allowed_methods_.begin(),
-    //               resolve_.allowed_methods_.end(),
-    //               request.method_) == resolve_.allowed_methods_.end())
-    //                                       resolve_.error_page_, server);
-    //     return HttpResponse::render_error(HttpStatus::MethodNotAllowed,
-    // TODO cgi が追加されたら追加する
-    if (ResponseFactory::is_cgi(request, route))
-        return ResponseFactory::response_cgi(request, route);
-    if (route.resolve_.redirect_.status != CommonConfig::INVALID_NUM)
-        return response_redirect(route);
-
+    // 許可されてないメソッド
+    if (std::find(route.resolve_.allowed_methods_.begin(),
+                  route.resolve_.allowed_methods_.end(),
+                  request.method_) == route.resolve_.allowed_methods_.end())
+        return render_error(HttpStatus::MethodNotAllowed, route);
+    // ボディサイズが大きすぎる
     if (route.resolve_.client_max_body_size_ != CommonConfig::INVALID_NUM &&
         route.resolve_.client_max_body_size_ <
             static_cast<off_t>(request.body_.size()))
         return render_error(HttpStatus::PayloadTooLarge, route);
+    // リダイレクト
+    if (route.resolve_.redirect_.status != CommonConfig::INVALID_NUM)
+        return response_redirect(route);
+
+    if (ResponseFactory::is_cgi(request, route))
+        return ResponseFactory::response_cgi(request, route);
 
     switch (request.method_) {
         case MethodGET: {
@@ -343,12 +344,14 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
             response.body_.clear();
             return response;
         }
-        case MethodPOST:
+        case MethodPOST: {
             return response_post(request, route);
-        case MethodDELETE:
+        }
+        case MethodDELETE: {
             return response_delete(request, route);
-        default:
+        }
+        default: {
             throw std::runtime_error("Unsupported HTTP method");
-            break;
+        }
     }
 }
