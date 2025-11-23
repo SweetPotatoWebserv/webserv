@@ -35,7 +35,8 @@ HttpResponse CgiProcess::validateCgiScript(const std::string& script_path) {
         return response;
     }
 
-    if (access(script_path.c_str(), X_OK) != 0 || access(script_path.c_str(), R_OK) != 0) {
+    if (access(script_path.c_str(), X_OK) != 0 ||
+        access(script_path.c_str(), R_OK) != 0) {
         response.status_code_ = HttpStatus::Forbidden;
         response.body_ = "CGI script is not executable or readable";
         return response;
