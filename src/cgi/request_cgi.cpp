@@ -59,10 +59,10 @@ char** createEnvp(const HttpRequest& request) {
              env_map.begin();
          it != env_map.end(); ++it) {
         std::string env_line = it->first + "=" + it->second;
-        envp[i] = strdup(env_line.c_str());
+        envp[i] = new char[env_line.length() + 1];
         if (envp[i] == NULL) {
             for (int j = 0; j < i; ++j) {
-                free(envp[j]);
+                delete (envp[j]);
             }
             delete[] envp;
             return NULL;
@@ -73,10 +73,10 @@ char** createEnvp(const HttpRequest& request) {
     return envp;
 }
 
-void freeArray(char** arr) {
+void deleteArray(char** arr) {
     if (!arr) return;
     for (int i = 0; arr[i] != NULL; ++i) {
-        free(arr[i]);
+        delete (arr[i]);
     }
     delete[] arr;
 }

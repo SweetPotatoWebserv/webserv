@@ -79,19 +79,19 @@ HttpResponse CgiProcess::run(const HttpRequest& request,
 
             response.status_code_ = e.getStatusCode();
             response.body_ = e.what();
-            freeArray(argv);
-            freeArray(envp);
+            deleteArray(argv);
+            deleteArray(envp);
             return response;
         }
 
         parseCgiResponse(response, raw_output);
-        freeArray(argv);
-        freeArray(envp);
+        deleteArray(argv);
+        deleteArray(envp);
         return response;
     } catch (const std::exception& e) {
         std::cerr << "CgiProcess FATAL error: " << e.what() << "\n";
-        freeArray(argv);
-        freeArray(envp);
+        deleteArray(argv);
+        deleteArray(envp);
 
         // エラーページすら生成できなかった時のみエラーを返す
         return response;
