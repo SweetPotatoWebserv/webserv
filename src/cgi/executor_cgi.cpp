@@ -270,16 +270,18 @@ void CgiExecutor::safeClose(int &fd) {
 }
 
 std::string CgiExecutor::getScriptDirectory(const std::string &scriptPath) {
-    char *path_c_str = strdup(scriptPath.c_str());
-    if (path_c_str == NULL) {
-        // ここではルート返して、child processのexecutorでエラー
+    std::string::size_type pos = scriptPath.rfind('/');
+
+    if (pos == std::string::npos) {
         return ".";
     }
 
-    char *dir = dirname(path_c_str);
-    std::string dir_str(dir);
-    free(path_c_str);
-    return dir_str;
+    // スラッシュが先頭にある場合 /test.py はルートを返す
+    if (pos == 0) {
+        return "/";
+    }
+
+    return scriptPath.substr(0, pos);
 }
 
 std::string CgiExecutor::getScriptBasename(const std::string &scriptPath) {
