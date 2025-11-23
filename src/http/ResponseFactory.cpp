@@ -305,8 +305,10 @@ HttpResponse ResponseFactory::response_cgi(const HttpRequest& request,
                                            const RouteInfo& route) {
     CgiProcess cgi_processor;
     HttpResponse response = cgi_processor.run(request, route);
-
     response.header_.content_length_ = response.body_.size();
+    if (request.method_ == MethodHEAD) {
+        response.body_.clear();
+    }
     return response;
 }
 

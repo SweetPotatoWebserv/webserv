@@ -85,10 +85,6 @@ HttpResponse CgiProcess::run(const HttpRequest& request,
         }
 
         parseCgiResponse(response, raw_output);
-        if (request.method_ == MethodHEAD) {
-            response.body_.clear();
-            response.header_.content_length_ = 0;
-        }
         freeArray(argv);
         freeArray(envp);
         return response;
