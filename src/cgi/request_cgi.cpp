@@ -70,7 +70,7 @@ char** createEnvp(const HttpRequest& request) {
     } catch (std::bad_alloc& e) {
         std::cerr << "Memory allocation failed in createEnvp\n";
         for (int j = 0; j < i; ++j) {
-            delete (envp[j]);
+            delete[] envp[j];
         }
         delete[] envp;
         return NULL;
@@ -82,7 +82,7 @@ char** createEnvp(const HttpRequest& request) {
 void deleteArray(char** arr) {
     if (!arr) return;
     for (int i = 0; arr[i] != NULL; ++i) {
-        delete (arr[i]);
+        delete[] arr[i];
     }
     delete[] arr;
 }
