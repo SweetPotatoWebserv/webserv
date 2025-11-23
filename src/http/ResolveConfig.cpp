@@ -1,5 +1,10 @@
 #include "ResolveConfig.h"
 
+#include <fcntl.h>
+
+#include <stdexcept>
+
+#include "../core/Fd.h"
 #include "HttpException.h"
 #include "Router.h"
 
@@ -54,11 +59,10 @@ void ResolveConfig::resolve_error_pages_internal(  // NOLINT
         if (!(error_page_directive
                   .target[error_page_directive.target.size() - 1] == '/')) {
             std::string absolute_path = base_root + error_page_directive.target;
-            int fd = open(absolute_path.c_str(), O_RDONLY);
-            if (fd != -1) {
-                close(fd);
+            try {
+                Fd fd(absolute_path.c_str(), O_RDONLY);
                 error_page_directive.target = absolute_path;
-            } else {
+            } catch (std::runtime_error& e) {
                 error_page_directive.target = "";
             }
             continue;
@@ -69,12 +73,13 @@ void ResolveConfig::resolve_error_pages_internal(  // NOLINT
              index != indexes.end(); ++index) {
             std::string absolute_path =
                 base_root + error_page_directive.target + *index;
-            int fd = open(absolute_path.c_str(), O_RDONLY);
-            if (fd != -1) {
-                close(fd);
+            try {
+                Fd fd(absolute_path.c_str(), O_RDONLY);
                 error_page_directive.target = absolute_path;
                 found = true;
                 break;
+            } catch (std::runtime_error& e) {
+                std::cerr << e.what() << '\n';
             }
         }
 
