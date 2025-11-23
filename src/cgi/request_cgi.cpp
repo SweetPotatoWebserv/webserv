@@ -65,13 +65,6 @@ char** createEnvp(const HttpRequest& request) {
             std::string env_line = it->first + "=" + it->second;
             envp[i] = new char[env_line.length() + 1];
             std::strcpy(envp[i], env_line.c_str());
-            if (envp[i] == NULL) {
-                for (int j = 0; j < i; ++j) {
-                    delete (envp[j]);
-                }
-                delete[] envp;
-                return NULL;
-            }
             i++;
         }
     } catch (std::bad_alloc& e) {
