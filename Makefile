@@ -11,7 +11,7 @@ SRC_WITHOUT_MAIN = $(filter-out src/core/main.cpp,$(SRC))
 
 TEST_DIR = test
 # test 追加時は TEST_SRC に追加
-TEST_SRC = $(addprefix $(TEST_DIR)/, test_main.cpp \
+TEST_SRC = $(addprefix $(TEST_DIR)/gtest/, test_main.cpp \
             test_is_request_ready.cpp \
             test_split.cpp \
             test_trim.cpp \
@@ -61,7 +61,7 @@ test_cgi: build
 
 internal_test_cgi:
 	@make clean
-	
+
 	@make $(CGI_TEST_NAME)
 
 	@echo "--- Setting up test permissions (inside container) ---"
@@ -71,13 +71,13 @@ internal_test_cgi:
 	@chmod 755 ./cgi-bin/test_headers.py
 	@chmod 755 ./cgi-bin/timeout.py
 	@chmod 755 ./cgi-bin/cwd_test.py
-	
+
 	@echo "--- Verifying permissions in ./cgi-bin/ ---"
 	@ls -la ./cgi-bin/
 
 	@echo "---Run CGI TEST (inside container)---"
 	./$(CGI_TEST_NAME)
-	
+
 $(CGI_TEST_NAME): $(CGI_TEST_OBJ)
 	$(CXX) $(CXXFLAGS) -o $(CGI_TEST_NAME) $(CGI_TEST_OBJ)
 
