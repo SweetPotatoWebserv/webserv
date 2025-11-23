@@ -174,9 +174,6 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
         if (hup_occurred && !(events[0].events & EPOLLIN)) {
             break;
         }
-        if (hup_occurred && !(events[0].events & EPOLLIN)) {
-            break;
-        }
     }
 
     safeClose(epoll_fd);
