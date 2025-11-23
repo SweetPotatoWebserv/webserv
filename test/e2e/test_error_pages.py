@@ -1,10 +1,10 @@
 from util import http_get
 
-def test_index(server):
-    res = http_get(server, "/dir/", headers={"Host": "localhost"})
+def test_error_override(server):
+    res = http_get(server, "/hoge", headers={"Host": "localhost"})
     assert res.status_code == 200
 
-def test_autoindex(server):
-    res = http_get(server, "/list/", headers={"Host": "localhost"})
-    assert res.status_code == 200
-    assert "<a href=" in res.text
+def test_error_page(server):
+    res = http_get(server, "/hoge", headers={"Host": "localhost"})
+    assert res.status_code == 404
+    assert "<p>404</p>" == res.text

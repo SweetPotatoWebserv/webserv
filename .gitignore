@@ -3,3 +3,4 @@ webserv
 **/all_tests
 googletest
 cgi_test_runner
+**/__pycache__
