@@ -51,7 +51,7 @@ HttpResponse ResponseFactory::render_error(int status_code,
     try {
         Fd fd(error_page_directive.target.c_str(), O_RDONLY);
         buffer = fd.FreadAll();
-    } catch (std::runtime_error& e) {
+    } catch (const OpenException& e) {
         std::cerr << e.what() << '\n';
         return render_default_error_page(status_code);
     }
@@ -78,7 +78,7 @@ HttpResponse ResponseFactory::response_get(const HttpRequest& request,
         try {
             Fd fd(path_name.c_str(), O_RDONLY);
             buffer = fd.FreadAll();
-        } catch (std::runtime_error& e) {
+        } catch (const OpenException& e) {
             std::cerr << e.what() << '\n';
             continue;
         }
@@ -121,7 +121,7 @@ HttpResponse ResponseFactory::response_post(const HttpRequest& request,
     try {
         Fd fd(fullpath.c_str(), O_CREAT | O_WRONLY | O_TRUNC);
         fd.FwriteAll(request.body_);
-    } catch (std::runtime_error& e) {
+    } catch (const OpenException& e) {
         return render_error(HttpStatus::InternalServerError, route);
     }
     HttpResponse response;

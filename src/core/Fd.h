@@ -4,8 +4,14 @@
 #include <sys/types.h>
 
 #include <cstddef>
+#include <stdexcept>
 #include <string>
 #include <vector>
+
+class OpenException : public std::runtime_error {
+   public:
+    explicit OpenException(const std::string& message);
+};
 
 class Fd {
    public:

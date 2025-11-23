@@ -63,6 +63,7 @@ void ResolveConfig::resolve_error_pages_internal(  // NOLINT
                 Fd fd(absolute_path.c_str(), O_RDONLY);
                 error_page_directive.target = absolute_path;
             } catch (std::runtime_error& e) {
+                std::cerr << e.what() << '\n';
                 error_page_directive.target = "";
             }
             continue;
