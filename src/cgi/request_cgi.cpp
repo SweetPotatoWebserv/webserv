@@ -28,12 +28,15 @@ std::string methodToString(Method method) {
 
 char** createArgv(const std::string& script_path) {
     char** argv = new char*[2];
-    argv[0] = strdup(script_path.c_str());
-    argv[1] = NULL;
-    if (argv[0] == NULL) {
+    try {
+        argv[0] = new char[script_path.length() + 1];
+        std::strcpy(argv[0], script_path.c_str());
+        argv[1] = NULL;
+    } catch (std::bad_alloc& e) {
         delete[] argv;
         return NULL;
     }
+
     return argv;
 }
 
@@ -55,28 +58,31 @@ char** createEnvp(const HttpRequest& request) {
 
     char** envp = new char*[env_map.size() + 1];
     int i = 0;
-    for (std::map<std::string, std::string>::const_iterator it =
-             env_map.begin();
-         it != env_map.end(); ++it) {
-        std::string env_line = it->first + "=" + it->second;
-        envp[i] = strdup(env_line.c_str());
-        if (envp[i] == NULL) {
-            for (int j = 0; j < i; ++j) {
-                free(envp[j]);
-            }
-            delete[] envp;
-            return NULL;
+    try {
+        for (std::map<std::string, std::string>::const_iterator it =
+                 env_map.begin();
+             it != env_map.end(); ++it) {
+            std::string env_line = it->first + "=" + it->second;
+            envp[i] = new char[env_line.length() + 1];
+            std::strcpy(envp[i], env_line.c_str());
+            i++;
         }
-        i++;
+    } catch (std::bad_alloc& e) {
+        std::cerr << "Memory allocation failed in createEnvp\n";
+        for (int j = 0; j < i; ++j) {
+            delete[] envp[j];
+        }
+        delete[] envp;
+        return NULL;
     }
     envp[i] = NULL;
     return envp;
 }
 
-void freeArray(char** arr) {
+void deleteArray(char** arr) {
     if (!arr) return;
     for (int i = 0; arr[i] != NULL; ++i) {
-        free(arr[i]);
+        delete[] arr[i];
     }
     delete[] arr;
 }
