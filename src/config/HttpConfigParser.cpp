@@ -517,9 +517,7 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
         // (ss >> status_code) で変換を試み、
         // ss.eof() で "404foo" のような余計な文字がないことを確認
         // 課題の要件ではエラーページは 300-599 の範囲が妥当
-        if ((ss >> status_code) && ss.eof() &&
-            status_code >= MIN_ERROR_STATUS_CODE &&
-            status_code <= MAX_ERROR_STATUS_CODE) {
+        if ((ss >> status_code) && status_code >= MIN_ERROR_STATUS_CODE && status_code <= MAX_ERROR_STATUS_CODE) {
             pep.status_codes.push_back(status_code);
         } else {
             // 数値でなければ、ループを抜ける
@@ -541,15 +539,14 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
     }
 
     // オプションの '=' (ステータスコード上書き) をチェック
-    if (token == "=") {
+    if (token.find("=", 0, 1) != std::string::npos) {
         if (isEof(tokens, index)) {
             throw std::runtime_error(
                 "Error: Expected new status code after '=' in error_page");
         }
-        token = getNextToken(tokens, index);
+        std::stringstream ss(token.substr(1));
 
-        std::stringstream ss(token);
-        if (!(ss >> pep.directive.override_status) || !ss.eof() ||
+        if (!(ss >> pep.directive.override_status) ||
             pep.directive.override_status < MIN_VALID_STATUS_CODE ||
             pep.directive.override_status > MAX_VALID_STATUS_CODE) {
             throw std::runtime_error(
@@ -571,7 +568,6 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
                 "'/': " +
                 pep.directive.target);
         }
-
     } else {
         // '=' がなかった場合
         pep.directive.override_status = -1;  // -1 を「上書きなし」とする
