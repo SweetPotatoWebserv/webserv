@@ -168,10 +168,6 @@ std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
         }
 
         if (events[0].events & (EPOLLHUP | EPOLLERR)) {
-            if (!(events[0].events & EPOLLIN)) {
-                std::cerr
-                    << "CGI warning: EPOLLHUP/EPOLLERR without EPOLLIN.\n";
-            }
             hup_occurred = true;
         }
 

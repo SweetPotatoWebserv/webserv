@@ -93,7 +93,6 @@ HttpResponse CgiProcess::run(const HttpRequest& request,
         deleteArray(argv);
         deleteArray(envp);
 
-        // エラーページすら生成できなかった時のみエラーを返す
         return response;
     }
 }
