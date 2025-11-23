@@ -41,7 +41,8 @@ void Fd::FwriteAll(const std::string& buf) const {
     std::string::size_type total_written = 0;
     std::string::size_type buf_size = buf.size();
     while (total_written < buf_size) {
-        ssize_t len = write(fd_, buf.c_str() + total_written, buf_size - total_written);
+        ssize_t len =
+            write(fd_, buf.c_str() + total_written, buf_size - total_written);
         if (len == -1)
             throw std::runtime_error("write() failed: " +
                                      std::string(strerror(errno)));
