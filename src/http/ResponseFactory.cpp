@@ -121,7 +121,8 @@ HttpResponse ResponseFactory::response_post(const HttpRequest& request,
     try {
         Fd fd(fullpath.c_str(), O_CREAT | O_WRONLY | O_TRUNC);
         fd.FwriteAll(request.body_);
-    } catch (const OpenException& e) {
+    } catch (const std::runtime_error& e) {
+        std::cerr << e.what() << '\n';
         return render_error(HttpStatus::InternalServerError, route);
     }
     HttpResponse response;
