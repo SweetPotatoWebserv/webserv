@@ -40,7 +40,7 @@ std::vector<char> Fd::FreadAll() const {
 void Fd::FwriteAll(const std::string& buf) const {
     ssize_t written = 0;
     std::string::size_type buf_size = buf.size();
-    while (true) {
+    while (static_cast<std::string::size_type>(written) < buf_size) {
         ssize_t len = write(fd_, buf.c_str() + written, buf_size - written);
         if (len == -1)
             throw std::runtime_error("write() failed: " +
