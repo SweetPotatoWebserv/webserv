@@ -65,36 +65,84 @@ std::vector<std::string> HttpConfigParser::tokenize(
 
     std::vector<std::string> tokens;
     std::string line;
+    std::string content;
 
-    // copilot
-    const std::string special_chars_str(SPECIAL_CHARS);
-
+    // ファイル全体を1つの文字列として読み込む
+    // (クォートが行をまたぐ場合や、行末の処理を統一するため)
     while (std::getline(ifs, line)) {
-        for (size_t i = 0; i < line.size(); ++i) {
-            // 空欄スキップ
-            if (std::isspace(line[i])) {
+        content += line + "\n";
+    }
+
+    const std::string special_chars_str(SPECIAL_CHARS);
+    std::string current_token;
+    bool in_quote = false;
+    char quote_char = 0;
+
+    for (size_t i = 0; i < content.size(); ++i) {
+        char c = content[i];
+
+        if (in_quote) {
+            if (c == quote_char) {
+                // クォート終了
+                in_quote = false;
+                // ここではクォートの中身を1つのトークンとして確定
+                // (例: "my site" -> my site というトークンになる)
+                tokens.push_back(current_token);
+                current_token.clear();
+            } else {
+                // クォート内はスペースや特殊文字もそのまま追加
+                current_token += c;
+            }
+        } else {
+            if (std::isspace(c)) {
+                if (!current_token.empty()) {
+                    tokens.push_back(current_token);
+                    current_token.clear();
+                }
                 continue;
             }
-            // コメント行スキップ
-            if (line[i] == HASH_CHAR) {
-                break;
-            }  // HASH_CHAR==#
-            // トークン抽出
-            if (special_chars_str.find(line[i]) != std::string::npos) {
-                tokens.push_back(
-                    line.substr(i, 1));  // SPECIAL_CHARS=="{};"//1文字切り出す
+            if (c == HASH_CHAR) {
+                // 行末(改行)までスキップ
+                while (i < content.size() && content[i] != '\n') {
+                    i++;
+                }
                 continue;
             }
-            size_t start = i;
-            while (i < line.size() && std::isspace(line[i]) == 0 &&
-                   line[i] != HASH_CHAR &&
-                   special_chars_str.find(line[i]) == std::string::npos) {
-                ++i;
+            if (special_chars_str.find(c) != std::string::npos) {
+                // 直前までトークンがあれば登録
+                if (!current_token.empty()) {
+                    tokens.push_back(current_token);
+                    current_token.clear();
+                }
+                // 特殊文字自体をトークンとして登録
+                tokens.push_back(std::string(1, c));
+                continue;
             }
-            tokens.push_back(line.substr(start, i - start));
-            --i;
+
+            // 4. クォート開始 (", ')
+            if (c == '"' || c == '\'') {
+                // 直前までトークンがあれば登録 (例: key="value" の key部分など)
+                if (!current_token.empty()) {
+                    tokens.push_back(current_token);
+                    current_token.clear();
+                }
+                in_quote = true;
+                quote_char = c;
+                continue;
+            }
+
+            // 5. 通常文字
+            current_token += c;
         }
     }
+    if (in_quote) {
+        throw std::runtime_error("Error: Unclosed quote in configuration file");
+    }
+    // ファイル末尾に残っているトークンがあれば追加
+    if (!current_token.empty()) {
+        tokens.push_back(current_token);
+    }
+
     return tokens;
 }
 
