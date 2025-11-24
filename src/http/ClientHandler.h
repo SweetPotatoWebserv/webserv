@@ -1,7 +1,9 @@
 #pragma once
+#include "../cgi/handler_cgi.h"
 #include "../event/Event.h"
 #include "HttpParser.h"
 #include "HttpResponse.h"
+#include "ResponseFactory.h"
 #include "Router.h"
 
 class ClientHandler {
@@ -12,6 +14,8 @@ class ClientHandler {
     void on_close();
     void on_readable();
     void on_writable();
+    void on_cgi_read();
+    void on_cgi_write();
     static bool is_request_ready(const std::string& buffer);
     static bool is_complete_content_length(
         const std::string& buffer, const std::string& message_head,
@@ -29,6 +33,8 @@ class ClientHandler {
     std::string buffer_;
     HttpRequest request_;
     HttpResponse response_;
+    CgiProcess cgi_process_;
+    CgiSession cgi_session_;
     static const int BUFFER_SIZE = 4096;
     static const int RECV_FLG = 0;
 };

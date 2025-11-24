@@ -1,6 +1,7 @@
 #include "ClientHandler.h"
 
 #include <sys/socket.h>
+#include <sys/wait.h>  // <--- ADD THIS LINE
 #include <unistd.h>
 
 #include <algorithm>
@@ -26,6 +27,21 @@ ClientHandler::ClientHandler(int fd, Event& event, Router& router,
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
     static_cast<void>(fd);
     ClientHandler* handler = static_cast<ClientHandler*>(self);
+
+    // CGI 読み込み用FDからのイベントか？
+    if (handler->cgi_session_.readFd != -1 &&
+        fd == handler->cgi_session_.readFd) {
+        handler->on_cgi_read();
+        return;
+    }
+
+    // CGI 書き込み用FDからのイベントか？
+    if (handler->cgi_session_.writeFd != -1 &&
+        fd == handler->cgi_session_.writeFd) {
+        handler->on_cgi_write();
+        return;
+    }
+
     if (event & (EPOLLHUP | EPOLLERR)) {
         handler->on_close();
     } else if (event & EPOLLIN) {
@@ -36,6 +52,14 @@ void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
 }
 
 void ClientHandler::on_close() {
+    if (cgi_session_.readFd != -1) {
+        event_.del(cgi_session_.readFd);
+        close(cgi_session_.readFd);
+    }
+    if (cgi_session_.writeFd != -1) {
+        event_.del(cgi_session_.writeFd);
+        close(cgi_session_.writeFd);
+    }
     event_.del(fd_);
     ::close(fd_);
     delete this;
@@ -101,6 +125,43 @@ void ClientHandler::on_readable() {
         } catch (const HttpException& e) {
             exception = e;
         }
+        // --- CGI リクエスト判定と実行 ---
+        bool is_cgi = false;
+        if (exception.status_code() == HttpStatus::OK) {
+            is_cgi = ResponseFactory::is_cgi(request_, info);
+        }
+
+        if (is_cgi) {
+            try {
+                std::cout << "this is cgi request\n";
+                // 1. CGI起動 (セッション取得)
+                cgi_session_ = cgi_process_.startCgi(request_, info);
+
+                // 2. イベント登録 (コールバックはすべて on_event に統一)
+
+                // 読み込み監視
+                event_.add(
+                    cgi_session_.readFd, EPOLLIN,
+                    reinterpret_cast<EventCallback>(ClientHandler::on_event),
+                    this);
+
+                // 書き込み監視（ボディがある場合）
+                if (!cgi_session_.bodyBuffer.empty()) {
+                    event_.add(cgi_session_.writeFd, EPOLLOUT,
+                               reinterpret_cast<EventCallback>(
+                                   ClientHandler::on_event),
+                               this);
+                } else {
+                    close(cgi_session_.writeFd);
+                    cgi_session_.writeFd = -1;
+                }
+
+                // CGIが終わるまでクライアントへの書き込みは待機
+                return;
+            } catch (const std::exception& e) {
+                exception = HttpException(HttpStatus::InternalServerError);
+            }
+        }
         response_ = ResponseFactory::make(request_, info, exception);
         event_.mod(fd_, EPOLLOUT);
     }
@@ -115,5 +176,60 @@ void ClientHandler::on_writable() {
     }
     buffer_.clear();
     response_.clear();
+    cgi_session_ = CgiSession();
     event_.mod(fd_, EPOLLIN);
+}
+
+void ClientHandler::on_cgi_write() {
+    int fd = cgi_session_.writeFd;
+    const std::string& body = cgi_session_.bodyBuffer;
+    size_t& sent = cgi_session_.sentBytes;
+
+    ssize_t ret = write(fd, body.c_str() + sent, body.size() - sent);
+
+    if (ret > 0) {
+        sent += ret;
+        if (sent >= body.size()) {
+            event_.del(fd);
+            close(fd);
+            cgi_session_.writeFd = -1;
+        }
+    } else {
+        // エラー時
+        event_.del(fd);
+        close(fd);
+        cgi_session_.writeFd = -1;
+    }
+}
+
+void ClientHandler::on_cgi_read() {
+    int fd = cgi_session_.readFd;
+    char buf[BUFFER_SIZE];
+    ssize_t ret = read(fd, buf, sizeof(buf));
+
+    if (ret > 0) {
+        cgi_session_.responseBuffer.append(buf, ret);
+    } else if (ret == 0) {
+        // CGI 完了
+        event_.del(fd);
+        close(fd);
+        cgi_session_.readFd = -1;
+        waitpid(cgi_session_.pid, NULL, WNOHANG);
+
+        // レスポンス作成
+        CgiProcess::parseCgiResponse(response_, cgi_session_.responseBuffer);
+
+        // クライアントへの送信準備完了
+        event_.mod(fd_, EPOLLOUT);
+    } else {
+        // エラー
+        event_.del(fd);
+        close(fd);
+        cgi_session_.readFd = -1;
+
+        response_ = ResponseFactory::make(
+            request_, RouteInfo(),
+            HttpException(HttpStatus::InternalServerError));
+        event_.mod(fd_, EPOLLOUT);
+    }
 }

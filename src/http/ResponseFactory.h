@@ -7,9 +7,9 @@ class ResponseFactory {
    public:
     static HttpResponse make(const HttpRequest& request, const RouteInfo& route,
                              const HttpException& parse_error);
+    static bool is_cgi(const HttpRequest& request, const RouteInfo& route);
 
    private:
-    static bool is_cgi(const HttpRequest& request, const RouteInfo& route);
     static HttpResponse response_cgi(const HttpRequest& request,
                                      const RouteInfo& route);
     static HttpResponse response_get(const HttpRequest& request,

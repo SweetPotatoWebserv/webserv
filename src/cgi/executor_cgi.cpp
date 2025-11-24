@@ -19,7 +19,21 @@ namespace {
 const int CGI_TIMEOUT_MS = 5000;
 const int MAX_EPOLL_EVENTS = 1;
 const int BUFFER_SIZE = 4096;
+
+void setNonBlocking(int fd) {
+    if (fd == -1) return;
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1) {
+        perror("fcntl F_GETFL");
+        return;
+    }
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+        perror("fcntl F_SETFL");
+    }
+}
 }  // namespace
+
+// namespace
 
 CgiExecutor::CgiExecutor() {
     pipeIn_[0] = -1;
@@ -51,9 +65,8 @@ void CgiExecutor::writeAll(int fd, const char *buffer, size_t size) {
     }
 }
 
-std::string CgiExecutor::execute(const std::string &scriptPath,
-                                 char *const argv[], char *const envp[],
-                                 const std::string &requestBody) {
+CgiResult CgiExecutor::execute(const std::string &scriptPath,
+                               char *const argv[], char *const envp[]) {
     if (pipe(pipeIn_) == -1) {
         throw CgiExecutionException("Failed to create stdin pipe",
                                     HttpStatus::InternalServerError);
@@ -65,6 +78,9 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
         throw CgiExecutionException("Failed to create stdout pipe",
                                     HttpStatus::InternalServerError);
     }
+
+    setNonBlocking(pipeIn_[1]);   // 親が書き込む方
+    setNonBlocking(pipeOut_[0]);  // 親が読み込む方
 
     pid_ = fork();
     if (pid_ == -1) {
@@ -83,14 +99,25 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
 
     safeClose(pipeIn_[0]);
     safeClose(pipeOut_[1]);
-    try {
-        return readParentProcess(requestBody);
-    } catch (const std::exception &e) {
-        waitpid(
-            pid_, NULL,
-            0);  // epoll_createなどで失敗した場合にも子プロセスをきちんと削除するため
-        throw;   // 例外をそのまま再スロー
-    }
+    //    try {
+    //        return readParentProcess(requestBody);
+    //    } catch (const std::exception &e) {
+    //        waitpid(
+    //            pid_, NULL,
+    //            0);  //
+    //            epoll_createなどで失敗した場合にも子プロセスをきちんと削除するため
+    //        throw;  // 例外をそのまま再スロー
+    //    }
+    CgiResult result;
+    result.pid = pid_;
+    result.readFd = pipeOut_[0];
+    result.writeFd = pipeIn_[1];
+
+    // -1をつけないと親で触る前にデストラクターで消されちゃう
+    pipeOut_[0] = -1;
+    pipeIn_[1] = -1;
+
+    return result;
 }
 
 int CgiExecutor::initializeEpoll(int pipe_fd) {

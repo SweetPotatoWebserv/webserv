@@ -12,7 +12,6 @@
 #include "../http/HttpParser.h"
 #include "executor_cgi.h"
 #include "request_cgi.h"
-#include "response_cgi.h"
 
 CgiProcess::CgiProcess() {}
 
@@ -45,8 +44,8 @@ HttpResponse CgiProcess::validateCgiScript(const std::string& script_path) {
     return response;
 }
 
-HttpResponse CgiProcess::run(const HttpRequest& request,
-                             const RouteInfo& info) {
+CgiSession CgiProcess::startCgi(const HttpRequest& request,
+                                const RouteInfo& info) {
     char** argv = NULL;
     char** envp = NULL;
     HttpResponse response;
@@ -59,40 +58,74 @@ HttpResponse CgiProcess::run(const HttpRequest& request,
 
         std::string script_path = info.resolve_.root_.value_ + path_str;
 
+        CgiSession session;
         response = validateCgiScript(script_path);
         if (response.status_code_ != HttpStatus::OK) {
-            return response;
+            // TODO エラーハンドリング
+            return session;
         }
 
         argv = createArgv(script_path);
         envp = createEnvp(request);
 
-        const std::string& request_body = request.body_;
+        CgiResult result = executor_.execute(script_path, argv, envp);
 
-        std::string raw_output;
-        try {
-            raw_output =
-                executor_.execute(script_path, argv, envp, request_body);
-        } catch (const CgiExecutionException& e) {
-            // CgiExecutor(fork, pipe, execve, waitpid)でエラーが発生した場合
-            std::cerr << "CGI Execution failed: " << e.what() << "\n";
+        session.pid = result.pid;
+        session.readFd = result.readFd;
+        session.writeFd = result.writeFd;
+        session.bodyBuffer = request.body_;
+        session.sentBytes = 0;
+        // const std::string& request_body = request.body_;
 
-            response.status_code_ = e.getStatusCode();
-            response.body_ = e.what();
-            deleteArray(argv);
-            deleteArray(envp);
-            return response;
-        }
+        // std::string raw_output;
+        // try {
+        //     raw_output =
+        //         executor_.execute(script_path, argv, envp, request_body);
+        // } catch (const CgiExecutionException& e) {
+        //     // CgiExecutor(fork, pipe, execve, waitpid)でエラーが発生した場合
+        //     std::cerr << "CGI Execution failed: " << e.what() << "\n";
 
-        parseCgiResponse(response, raw_output);
+        //     response.status_code_ = e.getStatusCode();
+        //     response.body_ = e.what();
+        //     deleteArray(argv);
+        //     deleteArray(envp);
+        //     return response;
+        // }
+
+        // parseCgiResponse(response, raw_output);
+
+        //  // [変更] epoll への登録処理 (READ)
+        //  struct epoll_event ev;
+        //  std::memset(&ev, 0, sizeof(ev));
+        //  ev.events = EPOLLIN;  // 読み込み監視
+        //  ev.data.fd = session.readFd;
+        //  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, session.readFd, &ev) == -1) {
+        //      throw std::runtime_error("epoll_ctl read failed");
+        //  }
+
+        //  // [変更] epoll への登録処理 (WRITE) - ボディがある場合のみ
+        //  if (!session.bodyBuffer.empty()) {
+        //      std::memset(&ev, 0, sizeof(ev));
+        //      ev.events = EPOLLOUT;  // 書き込み監視
+        //      ev.data.fd = session.writeFd;
+        //      if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, session.writeFd, &ev) ==
+        //          -1) {
+        //          throw std::runtime_error("epoll_ctl write failed");
+        //      }
+        //  } else {
+        //      // ボディがなければ書き込みパイプは閉じる
+        //      close(session.writeFd);
+        //      session.writeFd = -1;
+        //  }
+
         deleteArray(argv);
         deleteArray(envp);
-        return response;
+        return session;
     } catch (const std::exception& e) {
         std::cerr << "CgiProcess FATAL error: " << e.what() << "\n";
         deleteArray(argv);
         deleteArray(envp);
 
-        return response;
+        throw;
     }
 }

@@ -7,6 +7,12 @@
 
 #include "../core/Common.h"
 
+struct CgiResult {
+    pid_t pid;
+    int readFd;   // 親が読む (CGIのstdout)
+    int writeFd;  // 親が書く (CGIのstdin)
+};
+
 class CgiExecutionException : public std::exception {
    public:
     CgiExecutionException(const std::string &message,
@@ -31,8 +37,8 @@ class CgiExecutor {
     CgiExecutor();
     ~CgiExecutor();
 
-    std::string execute(const std::string &scriptPath, char *const argv[],
-                        char *const envp[], const std::string &requestBody);
+    CgiResult execute(const std::string &scriptPath, char *const argv[],
+                      char *const envp[]);
     static void safeClose(int &fd);
 
    private:

@@ -8,6 +8,7 @@
 #include "../core/Common.h"
 #include "../core/String.h"
 #include "../http/HttpParser.h"
+#include "handler_cgi.h"
 
 namespace {
 const char* const LF_LF = "\n\n";
@@ -55,7 +56,8 @@ void parseCgiHeaderLine(const std::string& line, HttpResponse& response) {
     }
 }
 
-void parseCgiResponse(HttpResponse& response, const std::string& raw_output) {
+void CgiProcess::parseCgiResponse(HttpResponse& response,
+                                  const std::string& raw_output) {
     std::string::size_type pos = raw_output.find(LF_LF);
 
     std::string header_str;
@@ -84,7 +86,7 @@ void parseCgiResponse(HttpResponse& response, const std::string& raw_output) {
         }
         parseCgiHeaderLine(line, response);
     }
-
+    response.header_.content_length_ = response.body_.size();
     if (!response.location_.empty() &&
         response.status_code_ == HttpStatus::OK) {
         response.status_code_ = HttpStatus::Found;
