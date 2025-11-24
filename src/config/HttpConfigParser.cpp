@@ -502,9 +502,8 @@ off_t HttpConfigParser::parseClientMaxBodySize(
 
 // [ヘルパー関数] ターゲットURIとオプションの'='リダイレクトを処理
 void HttpConfigParser::parseErrorPageTarget(
-    const std::vector<std::string>& tokens, size_t& index,
-    std::string& token, ParsedErrorPage& pep) {
-
+    const std::vector<std::string>& tokens, size_t& index, std::string& token,
+    ParsedErrorPage& pep) {
     // オプションの '=' (ステータスコード上書き) をチェック
     if (!token.empty() && token[0] == '=') {
         std::string status_str;
@@ -520,7 +519,7 @@ void HttpConfigParser::parseErrorPageTarget(
         }
 
         std::stringstream ss(status_str);
-        
+
         if (!(ss >> pep.directive.override_status) ||
             pep.directive.override_status < MIN_VALID_STATUS_CODE ||
             pep.directive.override_status > MAX_VALID_STATUS_CODE) {
@@ -532,7 +531,7 @@ void HttpConfigParser::parseErrorPageTarget(
             throw std::runtime_error(
                 "Error: Expected target URI after status code in error_page");
         }
-        
+
         pep.directive.target = getNextToken(tokens, index);
 
     } else {
@@ -549,7 +548,7 @@ void HttpConfigParser::parseErrorPageTarget(
     }
 }
 
-//error_page ディレクティブをパースする
+// error_page ディレクティブをパースする
 HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
     const std::vector<std::string>& tokens, size_t& index) {
     ParsedErrorPage pep;
@@ -575,7 +574,7 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
 
     //基本的なエラーチェック
     if (isEof(tokens, index) && pep.status_codes.empty()) {
-         // status_codesもターゲットもない場合
+        // status_codesもターゲットもない場合
         throw std::runtime_error(
             "Error: Expected target URI or '=' after status code(s)");
     }
