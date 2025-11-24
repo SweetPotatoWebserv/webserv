@@ -499,103 +499,96 @@ off_t HttpConfigParser::parseClientMaxBodySize(
 //-----------------------------------------------------------------
 //------------------error_pageディレクティブパーサー---------------
 //-----------------------------------------------------------------
-///@brief error_page ディレクティブをパースする
-///       (例: error_page 404 500 /50x.html;)
-///       (例: error_page 403 =200 /index.html;)
-HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
-    const std::vector<std::string>& tokens, size_t& index) {
-    ParsedErrorPage pep;
-    std::string token;
 
-    // ステータスコードを読み込む (数値が続く限り)
-    while (!isEof(tokens, index)) {
-        token = getNextToken(tokens, index);
-
-        // トークンが数値 (ステータスコード) かどうかをチェック
-        std::stringstream ss(token);
-        int status_code;
-        // (ss >> status_code) で変換を試み、
-        // ss.eof() で "404foo" のような余計な文字がないことを確認
-        // 課題の要件ではエラーページは 300-599 の範囲が妥当
-        if ((ss >> status_code) && status_code >= MIN_ERROR_STATUS_CODE &&
-            status_code <= MAX_ERROR_STATUS_CODE) {
-            pep.status_codes.push_back(status_code);
-        } else {
-            // 数値でなければ、ループを抜ける
-            // この 'token' は、'=' か ターゲットパス (e.g., "/50x.html") のはず
-            break;
-        }
-    }
-
-    // ループがEOFで抜けた場合、ターゲットURIや'='がない
-    if (isEof(tokens, index) && !pep.status_codes.empty()) {
-        // (status_codesが空の場合は、次のempty()チェックでエラーになるのでここではじかない)
-        throw std::runtime_error(
-            "Error: Expected target URI or '=' after status code(s)");
-    }
-
-    if (pep.status_codes.empty()) {
-        throw std::runtime_error(
-            "Error: Expected status code(s) for error_page");
-    }
+// [ヘルパー関数] ターゲットURIとオプションの'='リダイレクトを処理
+void HttpConfigParser::parseErrorPageTarget(
+    const std::vector<std::string>& tokens, size_t& index,
+    std::string& token, ParsedErrorPage& pep) {
 
     // オプションの '=' (ステータスコード上書き) をチェック
     if (!token.empty() && token[0] == '=') {
         std::string status_str;
 
         if (token.size() > 1) {
-            // "=200"
-            // "=" の後ろの部分を数値として使う
             status_str = token.substr(1);
         } else {
-            // "= 200"
-            // 次のトークンを読み込んで、それを数値として使う
             if (isEof(tokens, index)) {
                 throw std::runtime_error(
                     "Error: Expected new status code after '=' in error_page");
             }
             status_str = getNextToken(tokens, index);
         }
-        std::stringstream ss(status_str);
 
+        std::stringstream ss(status_str);
+        
         if (!(ss >> pep.directive.override_status) ||
             pep.directive.override_status < MIN_VALID_STATUS_CODE ||
             pep.directive.override_status > MAX_VALID_STATUS_CODE) {
             throw std::runtime_error(
-                "Error: Invalid new status code in error_page: " + token);
+                "Error: Invalid new status code in error_page: " + status_str);
         }
 
-        // 最後の引数 (ターゲットURI) を取得
         if (isEof(tokens, index)) {
             throw std::runtime_error(
                 "Error: Expected target URI after status code in error_page");
         }
+        
         pep.directive.target = getNextToken(tokens, index);
-        // URI検証
-        if (pep.directive.target.empty() ||
-            pep.directive.target[0] !=
-                '/') {  //ターゲットURIは'/'で始まらなければならない：500がターゲットに入った×
-            throw std::runtime_error(
-                "Error: Invalid target URI in error_page, must start with "
-                "'/': " +
-                pep.directive.target);
-        }
+
     } else {
         // '=' がなかった場合
-        pep.directive.override_status = -1;  // -1 を「上書きなし」とする
-
-        // ここで検証を追加
-        // ターゲットURIは '/' で始まらなければならない
-        if (token.empty() || token[0] != '/') {
-            throw std::runtime_error(
-                "Error: Invalid target URI in error_page, must start with "
-                "'/': " +
-                token);
-        }
-        pep.directive.target = token;  // 検証OK
+        pep.directive.override_status = -1;
+        pep.directive.target = token;
     }
 
-    //最後にセミコロンがあるか確認
+    // 共通検証
+    if (pep.directive.target.empty() || pep.directive.target[0] != '/') {
+        throw std::runtime_error(
+            "Error: Invalid target URI in error_page, must start with '/': " +
+            pep.directive.target);
+    }
+}
+
+//error_page ディレクティブをパースする
+HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
+    const std::vector<std::string>& tokens, size_t& index) {
+    ParsedErrorPage pep;
+    std::string token;
+
+    //ステータスコードを読み込む (数値が続く限り)
+    while (!isEof(tokens, index)) {
+        token = getNextToken(tokens, index);
+
+        std::stringstream ss(token);
+        int status_code;
+
+        // トークンが数値かつ有効範囲内かチェック
+        if ((ss >> status_code) && status_code >= MIN_ERROR_STATUS_CODE &&
+            status_code <= MAX_ERROR_STATUS_CODE) {
+            pep.status_codes.push_back(status_code);
+        } else {
+            // 数値でなければループを抜ける。
+            // この時点で 'token' は '=' またはターゲットパスを保持している
+            break;
+        }
+    }
+
+    //基本的なエラーチェック
+    if (isEof(tokens, index) && pep.status_codes.empty()) {
+         // status_codesもターゲットもない場合
+        throw std::runtime_error(
+            "Error: Expected target URI or '=' after status code(s)");
+    }
+    if (pep.status_codes.empty()) {
+        throw std::runtime_error(
+            "Error: Expected status code(s) for error_page");
+    }
+
+    //ターゲットとOverrideの解析 (ヘルパー関数へ委譲)
+    //ここにあった複雑なif/elseロジックを外に出すことでComplexityを下げる
+    parseErrorPageTarget(tokens, index, token, pep);
+
+    // 4. 最後にセミコロンがあるか確認
     if (getNextToken(tokens, index) != SEMICOLON) {
         throw std::runtime_error(
             "Error: Expected ';' after error_page directive");
@@ -603,7 +596,6 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
 
     return pep;
 }
-
 //-----------------------------------------------------------------
 //------------------returnディレクティブパーサー---------------------
 //-----------------------------------------------------------------
