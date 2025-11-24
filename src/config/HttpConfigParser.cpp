@@ -517,7 +517,8 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
         // (ss >> status_code) で変換を試み、
         // ss.eof() で "404foo" のような余計な文字がないことを確認
         // 課題の要件ではエラーページは 300-599 の範囲が妥当
-        if ((ss >> status_code) && status_code >= MIN_ERROR_STATUS_CODE && status_code <= MAX_ERROR_STATUS_CODE) {
+        if ((ss >> status_code) && status_code >= MIN_ERROR_STATUS_CODE &&
+            status_code <= MAX_ERROR_STATUS_CODE) {
             pep.status_codes.push_back(status_code);
         } else {
             // 数値でなければ、ループを抜ける
