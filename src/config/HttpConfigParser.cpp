@@ -539,12 +539,23 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
     }
 
     // オプションの '=' (ステータスコード上書き) をチェック
-    if (token.find("=", 0, 1) != std::string::npos) {
-        if (isEof(tokens, index)) {
-            throw std::runtime_error(
-                "Error: Expected new status code after '=' in error_page");
+    if (!token.empty() && token[0] == '=') {
+        std::string status_str;
+
+        if (token.size() > 1) {
+            // "=200"
+            // "=" の後ろの部分を数値として使う
+            status_str = token.substr(1);
+        } else {
+            // "= 200"
+            // 次のトークンを読み込んで、それを数値として使う
+            if (isEof(tokens, index)) {
+                throw std::runtime_error(
+                    "Error: Expected new status code after '=' in error_page");
+            }
+            status_str = getNextToken(tokens, index);
         }
-        std::stringstream ss(token.substr(1));
+        std::stringstream ss(status_str);
 
         if (!(ss >> pep.directive.override_status) ||
             pep.directive.override_status < MIN_VALID_STATUS_CODE ||
