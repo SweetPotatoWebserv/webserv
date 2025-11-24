@@ -8,3 +8,6 @@ def http_post(base, path="/", data=None, files=None, headers=None):
 
 def http_delete(base, path="/", headers=None):
     return requests.delete(base + path, headers=headers or {})
+
+def http_custom_method(base, method, path="/", headers=None):
+    return requests.request(method, base + path, headers=headers or {})
