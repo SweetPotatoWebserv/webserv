@@ -121,10 +121,9 @@ class HttpConfigParser {
     static ReturnDirective parseImplicitReturn(
         const std::string& url, const std::vector<std::string>& tokens,
         size_t& index);
-    static void parseErrorPageTarget(const std::vector<std::string>& tokens, 
-                          size_t& index, 
-                          std::string& current_token, 
-                          ParsedErrorPage& pep);
+    static void parseErrorPageTarget(const std::vector<std::string>& tokens,
+                                     size_t& index, std::string& current_token,
+                                     ParsedErrorPage& pep);
 
     // 特殊文字リスト（トークン分割用）構文解析用
     static const char* const SPECIAL_CHARS;
