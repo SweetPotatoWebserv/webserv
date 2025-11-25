@@ -82,5 +82,9 @@ CgiSession CgiProcess::startCgi(const HttpRequest& request,
         deleteArray(argv);
         deleteArray(envp);
         throw HttpException(HttpStatus::InternalServerError);
+    } catch (...) {
+        deleteArray(argv);
+        deleteArray(envp);
+        throw;
     }
 }
