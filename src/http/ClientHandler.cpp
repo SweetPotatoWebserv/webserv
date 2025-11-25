@@ -1,29 +1,73 @@
 #include "ClientHandler.h"
 
+#include <signal.h>
 #include <sys/socket.h>
 #include <sys/wait.h>  // <--- ADD THIS LINE
 #include <unistd.h>
 
-#include <algorithm>
 #include <cctype>
 #include <cerrno>
 #include <cstring>
+#include <ctime>  // [必須]include <algorithm>
 #include <stdexcept>
 
 #include "../core/String.h"
 #include "HttpException.h"
 #include "ResponseFactory.h"
 #include "Router.h"
-
+std::vector<ClientHandler*> ClientHandler::all_handlers_;
 const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
-
 ClientHandler::ClientHandler(int fd, Event& event, Router& router,
                              ServerConfig server_config)
     : fd_(fd),
       event_(event),
       router_(router),
-      server_config_(server_config) {}  // NOLINT
+      server_config_(server_config) {  // NOLINT
+    all_handlers_.push_back(this);
+}
 
+// [追加] 静的関数 : 全員をチェック
+void ClientHandler::check_timeout_all() {
+    // [変更] vector のイテレータを使用
+    for (std::vector<ClientHandler*>::iterator it = all_handlers_.begin();
+         it != all_handlers_.end(); ++it) {
+        (*it)->check_cgi_timeout();
+    }
+}
+// [追加] インスタンス関数: 自分のCGIをチェック
+void ClientHandler::check_cgi_timeout() {
+    // CGIが実行中でなければ無視
+    if (cgi_session_.pid == -1) {
+        return;
+    }
+
+    std::time_t now = std::time(NULL);
+    // 開始から5秒以上経過しているか？
+    if (std::difftime(now, cgi_session_.startTime) >= CGI_TIMEOUT_SEC) {
+        // 1. 強制終了
+        kill(cgi_session_.pid, SIGKILL);
+        waitpid(cgi_session_.pid, NULL, 0);
+
+        // [重要] プロセス回収済みなのでPIDをリセット
+        // これで on_cgi_read 側での二重 waitpid を防ぎます
+        cgi_session_.pid = -1;
+
+        // 2. パイプのクローズと監視削除
+        if (cgi_session_.readFd != -1) {
+            event_.del(cgi_session_.readFd);
+            close(cgi_session_.readFd);
+            cgi_session_.readFd = -1;
+        }
+        if (cgi_session_.writeFd != -1) {
+            event_.del(cgi_session_.writeFd);
+            close(cgi_session_.writeFd);
+            cgi_session_.writeFd = -1;
+        }
+
+        // 3. タイムアウトエラー (504 Gateway Timeout) を返す
+        handle_cgi_error(HttpStatus::RequestTimeout);
+    }
+}
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
     static_cast<void>(fd);
     ClientHandler* handler = static_cast<ClientHandler*>(self);
@@ -52,6 +96,13 @@ void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
 }
 
 void ClientHandler::on_close() {
+    for (std::vector<ClientHandler*>::iterator it = all_handlers_.begin();
+         it != all_handlers_.end(); ++it) {
+        if (*it == this) {
+            all_handlers_.erase(it);
+            break;  // 見つけたら削除してループを抜ける
+        }
+    }
     if (cgi_session_.readFd != -1) {
         event_.del(cgi_session_.readFd);
         close(cgi_session_.readFd);
@@ -159,17 +210,10 @@ void ClientHandler::on_readable() {
                 // CGIが終わるまでクライアントへの書き込みは待機
                 return;
             } catch (const HttpException& e) {
-                // [修正] StartCgiから来た具体的なエラーコード(404,
-                // 403等)を採用する
-                std::cerr << "[DEBUG] CGI Start Failed (HttpException): "
-                          << e.status_code() << std::endl;
                 exception = e;
                 // ここで catch して exception を更新し、下の ResponseFactory
                 // へ流す
             } catch (const std::exception& e) {
-                // その他の予期せぬエラーは 500
-                std::cerr << "[DEBUG] CGI Start Failed (std::exception): "
-                          << e.what() << std::endl;
                 exception = HttpException(HttpStatus::InternalServerError);
             }
         }
@@ -248,8 +292,17 @@ void ClientHandler::on_cgi_read() {
 
         // 2. 終了ステータスの確認
         int status;
-        waitpid(cgi_session_.pid, &status, 0);
+        // waitpid(cgi_session_.pid, &status, 0);
 
+        if (cgi_session_.pid != -1) {
+            waitpid(cgi_session_.pid, &status, 0);
+            // ここで pid = -1 にリセットしてもよい
+        } else {
+            // すでに kill 済み（タイムアウトなど）の場合の処理
+            // ここに来る＝タイムアウト後にEOFイベントが遅れて来たということなので
+            // エラーにするか return する
+            return;
+        }
         // プロセスがクラッシュまたはエラー終了した場合は 500
         if (WIFEXITED(status)) {
             int exit_code = WEXITSTATUS(status);
@@ -291,6 +344,7 @@ void ClientHandler::on_cgi_read() {
         if (request_.method_ == MethodHEAD) {
             response_.body_.clear();
         }
+        // response_.header_.content_length_ = response_.body_.size();
 
         // クライアントへの送信準備完了
         event_.mod(fd_, EPOLLOUT);

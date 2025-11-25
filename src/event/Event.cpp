@@ -5,6 +5,8 @@
 #include <cstring>
 #include <stdexcept>
 
+#include "../http/ClientHandler.h"
+
 Event::Event() {
     epoll_fd_ = epoll_create(1);
     if (epoll_fd_ == -1) {
@@ -67,7 +69,7 @@ void Event::run() {  // NOLINT
     struct epoll_event events[MAX_EVENTS];
 
     for (;;) {
-        int number_of_fd = epoll_wait(epoll_fd_, events, MAX_EVENTS, -1);
+        int number_of_fd = epoll_wait(epoll_fd_, events, MAX_EVENTS, 1000);
         if (number_of_fd == -1) {
             throw std::runtime_error("epoll_wait failed:" +
                                      std::string(std::strerror(errno)));
@@ -76,6 +78,7 @@ void Event::run() {  // NOLINT
             EventData* data = static_cast<EventData*>(events[i].data.ptr);
             data->callback(data->fd, events[i].events, data->user);
         }
+        ClientHandler::check_timeout_all();
     }
 }
 

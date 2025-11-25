@@ -41,7 +41,6 @@ HttpResponse CgiProcess::validateCgiScript(const std::string& script_path) {
         return response;
     }
 
-    std::cout << "validation is okay!!!!!!!\n";
     return response;
 }
 
@@ -74,22 +73,14 @@ CgiSession CgiProcess::startCgi(const HttpRequest& request,
         session.writeFd = result.writeFd;
         session.bodyBuffer = request.body_;
         session.sentBytes = 0;
+        session.startTime = std::time(NULL);
         deleteArray(argv);
         deleteArray(envp);
         return session;
-    } catch (const CgiExecutionException& e) {
-        // Executor内部のエラー（fork失敗など）は 500 Internal Server Error
-        // に変換
-        std::cerr << "CGI Execution Error: " << e.what() << "\n";
+    } catch (const std::exception& e) {
+        std::cerr << "CGI Unexpected Error: " << e.what() << "\n";
         deleteArray(argv);
         deleteArray(envp);
         throw HttpException(HttpStatus::InternalServerError);
-
-    } catch (const std::exception& e) {
-        // HttpException (404/403) や その他の例外はここでキャッチされ、再スロー
-        // ClientHandler まで伝播させます
-        deleteArray(argv);
-        deleteArray(envp);
-        throw;
     }
 }

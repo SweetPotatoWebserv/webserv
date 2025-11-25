@@ -16,6 +16,7 @@ class ClientHandler {
     void on_writable();
     void on_cgi_read();
     void on_cgi_write();
+    static void check_timeout_all();
     static bool is_request_ready(const std::string& buffer);
     static bool is_complete_content_length(
         const std::string& buffer, const std::string& message_head,
@@ -37,6 +38,9 @@ class ClientHandler {
     HttpResponse response_;
     CgiProcess cgi_process_;
     CgiSession cgi_session_;
+    void check_cgi_timeout();
+    static std::vector<ClientHandler*> all_handlers_;
     static const int BUFFER_SIZE = 4096;
     static const int RECV_FLG = 0;
+    static const int CGI_TIMEOUT_SEC = 5;
 };

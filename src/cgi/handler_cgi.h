@@ -15,6 +15,7 @@ struct CgiSession {
     std::string bodyBuffer;  // 送信待ちのリクエストボディ
     size_t sentBytes;        // 送信済みのバイト数
 
+    std::time_t startTime;
     std::string responseBuffer;  // 受信したレスポンスを溜める場所
 
     CgiSession() : pid(-1), readFd(-1), writeFd(-1), sentBytes(0) {}
