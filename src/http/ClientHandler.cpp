@@ -158,7 +158,18 @@ void ClientHandler::on_readable() {
 
                 // CGIが終わるまでクライアントへの書き込みは待機
                 return;
+            } catch (const HttpException& e) {
+                // [修正] StartCgiから来た具体的なエラーコード(404,
+                // 403等)を採用する
+                std::cerr << "[DEBUG] CGI Start Failed (HttpException): "
+                          << e.status_code() << std::endl;
+                exception = e;
+                // ここで catch して exception を更新し、下の ResponseFactory
+                // へ流す
             } catch (const std::exception& e) {
+                // その他の予期せぬエラーは 500
+                std::cerr << "[DEBUG] CGI Start Failed (std::exception): "
+                          << e.what() << std::endl;
                 exception = HttpException(HttpStatus::InternalServerError);
             }
         }
@@ -202,6 +213,19 @@ void ClientHandler::on_cgi_write() {
     }
 }
 
+void ClientHandler::handle_cgi_error(int status_code) {
+    // エラーページを生成
+    HttpException exception(status_code);
+    response_ = ResponseFactory::make(
+        request_, RouteInfo(),
+        exception);  // RouteInfoは保存しておくか空でもよい
+
+    // クライアントへ送信フェーズへ移行
+    event_.mod(fd_, EPOLLOUT);
+
+    // セッションリセット
+    cgi_session_ = CgiSession();
+}
 void ClientHandler::on_cgi_read() {
     int fd = cgi_session_.readFd;
     char buf[BUFFER_SIZE];
@@ -210,26 +234,76 @@ void ClientHandler::on_cgi_read() {
     if (ret > 0) {
         cgi_session_.responseBuffer.append(buf, ret);
     } else if (ret == 0) {
-        // CGI 完了
+        // --- EOF: CGIプロセス終了 ---
+
+        // 1. 後片付け
         event_.del(fd);
         close(fd);
         cgi_session_.readFd = -1;
-        waitpid(cgi_session_.pid, NULL, WNOHANG);
+        if (cgi_session_.writeFd != -1) {
+            event_.del(cgi_session_.writeFd);
+            close(cgi_session_.writeFd);
+            cgi_session_.writeFd = -1;
+        }
 
-        // レスポンス作成
+        // 2. 終了ステータスの確認
+        int status;
+        waitpid(cgi_session_.pid, &status, 0);
+
+        // プロセスがクラッシュまたはエラー終了した場合は 500
+        if (WIFEXITED(status)) {
+            int exit_code = WEXITSTATUS(status);
+            if (exit_code != 0) {
+                std::cerr << "CGI Error: Process exited with code " << exit_code
+                          << "\n";
+                handle_cgi_error(HttpStatus::InternalServerError);
+                return;
+            }
+        } else if (WIFSIGNALED(status)) {
+            std::cerr << "CGI Error: Process terminated by signal\n";
+            handle_cgi_error(HttpStatus::InternalServerError);
+            return;
+        }
+
+        // 3. 空レスポンスチェック
+        if (cgi_session_.responseBuffer.empty()) {
+            std::cerr << "CGI Error: Empty response\n";
+            handle_cgi_error(HttpStatus::InternalServerError);
+            return;
+        }
+
+        // 4. パース実行
+        // ここで CGIスクリプトが "Status: 404" などを返していれば
+        // response_.status_code_ に 404 がセットされます。
         CgiProcess::parseCgiResponse(response_, cgi_session_.responseBuffer);
+
+        // パース自体に失敗した場合（ヘッダー不備など）は、parseCgiResponse内で
+        // 500 がセットされているはずなので、そのまま送信フェーズへ移行します。
+
+        // --- [復元] Content-Length と HEADメソッド対応 ---
+
+        // Content-Length を計算して設定
+        // (これをしないとクライアントが読み込み続けようとする場合があります)
+        response_.header_.content_length_ = response_.body_.size();
+
+        // HEADメソッドの場合はボディを空にする
+        // (method_ の比較は実装に合わせて調整してください。文字列比較の例です)
+        if (request_.method_ == MethodHEAD) {
+            response_.body_.clear();
+        }
 
         // クライアントへの送信準備完了
         event_.mod(fd_, EPOLLOUT);
+
     } else {
-        // エラー
+        // [異常系] readエラー
+        std::cout << "CGI read failed\n";
         event_.del(fd);
         close(fd);
         cgi_session_.readFd = -1;
+        // kill(cgi_session_.pid, SIGKILL);
+        waitpid(cgi_session_.pid, NULL, 0);
 
-        response_ = ResponseFactory::make(
-            request_, RouteInfo(),
-            HttpException(HttpStatus::InternalServerError));
-        event_.mod(fd_, EPOLLOUT);
+        handle_cgi_error(HttpStatus::InternalServerError);
     }
 }

@@ -25,6 +25,8 @@ class ClientHandler {
         const std::vector<std::string>& transfer_encoding);
     static const char* const TRANSFER_ENCODING_CHUNKED_END;
 
+    void handle_cgi_error(int status_code);
+
    private:
     int fd_;
     Event& event_;

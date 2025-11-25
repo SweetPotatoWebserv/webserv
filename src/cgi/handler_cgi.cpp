@@ -41,6 +41,7 @@ HttpResponse CgiProcess::validateCgiScript(const std::string& script_path) {
         return response;
     }
 
+    std::cout << "validation is okay!!!!!!!\n";
     return response;
 }
 
@@ -61,10 +62,8 @@ CgiSession CgiProcess::startCgi(const HttpRequest& request,
         CgiSession session;
         response = validateCgiScript(script_path);
         if (response.status_code_ != HttpStatus::OK) {
-            // TODO エラーハンドリング
-            return session;
+            throw HttpException(response.status_code_);
         }
-
         argv = createArgv(script_path);
         envp = createEnvp(request);
 
@@ -75,57 +74,22 @@ CgiSession CgiProcess::startCgi(const HttpRequest& request,
         session.writeFd = result.writeFd;
         session.bodyBuffer = request.body_;
         session.sentBytes = 0;
-        // const std::string& request_body = request.body_;
-
-        // std::string raw_output;
-        // try {
-        //     raw_output =
-        //         executor_.execute(script_path, argv, envp, request_body);
-        // } catch (const CgiExecutionException& e) {
-        //     // CgiExecutor(fork, pipe, execve, waitpid)でエラーが発生した場合
-        //     std::cerr << "CGI Execution failed: " << e.what() << "\n";
-
-        //     response.status_code_ = e.getStatusCode();
-        //     response.body_ = e.what();
-        //     deleteArray(argv);
-        //     deleteArray(envp);
-        //     return response;
-        // }
-
-        // parseCgiResponse(response, raw_output);
-
-        //  // [変更] epoll への登録処理 (READ)
-        //  struct epoll_event ev;
-        //  std::memset(&ev, 0, sizeof(ev));
-        //  ev.events = EPOLLIN;  // 読み込み監視
-        //  ev.data.fd = session.readFd;
-        //  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, session.readFd, &ev) == -1) {
-        //      throw std::runtime_error("epoll_ctl read failed");
-        //  }
-
-        //  // [変更] epoll への登録処理 (WRITE) - ボディがある場合のみ
-        //  if (!session.bodyBuffer.empty()) {
-        //      std::memset(&ev, 0, sizeof(ev));
-        //      ev.events = EPOLLOUT;  // 書き込み監視
-        //      ev.data.fd = session.writeFd;
-        //      if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, session.writeFd, &ev) ==
-        //          -1) {
-        //          throw std::runtime_error("epoll_ctl write failed");
-        //      }
-        //  } else {
-        //      // ボディがなければ書き込みパイプは閉じる
-        //      close(session.writeFd);
-        //      session.writeFd = -1;
-        //  }
-
         deleteArray(argv);
         deleteArray(envp);
         return session;
-    } catch (const std::exception& e) {
-        std::cerr << "CgiProcess FATAL error: " << e.what() << "\n";
+    } catch (const CgiExecutionException& e) {
+        // Executor内部のエラー（fork失敗など）は 500 Internal Server Error
+        // に変換
+        std::cerr << "CGI Execution Error: " << e.what() << "\n";
         deleteArray(argv);
         deleteArray(envp);
+        throw HttpException(HttpStatus::InternalServerError);
 
+    } catch (const std::exception& e) {
+        // HttpException (404/403) や その他の例外はここでキャッチされ、再スロー
+        // ClientHandler まで伝播させます
+        deleteArray(argv);
+        deleteArray(envp);
         throw;
     }
 }
