@@ -39,7 +39,7 @@ class ClientHandler {
     CgiProcess cgi_process_;
     CgiSession cgi_session_;
     void check_cgi_timeout();
-    static std::vector<ClientHandler*> all_handlers_;
+    static std::vector<ClientHandler*>& getAllHandlers();
     static const int BUFFER_SIZE = 4096;
     static const int RECV_FLG = 0;
     static const int CGI_TIMEOUT_SEC = 5;

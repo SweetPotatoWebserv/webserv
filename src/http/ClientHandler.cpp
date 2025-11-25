@@ -15,22 +15,30 @@
 #include "HttpException.h"
 #include "ResponseFactory.h"
 #include "Router.h"
-std::vector<ClientHandler*> ClientHandler::all_handlers_;
+
+std::vector<ClientHandler*>& ClientHandler::getAllHandlers() {
+    static std::vector<ClientHandler*> handlers;  // ここで定義する
+    return handlers;
+}
+
 const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
+
 ClientHandler::ClientHandler(int fd, Event& event, Router& router,
                              ServerConfig server_config)
     : fd_(fd),
       event_(event),
       router_(router),
       server_config_(server_config) {  // NOLINT
-    all_handlers_.push_back(this);
+    getAllHandlers().push_back(this);
 }
 
 // [追加] 静的関数 : 全員をチェック
 void ClientHandler::check_timeout_all() {
     // [変更] vector のイテレータを使用
-    for (std::vector<ClientHandler*>::iterator it = all_handlers_.begin();
-         it != all_handlers_.end(); ++it) {
+
+    std::vector<ClientHandler*>& handlers = getAllHandlers();
+    for (std::vector<ClientHandler*>::iterator it = handlers.begin();
+         it != handlers.end(); ++it) {
         (*it)->check_cgi_timeout();
     }
 }
@@ -96,11 +104,12 @@ void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
 }
 
 void ClientHandler::on_close() {
-    for (std::vector<ClientHandler*>::iterator it = all_handlers_.begin();
-         it != all_handlers_.end(); ++it) {
+    std::vector<ClientHandler*>& handlers = getAllHandlers();
+    for (std::vector<ClientHandler*>::iterator it = handlers.begin();
+         it != handlers.end(); ++it) {
         if (*it == this) {
-            all_handlers_.erase(it);
-            break;  // 見つけたら削除してループを抜ける
+            handlers.erase(it);  // [Change 3] Erase from the reference
+            break;               // Safe to break immediately after erase
         }
     }
     if (cgi_session_.readFd != -1) {
