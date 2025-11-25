@@ -69,7 +69,8 @@ void Event::run() {  // NOLINT
     struct epoll_event events[MAX_EVENTS];
 
     for (;;) {
-        int number_of_fd = epoll_wait(epoll_fd_, events, MAX_EVENTS, 1000);
+        int number_of_fd =
+            epoll_wait(epoll_fd_, events, MAX_EVENTS, MONITOR_MSEC);
         if (number_of_fd == -1) {
             throw std::runtime_error("epoll_wait failed:" +
                                      std::string(std::strerror(errno)));
