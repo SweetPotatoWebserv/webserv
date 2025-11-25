@@ -77,14 +77,17 @@ CgiSession CgiProcess::startCgi(const HttpRequest& request,
         deleteArray(argv);
         deleteArray(envp);
         return session;
-    } catch (const std::exception& e) {
-        std::cerr << "CGI Unexpected Error: " << e.what() << "\n";
+    } catch (const CgiExecutionException& e) {
+        // Handle internal execution errors (500)
+        std::cerr << "CGI Execution Error: " << e.what() << "\n";
         deleteArray(argv);
         deleteArray(envp);
         throw HttpException(HttpStatus::InternalServerError);
-    } catch (...) {
+
+    } catch (const std::exception& e) {
+        // Handle any other standard errors (e.g., std::bad_alloc)
         deleteArray(argv);
         deleteArray(envp);
-        throw;
+        throw;  // Re-throw to let ClientHandler handle it
     }
 }
