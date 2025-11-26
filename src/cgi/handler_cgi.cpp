@@ -11,7 +11,6 @@
 
 #include "../core/Common.h"
 #include "../http/HttpParser.h"
-#include "handler_cgi.h"
 #include "request_cgi.h"
 
 namespace {
