@@ -290,11 +290,11 @@ void ClientHandler::on_cgi_read() {
 
         if (cgi_session_.pid != -1) {
             waitpid(cgi_session_.pid, &status, 0);
-            // ここで pid = -1 にリセットしてもよい
+            cgi_session_.pid = -1;
         } else {
             // すでに kill 済み（タイムアウトなど）の場合の処理
             // ここに来る＝タイムアウト後にEOFイベントが遅れて来たということなので
-            // エラーにするか return する
+            // return する
             return;
         }
         if (WIFEXITED(status)) {
@@ -334,8 +334,12 @@ void ClientHandler::on_cgi_read() {
         event_.del(fd);
         close(fd);
         cgi_session_.readFd = -1;
-        waitpid(cgi_session_.pid, NULL, 0);
 
+        if (cgi_session_.pid != -1) {
+            kill(cgi_session_.pid, SIGKILL);
+            waitpid(cgi_session_.pid, NULL, 0);
+            cgi_session_.pid = -1;
+        }
         handle_cgi_error(HttpStatus::InternalServerError);
     }
 }
