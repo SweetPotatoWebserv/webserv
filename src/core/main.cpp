@@ -22,6 +22,7 @@ int main(int argc, char* argv[]) {
         const std::vector<ServerConfig>& server_configs = config.getservers();
         std::vector<Server> servers;
         size_t server_count = server_configs.size();
+        servers.reserve(server_count);
         for (size_t i = 0; i < server_count; ++i) {
             servers.push_back(Server(ev, router, server_configs[i]));
         }

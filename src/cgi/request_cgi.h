@@ -6,4 +6,4 @@
 
 char** createArgv(const std::string& script_path);
 char** createEnvp(const HttpRequest& request);
-void freeArray(char** arr);
+void deleteArray(char** arr);
