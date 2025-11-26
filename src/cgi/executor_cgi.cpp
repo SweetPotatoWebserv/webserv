@@ -33,8 +33,6 @@ void setNonBlocking(int fd) {
 }
 }  // namespace
 
-// namespace
-
 CgiExecutor::CgiExecutor() {
     pipeIn_[0] = -1;
     pipeIn_[1] = -1;
