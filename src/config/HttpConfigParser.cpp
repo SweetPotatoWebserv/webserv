@@ -504,14 +504,14 @@ off_t HttpConfigParser::parseClientMaxBodySize(
 void HttpConfigParser::parseErrorPageTarget(
     const std::vector<std::string>& tokens, size_t& index, std::string& token,
     ParsedErrorPage& pep) {
-    
     // オプションの '=' (ステータスコード上書き) をチェック
     if (!token.empty() && token[0] == '=') {
-        
         //"=" 単体の場合はエラーにする
         if (token.size() == 1) {
             throw std::runtime_error(
-                "Error: Space between '=' and status code is not allowed (must be like '=200'): " + token);
+                "Error: Space between '=' and status code is not allowed (must "
+                "be like '=200'): " +
+                token);
         }
 
         // ここに来るということは、"=200" のように結合されている
