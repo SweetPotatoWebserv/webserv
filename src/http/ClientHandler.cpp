@@ -32,17 +32,14 @@ ClientHandler::ClientHandler(int fd, Event& event, Router& router,
     getAllHandlers().push_back(this);
 }
 
-// [追加] 静的関数 : 全員をチェック
 void ClientHandler::check_timeout_all() {
-    // [変更] vector のイテレータを使用
-
     std::vector<ClientHandler*>& handlers = getAllHandlers();
     for (std::vector<ClientHandler*>::iterator it = handlers.begin();
          it != handlers.end(); ++it) {
         (*it)->check_cgi_timeout();
     }
 }
-// [追加] インスタンス関数: 自分のCGIをチェック
+
 void ClientHandler::check_cgi_timeout() {
     // CGIが実行中でなければ無視
     if (cgi_session_.pid == -1) {
@@ -54,8 +51,8 @@ void ClientHandler::check_cgi_timeout() {
         kill(cgi_session_.pid, SIGKILL);
         waitpid(cgi_session_.pid, NULL, 0);
 
-        // [重要] プロセス回収済みなのでPIDをリセット
-        // これで on_cgi_read 側での二重 waitpid を防ぎます
+        // プロセス回収済みなのでPIDをリセット
+        // これで on_cgi_read 側での二重 waitpid を防ぐ
         cgi_session_.pid = -1;
 
         // 2. パイプのクローズと監視削除
@@ -280,7 +277,6 @@ void ClientHandler::on_cgi_read() {
     } else if (ret == 0) {
         // --- EOF: CGIプロセス終了 ---
 
-        // 1. 後片付け
         event_.del(fd);
         close(fd);
         cgi_session_.readFd = -1;
@@ -290,9 +286,7 @@ void ClientHandler::on_cgi_read() {
             cgi_session_.writeFd = -1;
         }
 
-        // 2. 終了ステータスの確認
         int status;
-        // waitpid(cgi_session_.pid, &status, 0);
 
         if (cgi_session_.pid != -1) {
             waitpid(cgi_session_.pid, &status, 0);
@@ -335,12 +329,11 @@ void ClientHandler::on_cgi_read() {
         event_.mod(fd_, EPOLLOUT);
 
     } else {
-        // [異常系] readエラー
+        // 異常系 readエラー
         std::cout << "CGI read failed\n";
         event_.del(fd);
         close(fd);
         cgi_session_.readFd = -1;
-        // kill(cgi_session_.pid, SIGKILL);
         waitpid(cgi_session_.pid, NULL, 0);
 
         handle_cgi_error(HttpStatus::InternalServerError);
