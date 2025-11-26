@@ -185,15 +185,10 @@ void ClientHandler::on_readable() {
             exception = e;
         }
 
-        bool is_cgi = false;
-        if (exception.status_code() == HttpStatus::OK) {
-            is_cgi = ResponseFactory::is_cgi(request_, info);
-        }
-
-        if (is_cgi) {
+        if (exception.status_code() == HttpStatus::OK &&
+            ResponseFactory::is_cgi(request_, info)) {
             try {
                 cgi_session_ = cgi_process_.startCgi(request_, info);
-
                 // 読み込み監視
                 event_.add(
                     cgi_session_.readFd, EPOLLIN,
