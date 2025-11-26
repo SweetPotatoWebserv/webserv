@@ -270,8 +270,6 @@ bool ResponseFactory::is_cgi(const HttpRequest& request,
 
     return (path.size() >= ext.size() &&
             path.compare(path.size() - ext.size(), ext.size(), ext) == 0);
-
-    return false;
 }
 
 HttpResponse ResponseFactory::make(const HttpRequest& request,
