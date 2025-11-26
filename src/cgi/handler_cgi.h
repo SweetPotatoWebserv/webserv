@@ -18,7 +18,8 @@ struct CgiSession {
     std::time_t startTime;
     std::string responseBuffer;  // 受信したレスポンスを溜める場所
 
-    CgiSession() : pid(-1), readFd(-1), writeFd(-1), sentBytes(0) {}
+    CgiSession()
+        : pid(-1), readFd(-1), writeFd(-1), sentBytes(0), startTime(0) {}
 };
 
 class CgiProcess {
