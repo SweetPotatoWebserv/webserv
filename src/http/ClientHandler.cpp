@@ -187,7 +187,6 @@ void ClientHandler::on_readable() {
 
         if (is_cgi) {
             try {
-                std::cout << "this is cgi request\n";
                 cgi_session_ = cgi_process_.startCgi(request_, info);
 
                 // 読み込み監視
