@@ -19,18 +19,6 @@ namespace {
 const int CGI_TIMEOUT_MS = 5000;
 const int MAX_EPOLL_EVENTS = 1;
 const int BUFFER_SIZE = 4096;
-
-void setNonBlocking(int fd) {
-    if (fd == -1) return;
-    int flags = fcntl(fd, F_GETFL, 0);
-    if (flags == -1) {
-        perror("fcntl F_GETFL");
-        return;
-    }
-    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-        perror("fcntl F_SETFL");
-    }
-}
 }  // namespace
 
 CgiExecutor::CgiExecutor() {
@@ -77,8 +65,8 @@ CgiResult CgiExecutor::execute(const std::string &scriptPath,
                                     HttpStatus::InternalServerError);
     }
 
-    setNonBlocking(pipeIn_[1]);   // 親が書き込む方
-    setNonBlocking(pipeOut_[0]);  // 親が読み込む方
+    Socket::set_nonblocking(pipeIn_[1]);   // 親が書き込む方
+    Socket::set_nonblocking(pipeOut_[0]);  // 親が読み込む方
 
     pid_ = fork();
     if (pid_ == -1) {
