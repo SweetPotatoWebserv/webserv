@@ -2,13 +2,13 @@
 
 #include <signal.h>
 #include <sys/socket.h>
-#include <sys/wait.h>  // <--- ADD THIS LINE
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <cctype>
 #include <cerrno>
 #include <cstring>
-#include <ctime>  // [必須]include <algorithm>
+#include <ctime>
 #include <stdexcept>
 
 #include "../core/String.h"
@@ -17,7 +17,7 @@
 #include "Router.h"
 
 std::vector<ClientHandler*>& ClientHandler::getAllHandlers() {
-    static std::vector<ClientHandler*> handlers;  // ここで定義する
+    static std::vector<ClientHandler*> handlers;
     return handlers;
 }
 
@@ -50,9 +50,7 @@ void ClientHandler::check_cgi_timeout() {
     }
 
     std::time_t now = std::time(NULL);
-    // 開始から5秒以上経過しているか？
     if (std::difftime(now, cgi_session_.startTime) >= CGI_TIMEOUT_SEC) {
-        // 1. 強制終了
         kill(cgi_session_.pid, SIGKILL);
         waitpid(cgi_session_.pid, NULL, 0);
 
@@ -72,22 +70,21 @@ void ClientHandler::check_cgi_timeout() {
             cgi_session_.writeFd = -1;
         }
 
-        // 3. タイムアウトエラー (504 Gateway Timeout) を返す
         handle_cgi_error(HttpStatus::RequestTimeout);
     }
 }
+
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
-    static_cast<void>(fd);
     ClientHandler* handler = static_cast<ClientHandler*>(self);
 
-    // CGI 読み込み用FDからのイベントか？
+    // CGI 読み込み用FDからのイベント
     if (handler->cgi_session_.readFd != -1 &&
         fd == handler->cgi_session_.readFd) {
         handler->on_cgi_read();
         return;
     }
 
-    // CGI 書き込み用FDからのイベントか？
+    // CGI 書き込み用FDからのイベント
     if (handler->cgi_session_.writeFd != -1 &&
         fd == handler->cgi_session_.writeFd) {
         handler->on_cgi_write();
@@ -108,8 +105,8 @@ void ClientHandler::on_close() {
     for (std::vector<ClientHandler*>::iterator it = handlers.begin();
          it != handlers.end(); ++it) {
         if (*it == this) {
-            handlers.erase(it);  // [Change 3] Erase from the reference
-            break;               // Safe to break immediately after erase
+            handlers.erase(it);
+            break;
         }
     }
     if (cgi_session_.readFd != -1) {
@@ -185,7 +182,7 @@ void ClientHandler::on_readable() {
         } catch (const HttpException& e) {
             exception = e;
         }
-        // --- CGI リクエスト判定と実行 ---
+
         bool is_cgi = false;
         if (exception.status_code() == HttpStatus::OK) {
             is_cgi = ResponseFactory::is_cgi(request_, info);
@@ -194,10 +191,7 @@ void ClientHandler::on_readable() {
         if (is_cgi) {
             try {
                 std::cout << "this is cgi request\n";
-                // 1. CGI起動 (セッション取得)
                 cgi_session_ = cgi_process_.startCgi(request_, info);
-
-                // 2. イベント登録 (コールバックはすべて on_event に統一)
 
                 // 読み込み監視
                 event_.add(
@@ -220,8 +214,6 @@ void ClientHandler::on_readable() {
                 return;
             } catch (const HttpException& e) {
                 exception = e;
-                // ここで catch して exception を更新し、下の ResponseFactory
-                // へ流す
             } catch (const std::exception& e) {
                 exception = HttpException(HttpStatus::InternalServerError);
             }
@@ -269,9 +261,7 @@ void ClientHandler::on_cgi_write() {
 void ClientHandler::handle_cgi_error(int status_code) {
     // エラーページを生成
     HttpException exception(status_code);
-    response_ = ResponseFactory::make(
-        request_, RouteInfo(),
-        exception);  // RouteInfoは保存しておくか空でもよい
+    response_ = ResponseFactory::make(request_, RouteInfo(), exception);
 
     // クライアントへ送信フェーズへ移行
     event_.mod(fd_, EPOLLOUT);
@@ -279,6 +269,7 @@ void ClientHandler::handle_cgi_error(int status_code) {
     // セッションリセット
     cgi_session_ = CgiSession();
 }
+
 void ClientHandler::on_cgi_read() {
     int fd = cgi_session_.readFd;
     char buf[BUFFER_SIZE];
@@ -312,7 +303,6 @@ void ClientHandler::on_cgi_read() {
             // エラーにするか return する
             return;
         }
-        // プロセスがクラッシュまたはエラー終了した場合は 500
         if (WIFEXITED(status)) {
             int exit_code = WEXITSTATUS(status);
             if (exit_code != 0) {
@@ -327,33 +317,19 @@ void ClientHandler::on_cgi_read() {
             return;
         }
 
-        // 3. 空レスポンスチェック
         if (cgi_session_.responseBuffer.empty()) {
             std::cerr << "CGI Error: Empty response\n";
             handle_cgi_error(HttpStatus::InternalServerError);
             return;
         }
 
-        // 4. パース実行
-        // ここで CGIスクリプトが "Status: 404" などを返していれば
-        // response_.status_code_ に 404 がセットされます。
         CgiProcess::parseCgiResponse(response_, cgi_session_.responseBuffer);
 
-        // パース自体に失敗した場合（ヘッダー不備など）は、parseCgiResponse内で
-        // 500 がセットされているはずなので、そのまま送信フェーズへ移行します。
-
-        // --- [復元] Content-Length と HEADメソッド対応 ---
-
-        // Content-Length を計算して設定
-        // (これをしないとクライアントが読み込み続けようとする場合があります)
         response_.header_.content_length_ = response_.body_.size();
 
-        // HEADメソッドの場合はボディを空にする
-        // (method_ の比較は実装に合わせて調整してください。文字列比較の例です)
         if (request_.method_ == MethodHEAD) {
             response_.body_.clear();
         }
-        // response_.header_.content_length_ = response_.body_.size();
 
         // クライアントへの送信準備完了
         event_.mod(fd_, EPOLLOUT);
