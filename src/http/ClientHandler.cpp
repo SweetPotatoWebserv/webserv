@@ -114,6 +114,11 @@ void ClientHandler::on_close() {
         event_.del(cgi_session_.writeFd);
         close(cgi_session_.writeFd);
     }
+    if (cgi_session_.pid != -1) {
+        kill(cgi_session_.pid, SIGKILL);
+        waitpid(cgi_session_.pid, NULL, 0);
+        cgi_session_.pid = -1;
+    }
     event_.del(fd_);
     ::close(fd_);
     delete this;
@@ -261,6 +266,12 @@ void ClientHandler::handle_cgi_error(int status_code) {
 
     // クライアントへ送信フェーズへ移行
     event_.mod(fd_, EPOLLOUT);
+
+    if (cgi_session_.pid != -1) {
+        kill(cgi_session_.pid, SIGKILL);
+        waitpid(cgi_session_.pid, NULL, 0);
+        cgi_session_.pid = -1;
+    }
 
     // セッションリセット
     cgi_session_ = CgiSession();
