@@ -9,14 +9,14 @@
 
 struct CgiSession {
     pid_t pid;
-    int readFd;   // ここからCGIの出力を読む (EPOLLIN)
-    int writeFd;  // ここへBodyを書き込む (EPOLLOUT)
+    int readFd;
+    int writeFd;
 
-    std::string bodyBuffer;  // 送信待ちのリクエストボディ
-    size_t sentBytes;        // 送信済みのバイト数
+    std::string bodyBuffer;
+    size_t sentBytes;
 
     std::time_t startTime;
-    std::string responseBuffer;  // 受信したレスポンスを溜める場所
+    std::string responseBuffer;
 
     CgiSession()
         : pid(-1), readFd(-1), writeFd(-1), sentBytes(0), startTime(0) {}

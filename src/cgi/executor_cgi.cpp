@@ -97,15 +97,6 @@ CgiResult CgiExecutor::execute(const std::string &scriptPath,
 
     safeClose(pipeIn_[0]);
     safeClose(pipeOut_[1]);
-    //    try {
-    //        return readParentProcess(requestBody);
-    //    } catch (const std::exception &e) {
-    //        waitpid(
-    //            pid_, NULL,
-    //            0);  //
-    //            epoll_createなどで失敗した場合にも子プロセスをきちんと削除するため
-    //        throw;  // 例外をそのまま再スロー
-    //    }
     CgiResult result;
     result.pid = pid_;
     result.readFd = pipeOut_[0];

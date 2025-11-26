@@ -293,9 +293,6 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
     if (route.resolve_.redirect_.status != CommonConfig::INVALID_NUM)
         return response_redirect(route);
 
-    //    if (ResponseFactory::is_cgi(request, route))
-    //        return ResponseFactory::response_cgi(request, route);
-
     switch (request.method_) {
         case MethodGET: {
             return response_get(request, route);
