@@ -318,8 +318,6 @@ void ClientHandler::on_cgi_read() {
 
         CgiProcess::parseCgiResponse(response_, cgi_session_.responseBuffer);
 
-        response_.header_.content_length_ = response_.body_.size();
-
         if (request_.method_ == MethodHEAD) {
             response_.body_.clear();
         }
