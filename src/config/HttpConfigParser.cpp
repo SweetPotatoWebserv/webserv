@@ -504,19 +504,18 @@ off_t HttpConfigParser::parseClientMaxBodySize(
 void HttpConfigParser::parseErrorPageTarget(
     const std::vector<std::string>& tokens, size_t& index, std::string& token,
     ParsedErrorPage& pep) {
+    
     // オプションの '=' (ステータスコード上書き) をチェック
     if (!token.empty() && token[0] == '=') {
-        std::string status_str;
-
-        if (token.size() > 1) {
-            status_str = token.substr(1);
-        } else {
-            if (isEof(tokens, index)) {
-                throw std::runtime_error(
-                    "Error: Expected new status code after '=' in error_page");
-            }
-            status_str = getNextToken(tokens, index);
+        
+        //"=" 単体の場合はエラーにする
+        if (token.size() == 1) {
+            throw std::runtime_error(
+                "Error: Space between '=' and status code is not allowed (must be like '=200'): " + token);
         }
+
+        // ここに来るということは、"=200" のように結合されている
+        std::string status_str = token.substr(1);
 
         std::stringstream ss(status_str);
 
@@ -532,10 +531,11 @@ void HttpConfigParser::parseErrorPageTarget(
                 "Error: Expected target URI after status code in error_page");
         }
 
+        // 次のトークン（ターゲットURI）を取得
         pep.directive.target = getNextToken(tokens, index);
 
     } else {
-        // '=' がなかった場合
+        // '=' がなかった場合 (例: /404.html)
         pep.directive.override_status = -1;
         pep.directive.target = token;
     }
