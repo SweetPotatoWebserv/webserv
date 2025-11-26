@@ -330,7 +330,7 @@ void ClientHandler::on_cgi_read() {
 
     } else {
         // 異常系 readエラー
-        std::cout << "CGI read failed\n";
+        std::cerr << "CGI read failed\n";
         event_.del(fd);
         close(fd);
         cgi_session_.readFd = -1;
