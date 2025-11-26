@@ -5,7 +5,6 @@
 #include "../http/HttpResponse.h"
 #include "../http/ResponseFactory.h"
 #include "executor_cgi.h"
-#include "response_cgi.h"
 
 struct CgiSession {
     pid_t pid;

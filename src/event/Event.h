@@ -27,7 +27,6 @@ class Event {
     static const uint32_t EVENT_ERR = EPOLLERR;
     static const uint32_t EVENT_HUP = EPOLLHUP;
     static const int MAX_EVENTS = 10000;
-    static const int MONITOR_MSEC = 1000;
     struct EventData {
         int fd;
         uint32_t events;
