@@ -165,8 +165,7 @@ void ClientHandler::on_readable() {
     ssize_t len = ::recv(fd_, buf, sizeof(buf), RECV_FLG);
     if (len == -1) {
         on_close();
-        throw std::runtime_error("recv() failed: " +
-                                 std::string(strerror(errno)));
+        return ;
     }
     // 接続が閉じられた
     if (len == 0) {
@@ -222,8 +221,7 @@ void ClientHandler::on_writable() {
     ssize_t ret = HttpResponse::send_response(fd_, response_);
     if (ret == -1) {
         on_close();
-        throw std::runtime_error("write() failed: " +
-                                 std::string(strerror(errno)));
+        return ;
     }
     buffer_.clear();
     response_.clear();
