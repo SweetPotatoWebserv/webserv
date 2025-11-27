@@ -281,27 +281,36 @@ void ClientHandler::on_cgi_read() {
         ssize_t ret = read(fd, buf, sizeof(buf));
         if (ret > 0) {
             cgi_session_.responseBuffer.append(buf, ret);
-        }
-        if (ret == 0) {
+        } else if (ret == 0) {
             finish_cgi_process();
             return;
-        }
-        if (ret == -1) {
+        } else {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 // 全部読み切ったので一旦抜ける（正常）
                 break;
             }
             // 本当のエラー
             std::cerr << "CGI read failed: " << strerror(errno) << "\n";
+            // Clean up CGI file descriptors before handling error
+            if (cgi_session_.readFd != -1) {
+                event_.del(cgi_session_.readFd);
+                close(cgi_session_.readFd);
+                cgi_session_.readFd = -1;
+            }
+            if (cgi_session_.writeFd != -1) {
+                event_.del(cgi_session_.writeFd);
+                close(cgi_session_.writeFd);
+                cgi_session_.writeFd = -1;
+            }
             handle_cgi_error(HttpStatus::InternalServerError);
             return;
         }
     }
 }
+
 void ClientHandler::finish_cgi_process() {
     int fd = cgi_session_.readFd;
 
-    // 修正: クローズ処理の重複を削除し、一度だけにまとめました
     if (fd != -1) {
         event_.del(fd);
         close(fd);
@@ -326,18 +335,30 @@ void ClientHandler::finish_cgi_process() {
         if (exit_code != 0) {
             std::cerr << "CGI Error: Process exited with code " << exit_code
                       << "\n";
-            handle_cgi_error(HttpStatus::InternalServerError);
+
+            HttpException exception(HttpStatus::InternalServerError);
+            response_ = ResponseFactory::make(request_, RouteInfo(), exception);
+            event_.mod(fd_, EPOLLOUT);
+            cgi_session_ = CgiSession();
             return;
         }
     } else if (WIFSIGNALED(status)) {
         std::cerr << "CGI Error: Process terminated by signal\n";
-        handle_cgi_error(HttpStatus::InternalServerError);
+
+        HttpException exception(HttpStatus::InternalServerError);
+        response_ = ResponseFactory::make(request_, RouteInfo(), exception);
+        event_.mod(fd_, EPOLLOUT);
+        cgi_session_ = CgiSession();
         return;
     }
 
     if (cgi_session_.responseBuffer.empty()) {
         std::cerr << "CGI Error: Empty response\n";
-        handle_cgi_error(HttpStatus::InternalServerError);
+
+        HttpException exception(HttpStatus::InternalServerError);
+        response_ = ResponseFactory::make(request_, RouteInfo(), exception);
+        event_.mod(fd_, EPOLLOUT);
+        cgi_session_ = CgiSession();
         return;
     }
 
@@ -348,4 +369,6 @@ void ClientHandler::finish_cgi_process() {
     }
 
     event_.mod(fd_, EPOLLOUT);
+
+    cgi_session_ = CgiSession();
 }
