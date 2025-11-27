@@ -274,75 +274,78 @@ void ClientHandler::handle_cgi_error(int status_code) {
 
 void ClientHandler::on_cgi_read() {
     int fd = cgi_session_.readFd;
+    if (fd == -1) return;
     char buf[BUFFER_SIZE];
-    ssize_t ret = read(fd, buf, sizeof(buf));
 
-    if (ret > 0) {
-        cgi_session_.responseBuffer.append(buf, ret);
-    } else if (ret == 0) {
-        // --- EOF: CGIプロセス終了 ---
-
-        event_.del(fd);
-        close(fd);
-        cgi_session_.readFd = -1;
-        if (cgi_session_.writeFd != -1) {
-            event_.del(cgi_session_.writeFd);
-            close(cgi_session_.writeFd);
-            cgi_session_.writeFd = -1;
+    while (true) {
+        ssize_t ret = read(fd, buf, sizeof(buf));
+        if (ret > 0) {
+            cgi_session_.responseBuffer.append(buf, ret);
         }
-
-        int status;
-
-        if (cgi_session_.pid != -1) {
-            waitpid(cgi_session_.pid, &status, 0);
-            cgi_session_.pid = -1;
-        } else {
-            // すでに kill 済み（タイムアウトなど）の場合の処理
-            // ここに来る＝タイムアウト後にEOFイベントが遅れて来たということなので
-            // return する
+        if (ret == 0) {
+            finish_cgi_process();
             return;
         }
-        if (WIFEXITED(status)) {
-            int exit_code = WEXITSTATUS(status);
-            if (exit_code != 0) {
-                std::cerr << "CGI Error: Process exited with code " << exit_code
-                          << "\n";
-                handle_cgi_error(HttpStatus::InternalServerError);
-                return;
+        if (ret == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                // 全部読み切ったので一旦抜ける（正常）
+                break;
             }
-        } else if (WIFSIGNALED(status)) {
-            std::cerr << "CGI Error: Process terminated by signal\n";
+            // 本当のエラー
+            std::cerr << "CGI read failed: " << strerror(errno) << "\n";
             handle_cgi_error(HttpStatus::InternalServerError);
             return;
         }
+    }
+}
+void ClientHandler::finish_cgi_process() {
+    int fd = cgi_session_.readFd;
 
-        if (cgi_session_.responseBuffer.empty()) {
-            std::cerr << "CGI Error: Empty response\n";
-            handle_cgi_error(HttpStatus::InternalServerError);
-            return;
-        }
-
-        CgiProcess::parseCgiResponse(response_, cgi_session_.responseBuffer);
-
-        if (request_.method_ == MethodHEAD) {
-            response_.body_.clear();
-        }
-
-        // クライアントへの送信準備完了
-        event_.mod(fd_, EPOLLOUT);
-
-    } else {
-        // 異常系 readエラー
-        std::cerr << "CGI read failed\n";
+    // 修正: クローズ処理の重複を削除し、一度だけにまとめました
+    if (fd != -1) {
         event_.del(fd);
         close(fd);
         cgi_session_.readFd = -1;
-
-        if (cgi_session_.pid != -1) {
-            kill(cgi_session_.pid, SIGKILL);
-            waitpid(cgi_session_.pid, NULL, 0);
-            cgi_session_.pid = -1;
-        }
-        handle_cgi_error(HttpStatus::InternalServerError);
     }
+    if (cgi_session_.writeFd != -1) {
+        event_.del(cgi_session_.writeFd);
+        close(cgi_session_.writeFd);
+        cgi_session_.writeFd = -1;
+    }
+
+    int status;
+    if (cgi_session_.pid != -1) {
+        waitpid(cgi_session_.pid, &status, 0);
+        cgi_session_.pid = -1;
+    } else {
+        return;
+    }
+
+    if (WIFEXITED(status)) {
+        int exit_code = WEXITSTATUS(status);
+        if (exit_code != 0) {
+            std::cerr << "CGI Error: Process exited with code " << exit_code
+                      << "\n";
+            handle_cgi_error(HttpStatus::InternalServerError);
+            return;
+        }
+    } else if (WIFSIGNALED(status)) {
+        std::cerr << "CGI Error: Process terminated by signal\n";
+        handle_cgi_error(HttpStatus::InternalServerError);
+        return;
+    }
+
+    if (cgi_session_.responseBuffer.empty()) {
+        std::cerr << "CGI Error: Empty response\n";
+        handle_cgi_error(HttpStatus::InternalServerError);
+        return;
+    }
+
+    CgiProcess::parseCgiResponse(response_, cgi_session_.responseBuffer);
+
+    if (request_.method_ == MethodHEAD) {
+        response_.body_.clear();
+    }
+
+    event_.mod(fd_, EPOLLOUT);
 }
