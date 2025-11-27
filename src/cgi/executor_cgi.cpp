@@ -90,6 +90,8 @@ CgiResult CgiExecutor::execute(const std::string &scriptPath,
     result.readFd = pipeOut_[0];
     result.writeFd = pipeIn_[1];
 
+    pipeIn_[1] = -1;
+    pipeOut_[0] = -1;
     return result;
 }
 
