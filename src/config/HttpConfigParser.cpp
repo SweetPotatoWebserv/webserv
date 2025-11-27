@@ -502,8 +502,8 @@ off_t HttpConfigParser::parseClientMaxBodySize(
 
 // [ヘルパー関数] ターゲットURIとオプションの'='リダイレクトを処理
 void HttpConfigParser::parseErrorPageTarget(
-    const std::vector<std::string>& tokens, size_t& index, std::string& current_token,
-    ParsedErrorPage& pep) {
+    const std::vector<std::string>& tokens, size_t& index,
+    std::string& current_token, ParsedErrorPage& pep) {
     // オプションの '=' (ステータスコード上書き) をチェック
     if (!current_token.empty() && current_token[0] == '=') {
         //"=" 単体の場合はエラーにする
@@ -563,10 +563,9 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
         int status_code;
 
         // ss.eof() を追加し、"404foo" のような不正な数値を弾くように修正
-        if ((ss >> status_code) && ss.eof() && 
+        if ((ss >> status_code) && ss.eof() &&
             status_code >= MIN_ERROR_STATUS_CODE &&
             status_code <= MAX_ERROR_STATUS_CODE) {
-            
             pep.status_codes.push_back(status_code);
         } else {
             // 数値でない、またはゴミがついている場合はループを抜ける。
@@ -581,7 +580,7 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
         throw std::runtime_error(
             "Error: Expected target URI or '=' after status code(s)");
     }
-    
+
     // ステータスコード自体がなかった場合
     if (pep.status_codes.empty()) {
         throw std::runtime_error(
@@ -598,7 +597,7 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
             "Error: Expected ';' after error_page directive");
     }
 
-    return pep; //
+    return pep;
 }
 //-----------------------------------------------------------------
 //------------------returnディレクティブパーサー---------------------
