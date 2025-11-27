@@ -6,10 +6,8 @@
 #include <unistd.h>
 
 #include <cctype>
-#include <cerrno>
 #include <cstring>
 #include <ctime>
-#include <stdexcept>
 
 #include "../core/String.h"
 #include "HttpException.h"
