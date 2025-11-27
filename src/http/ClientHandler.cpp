@@ -176,7 +176,6 @@ void ClientHandler::on_readable() {
     buffer_.append(buf, len);
     if (ClientHandler::is_request_ready(buffer_)) {
         HttpException exception(HttpStatus::OK);
-        // TODO RouterInfo が適切に初期化されるか確認する
         RouteInfo info;
         try {
             request_ = HttpParser::http_request_parse(buffer_);

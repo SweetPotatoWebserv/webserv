@@ -35,7 +35,6 @@ std::string::size_type HttpParser::request_line_parse(const std::string& buffer,
                             HttpStatus::reason(HttpStatus::NotImplemented));
     }
 
-    // TODO パスの長さ制限をかける
     if (request_line_vec[1].find(QUESTION_MARK) == std::string::npos) {
         request.request_target_.path_ = (request_line_vec[1]);
     } else {
