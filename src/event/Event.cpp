@@ -26,7 +26,8 @@ void Event::add(int fd, uint32_t events, EventCallback callback,  // NOLINT
     struct epoll_event ev;
     std::memset(&ev, 0, sizeof(ev));
     ev.events = events;
-    ev.data.ptr = data;
+    // ev.data.ptr = data;
+    ev.data.fd = fd;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) == -1) {
         delete data;
@@ -46,7 +47,8 @@ void Event::mod(int fd, uint32_t events) {  // NOLINT
     struct epoll_event ev;
     std::memset(&ev, 0, sizeof(ev));
     ev.events = events;
-    ev.data.ptr = data;
+    // ev.data.ptr = data;
+    ev.data.fd = fd;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev) == -1) {
         throw std::runtime_error("epoll_ctl MOD failed: " +
@@ -75,8 +77,17 @@ void Event::run() {  // NOLINT
                                      std::string(std::strerror(errno)));
         }
         for (int i = 0; i < number_of_fd; ++i) {
-            EventData* data = static_cast<EventData*>(events[i].data.ptr);
+            int fd = events[i].data.fd;
+            std::map<int, EventData*>::iterator it = registry_.find(fd);
+            if (it == registry_.end()) {
+                // すでに削除されている（前のイベント処理で消された）のでスキップ
+                continue;
+            }
+
+            EventData* data = it->second;
             data->callback(data->fd, events[i].events, data->user);
+            // EventData* data = static_cast<EventData*>(events[i].data.ptr);
+            // data->callback(data->fd, events[i].events, data->user);
         }
         ClientHandler::check_timeout_all();
     }
@@ -86,4 +97,9 @@ Event::~Event() {
     if (epoll_fd_ >= 0) {
         ::close(epoll_fd_);
     }
+    for (std::map<int, EventData*>::iterator it = registry_.begin();
+         it != registry_.end(); ++it) {
+        delete it->second;
+    }
+    registry_.clear();
 }
