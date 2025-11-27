@@ -3,6 +3,8 @@
 #include "../event/Event.h"
 #include "../http/Router.h"
 #include "Server.h"
+#include <signal.h>
+#include <stdexcept>
 
 int main(int argc, char* argv[]) {
     const char* config_path = "default.conf";
@@ -10,12 +12,17 @@ int main(int argc, char* argv[]) {
     if (argc == 2) {
         config_path = argv[1];
     } else if (argc > 2) {
-        std::cerr << "Error: Too many arguments." << std::endl;
-        std::cerr << "Usage: ./webserv [configuration file]" << std::endl;
+        std::cerr << "Error: Too many arguments.\n";
+        std::cerr << "Usage: ./webserv [configuration file]\n";
         return 1;
     }
 
     try {
+        // クライアントのコネクションが切断された場合 SIGPIPE になる
+        // プロセス自体が落ちるのを防ぐために、SIGPIPE を無視する
+        if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+            throw std::runtime_error("signal() failed: " + std::string(strerror(errno)));
+        }
         HttpConfig config = HttpConfigParser::parse(config_path);
         Event ev;
         Router router(config);

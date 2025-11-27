@@ -119,7 +119,6 @@ Socket Socket::listen_tcp(const std::string& host, uint16_t port) {
         throw std::runtime_error("resolve_ipv4 failed");
     }
 
-    // TODO 後で消す、プロセス終了時にソケットがすぐ消えるようにする
     int yes = 1;
     if (setsockopt(server_fd.fd_, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) <
         0) {

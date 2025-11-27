@@ -64,11 +64,9 @@ CgiSession CgiProcess::startCgi(const HttpRequest& request,
     try {
         std::string path_str = request.request_target_.path_;
 
-        if (!path_str.empty() && path_str[0] == '/') {
-            path_str = path_str.substr(1);
-        }
-
-        std::string script_path = info.resolve_.root_.value_ + path_str;
+        std::string script_path;
+        if (info.resolve_.root_.is_set_)
+            script_path = info.resolve_.root_.value_ + path_str;
 
         CgiSession session;
         response = validateCgiScript(script_path);
@@ -169,11 +167,11 @@ void CgiProcess::parseCgiResponse(HttpResponse& response,
         parseCgiHeaderLine(line, response);
     }
     response.header_.content_length_ = response.body_.size();
-    if (!response.location_.empty() &&
-        response.status_code_ == HttpStatus::OK) {
+    if (!response.location_.empty() && response.status_code_ == HttpStatus::OK) {
         response.status_code_ = HttpStatus::Found;
     }
 
+    response.message_ = HttpStatus::reason(response.status_code_);
     if (response.status_code_ == HttpStatus::NoContent) {
         return;
     }
@@ -185,6 +183,7 @@ void CgiProcess::parseCgiResponse(HttpResponse& response,
     {
         // レスポンスが不正なので 500に上書きする
         response.status_code_ = HttpStatus::InternalServerError;
+        response.message_ = HttpStatus::reason(response.status_code_);
         response.body_ =
             "CGI script returned malformed response (missing Content-Type)";
     }
