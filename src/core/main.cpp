@@ -10,8 +10,8 @@ int main(int argc, char* argv[]) {
     if (argc == 2) {
         config_path = argv[1];
     } else if (argc > 2) {
-        std::cerr << "Error: Too many arguments." << std::endl;
-        std::cerr << "Usage: ./webserv [configuration file]" << std::endl;
+        std::cerr << "Error: Too many arguments.\n";
+        std::cerr << "Usage: ./webserv [configuration file]\n";
         return 1;
     }
 
