@@ -165,7 +165,7 @@ void ClientHandler::on_readable() {
     ssize_t len = ::recv(fd_, buf, sizeof(buf), RECV_FLG);
     if (len == -1) {
         on_close();
-        return ;
+        return;
     }
     // 接続が閉じられた
     if (len == 0) {
@@ -221,7 +221,7 @@ void ClientHandler::on_writable() {
     ssize_t ret = HttpResponse::send_response(fd_, response_);
     if (ret == -1) {
         on_close();
-        return ;
+        return;
     }
     buffer_.clear();
     response_.clear();
@@ -274,34 +274,26 @@ void ClientHandler::on_cgi_read() {
     if (fd == -1) return;
     char buf[BUFFER_SIZE];
 
-    while (true) {
-        ssize_t ret = read(fd, buf, sizeof(buf));
-        if (ret > 0) {
-            cgi_session_.responseBuffer.append(buf, ret);
-        } else if (ret == 0) {
-            finish_cgi_process();
-            return;
-        } else {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                // 全部読み切ったので一旦抜ける（正常）
-                break;
-            }
-            // 本当のエラー
-            std::cerr << "CGI read failed: " << strerror(errno) << "\n";
-            // Clean up CGI file descriptors before handling error
-            if (cgi_session_.readFd != -1) {
-                event_.del(cgi_session_.readFd);
-                close(cgi_session_.readFd);
-                cgi_session_.readFd = -1;
-            }
-            if (cgi_session_.writeFd != -1) {
-                event_.del(cgi_session_.writeFd);
-                close(cgi_session_.writeFd);
-                cgi_session_.writeFd = -1;
-            }
-            handle_cgi_error(HttpStatus::InternalServerError);
-            return;
+    ssize_t ret = read(fd, buf, sizeof(buf));
+    if (ret > 0) {
+        cgi_session_.responseBuffer.append(buf, ret);
+    } else if (ret == 0) {
+        finish_cgi_process();
+        return;
+    } else {
+        if (cgi_session_.readFd != -1) {
+            event_.del(cgi_session_.readFd);
+            close(cgi_session_.readFd);
+            cgi_session_.readFd = -1;
         }
+        if (cgi_session_.writeFd != -1) {
+            event_.del(cgi_session_.writeFd);
+            close(cgi_session_.writeFd);
+            cgi_session_.writeFd = -1;
+        }
+
+        handle_cgi_error(HttpStatus::InternalServerError);
+        return;
     }
 }
 
