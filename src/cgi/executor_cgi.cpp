@@ -51,9 +51,8 @@ void CgiExecutor::writeAll(int fd, const char *buffer, size_t size) {
     }
 }
 
-std::string CgiExecutor::execute(const std::string &scriptPath,
-                                 char *const argv[], char *const envp[],
-                                 const std::string &requestBody) {
+CgiResult CgiExecutor::execute(const std::string &scriptPath,
+                               char *const argv[], char *const envp[]) {
     if (pipe(pipeIn_) == -1) {
         throw CgiExecutionException("Failed to create stdin pipe",
                                     HttpStatus::InternalServerError);
@@ -65,6 +64,9 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
         throw CgiExecutionException("Failed to create stdout pipe",
                                     HttpStatus::InternalServerError);
     }
+
+    Socket::set_nonblocking(pipeIn_[1]);   // 親が書き込む方
+    Socket::set_nonblocking(pipeOut_[0]);  // 親が読み込む方
 
     pid_ = fork();
     if (pid_ == -1) {
@@ -83,14 +85,12 @@ std::string CgiExecutor::execute(const std::string &scriptPath,
 
     safeClose(pipeIn_[0]);
     safeClose(pipeOut_[1]);
-    try {
-        return readParentProcess(requestBody);
-    } catch (const std::exception &e) {
-        waitpid(
-            pid_, NULL,
-            0);  // epoll_createなどで失敗した場合にも子プロセスをきちんと削除するため
-        throw;   // 例外をそのまま再スロー
-    }
+    CgiResult result;
+    result.pid = pid_;
+    result.readFd = pipeOut_[0];
+    result.writeFd = pipeIn_[1];
+
+    return result;
 }
 
 int CgiExecutor::initializeEpoll(int pipe_fd) {

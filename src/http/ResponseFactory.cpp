@@ -270,19 +270,6 @@ bool ResponseFactory::is_cgi(const HttpRequest& request,
 
     return (path.size() >= ext.size() &&
             path.compare(path.size() - ext.size(), ext.size(), ext) == 0);
-
-    return false;
-}
-
-HttpResponse ResponseFactory::response_cgi(const HttpRequest& request,
-                                           const RouteInfo& route) {
-    CgiProcess cgi_processor;
-    HttpResponse response = cgi_processor.run(request, route);
-    response.header_.content_length_ = response.body_.size();
-    if (request.method_ == MethodHEAD) {
-        response.body_.clear();
-    }
-    return response;
 }
 
 HttpResponse ResponseFactory::make(const HttpRequest& request,
@@ -305,9 +292,6 @@ HttpResponse ResponseFactory::make(const HttpRequest& request,
     // リダイレクト
     if (route.resolve_.redirect_.status != CommonConfig::INVALID_NUM)
         return response_redirect(route);
-
-    if (ResponseFactory::is_cgi(request, route))
-        return ResponseFactory::response_cgi(request, route);
 
     switch (request.method_) {
         case MethodGET: {
