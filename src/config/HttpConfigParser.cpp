@@ -502,24 +502,25 @@ off_t HttpConfigParser::parseClientMaxBodySize(
 
 // [ヘルパー関数] ターゲットURIとオプションの'='リダイレクトを処理
 void HttpConfigParser::parseErrorPageTarget(
-    const std::vector<std::string>& tokens, size_t& index, std::string& token,
+    const std::vector<std::string>& tokens, size_t& index, std::string& current_token,
     ParsedErrorPage& pep) {
     // オプションの '=' (ステータスコード上書き) をチェック
-    if (!token.empty() && token[0] == '=') {
+    if (!current_token.empty() && current_token[0] == '=') {
         //"=" 単体の場合はエラーにする
-        if (token.size() == 1) {
+        if (current_token.size() == 1) {
             throw std::runtime_error(
                 "Error: Space between '=' and status code is not allowed (must "
                 "be like '=200'): " +
-                token);
+                current_token);
         }
 
         // ここに来るということは、"=200" のように結合されている
-        std::string status_str = token.substr(1);
+        std::string status_str = current_token.substr(1);
 
         std::stringstream ss(status_str);
 
-        if (!(ss >> pep.directive.override_status) ||
+        // ヘルパー関数側の ss.eof()
+        if (!(ss >> pep.directive.override_status) || !ss.eof() ||
             pep.directive.override_status < MIN_VALID_STATUS_CODE ||
             pep.directive.override_status > MAX_VALID_STATUS_CODE) {
             throw std::runtime_error(
@@ -537,7 +538,7 @@ void HttpConfigParser::parseErrorPageTarget(
     } else {
         // '=' がなかった場合 (例: /404.html)
         pep.directive.override_status = -1;
-        pep.directive.target = token;
+        pep.directive.target = current_token;
     }
 
     // 共通検証
@@ -561,30 +562,34 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
         std::stringstream ss(token);
         int status_code;
 
-        // トークンが数値かつ有効範囲内かチェック
-        if ((ss >> status_code) && status_code >= MIN_ERROR_STATUS_CODE &&
+        // ss.eof() を追加し、"404foo" のような不正な数値を弾くように修正
+        if ((ss >> status_code) && ss.eof() && 
+            status_code >= MIN_ERROR_STATUS_CODE &&
             status_code <= MAX_ERROR_STATUS_CODE) {
+            
             pep.status_codes.push_back(status_code);
         } else {
-            // 数値でなければループを抜ける。
-            // この時点で 'token' は '=' またはターゲットパスを保持している
+            // 数値でない、またはゴミがついている場合はループを抜ける。
+            // この時点で 'token' は '=' またはターゲットパスとして扱われる
             break;
         }
     }
 
     //基本的なエラーチェック
-    if (isEof(tokens, index) && pep.status_codes.empty()) {
-        // status_codesもターゲットもない場合
+    // ステータスコードはあるが、ターゲット指定前にEOFになった場合
+    if (isEof(tokens, index) && !pep.status_codes.empty()) {
         throw std::runtime_error(
             "Error: Expected target URI or '=' after status code(s)");
     }
+    
+    // ステータスコード自体がなかった場合
     if (pep.status_codes.empty()) {
         throw std::runtime_error(
             "Error: Expected status code(s) for error_page");
     }
 
     //ターゲットとOverrideの解析 (ヘルパー関数へ委譲)
-    //ここにあった複雑なif/elseロジックを外に出すことでComplexityを下げる
+    // 引数名を token から current_token に変更した定義に合わせて呼び出し
     parseErrorPageTarget(tokens, index, token, pep);
 
     // 4. 最後にセミコロンがあるか確認
@@ -593,7 +598,7 @@ HttpConfigParser::ParsedErrorPage HttpConfigParser::parseErrorPage(
             "Error: Expected ';' after error_page directive");
     }
 
-    return pep;
+    return pep; //
 }
 //-----------------------------------------------------------------
 //------------------returnディレクティブパーサー---------------------
