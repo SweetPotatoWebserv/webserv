@@ -7,7 +7,6 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "../cgi/handler_cgi.h"
 #include "../core/Fd.h"
 #include "HttpParser.h"
 #include "MimeTypes.h"
@@ -65,16 +64,12 @@ HttpResponse ResponseFactory::render_error(int status_code,
     return response;
 }
 
-HttpResponse ResponseFactory::response_get(const HttpRequest& request,
-                                           const RouteInfo& route) {
-    HttpResponse response;
+std::string ResponseFactory::find_index_files(const HttpRequest& request, HttpResponse& response, const RouteInfo& route) {
     std::string path_name;
-    bool found = false;
     for (std::vector<std::string>::const_iterator index_files =
-             route.resolve_.index_files_.begin();
-         index_files != route.resolve_.index_files_.end(); ++index_files) {
-        path_name = route.resolve_.root_.value_ +
-                    request.request_target_.path_ + *index_files;
+            route.resolve_.index_files_.begin();
+            index_files != route.resolve_.index_files_.end(); ++index_files) {
+        path_name = route.resolve_.root_.value_ + request.request_target_.path_ + *index_files;
         std::vector<char> buffer;
         try {
             Fd fd(path_name.c_str(), O_RDONLY);
@@ -84,22 +79,60 @@ HttpResponse ResponseFactory::response_get(const HttpRequest& request,
             continue;
         }
         response.body_.assign(buffer.begin(), buffer.end());
-        found = true;
         break;
     }
-    if (!found) {
-        std::string file_path =
-            route.resolve_.root_.value_ + request.request_target_.path_;
-        struct stat status;
-        if (stat(file_path.c_str(), &status) == 0 && S_ISDIR(status.st_mode)) {
-            if (route.resolve_.autoindex_.is_set_ &&
-                route.resolve_.autoindex_.value_) {
-                return response_autoindex(request, route);
-            }
-            return render_error(HttpStatus::Forbidden, route);
-        }
-        return render_error(HttpStatus::NotFound, route);
+    return path_name;
+}
+
+std::string ResponseFactory::find_root_files(const HttpRequest& request, HttpResponse& response, const RouteInfo& route) {
+    std::string path_name;
+    DIR *directory = NULL;
+    if (route.resolve_.root_.is_set_)
+        directory = opendir(route.resolve_.root_.value_.c_str());
+    if (directory == NULL) {
+        throw std::runtime_error("Failed to open directory '" + route.resolve_.root_.value_ + "': " + std::string(strerror(errno)));
     }
+    struct dirent* entry;
+    while ((entry = readdir(directory)) != NULL) {
+        std::vector<char> buffer;
+        // 先頭のスラッシュを削除
+        if (entry->d_name == request.request_target_.path_.substr(1)) {
+            try {
+                path_name = route.resolve_.root_.value_ + request.request_target_.path_;
+                Fd fd(path_name.c_str(), O_RDONLY);
+                buffer = fd.FreadAll();
+            } catch(const OpenException& e) {
+                std::cerr << e.what() << '\n';
+            }
+            response.body_.assign(buffer.begin(), buffer.end());
+            break;
+        }
+    }
+    return path_name;
+}
+
+HttpResponse ResponseFactory::response_get(const HttpRequest& request, // NOLINT
+                                           const RouteInfo& route) {
+    HttpResponse response;
+    std::string path_name;
+    if (request.request_target_.path_[request.request_target_.path_.size()-1] == '/') {
+        path_name = find_index_files(request, response, route);
+        if (path_name == "") {
+            std::string file_path = route.resolve_.root_.value_ + request.request_target_.path_;
+            struct stat status;
+            if (stat(file_path.c_str(), &status) == 0 && S_ISDIR(status.st_mode)) {
+                if (route.resolve_.autoindex_.is_set_ &&
+                    route.resolve_.autoindex_.value_) {
+                    return response_autoindex(request, route);
+                }
+                return render_error(HttpStatus::Forbidden, route);
+            }
+            return render_error(HttpStatus::NotFound, route);
+        }
+    } else {
+        path_name = find_root_files(request, response, route);
+    }
+
     response.status_code_ = HttpStatus::OK;
     response.message_ = HttpStatus::reason(HttpStatus::OK);
     response.header_.content_length_ = response.body_.size();

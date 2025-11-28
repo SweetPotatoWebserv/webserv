@@ -24,4 +24,6 @@ class ResponseFactory {
     static HttpResponse render_default_error_page(int status_code);
     static HttpResponse render_error(int status_code, const RouteInfo& route);
     static const int DEFAULT_BUFFER_LEN = 1024;
+    static std::string find_root_files(const HttpRequest& request, HttpResponse& response, const RouteInfo& route);
+    static std::string find_index_files(const HttpRequest& request, HttpResponse& response, const RouteInfo& route);
 };
