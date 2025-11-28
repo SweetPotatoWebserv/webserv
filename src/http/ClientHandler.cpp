@@ -6,10 +6,8 @@
 #include <unistd.h>
 
 #include <cctype>
-#include <cerrno>
 #include <cstring>
 #include <ctime>
-#include <stdexcept>
 
 #include "../core/String.h"
 #include "HttpException.h"
@@ -165,7 +163,7 @@ void ClientHandler::on_readable() {
     ssize_t len = ::recv(fd_, buf, sizeof(buf), RECV_FLG);
     if (len == -1) {
         on_close();
-        return ;
+        return;
     }
     // 接続が閉じられた
     if (len == 0) {
@@ -221,7 +219,7 @@ void ClientHandler::on_writable() {
     ssize_t ret = HttpResponse::send_response(fd_, response_);
     if (ret == -1) {
         on_close();
-        return ;
+        return;
     }
     buffer_.clear();
     response_.clear();
@@ -271,75 +269,93 @@ void ClientHandler::handle_cgi_error(int status_code) {
 
 void ClientHandler::on_cgi_read() {
     int fd = cgi_session_.readFd;
+    if (fd == -1) return;
     char buf[BUFFER_SIZE];
-    ssize_t ret = read(fd, buf, sizeof(buf));
 
+    ssize_t ret = read(fd, buf, sizeof(buf));
     if (ret > 0) {
         cgi_session_.responseBuffer.append(buf, ret);
     } else if (ret == 0) {
-        // --- EOF: CGIプロセス終了 ---
-
-        event_.del(fd);
-        close(fd);
-        cgi_session_.readFd = -1;
+        finish_cgi_process();
+        return;
+    } else {
+        if (cgi_session_.readFd != -1) {
+            event_.del(cgi_session_.readFd);
+            close(cgi_session_.readFd);
+            cgi_session_.readFd = -1;
+        }
         if (cgi_session_.writeFd != -1) {
             event_.del(cgi_session_.writeFd);
             close(cgi_session_.writeFd);
             cgi_session_.writeFd = -1;
         }
 
-        int status;
+        handle_cgi_error(HttpStatus::InternalServerError);
+        return;
+    }
+}
 
-        if (cgi_session_.pid != -1) {
-            waitpid(cgi_session_.pid, &status, 0);
-            cgi_session_.pid = -1;
-        } else {
-            // すでに kill 済み（タイムアウトなど）の場合の処理
-            // ここに来る＝タイムアウト後にEOFイベントが遅れて来たということなので
-            // return する
-            return;
-        }
-        if (WIFEXITED(status)) {
-            int exit_code = WEXITSTATUS(status);
-            if (exit_code != 0) {
-                std::cerr << "CGI Error: Process exited with code " << exit_code
-                          << "\n";
-                handle_cgi_error(HttpStatus::InternalServerError);
-                return;
-            }
-        } else if (WIFSIGNALED(status)) {
-            std::cerr << "CGI Error: Process terminated by signal\n";
-            handle_cgi_error(HttpStatus::InternalServerError);
-            return;
-        }
+void ClientHandler::finish_cgi_process() {
+    int fd = cgi_session_.readFd;
 
-        if (cgi_session_.responseBuffer.empty()) {
-            std::cerr << "CGI Error: Empty response\n";
-            handle_cgi_error(HttpStatus::InternalServerError);
-            return;
-        }
-
-        CgiProcess::parseCgiResponse(response_, cgi_session_.responseBuffer);
-
-        if (request_.method_ == MethodHEAD) {
-            response_.body_.clear();
-        }
-
-        // クライアントへの送信準備完了
-        event_.mod(fd_, EPOLLOUT);
-
-    } else {
-        // 異常系 readエラー
-        std::cerr << "CGI read failed\n";
+    if (fd != -1) {
         event_.del(fd);
         close(fd);
         cgi_session_.readFd = -1;
-
-        if (cgi_session_.pid != -1) {
-            kill(cgi_session_.pid, SIGKILL);
-            waitpid(cgi_session_.pid, NULL, 0);
-            cgi_session_.pid = -1;
-        }
-        handle_cgi_error(HttpStatus::InternalServerError);
     }
+    if (cgi_session_.writeFd != -1) {
+        event_.del(cgi_session_.writeFd);
+        close(cgi_session_.writeFd);
+        cgi_session_.writeFd = -1;
+    }
+
+    int status;
+    if (cgi_session_.pid != -1) {
+        waitpid(cgi_session_.pid, &status, 0);
+        cgi_session_.pid = -1;
+    } else {
+        return;
+    }
+
+    if (WIFEXITED(status)) {
+        int exit_code = WEXITSTATUS(status);
+        if (exit_code != 0) {
+            std::cerr << "CGI Error: Process exited with code " << exit_code
+                      << "\n";
+
+            HttpException exception(HttpStatus::InternalServerError);
+            response_ = ResponseFactory::make(request_, RouteInfo(), exception);
+            event_.mod(fd_, EPOLLOUT);
+            cgi_session_ = CgiSession();
+            return;
+        }
+    } else if (WIFSIGNALED(status)) {
+        std::cerr << "CGI Error: Process terminated by signal\n";
+
+        HttpException exception(HttpStatus::InternalServerError);
+        response_ = ResponseFactory::make(request_, RouteInfo(), exception);
+        event_.mod(fd_, EPOLLOUT);
+        cgi_session_ = CgiSession();
+        return;
+    }
+
+    if (cgi_session_.responseBuffer.empty()) {
+        std::cerr << "CGI Error: Empty response\n";
+
+        HttpException exception(HttpStatus::InternalServerError);
+        response_ = ResponseFactory::make(request_, RouteInfo(), exception);
+        event_.mod(fd_, EPOLLOUT);
+        cgi_session_ = CgiSession();
+        return;
+    }
+
+    CgiProcess::parseCgiResponse(response_, cgi_session_.responseBuffer);
+
+    if (request_.method_ == MethodHEAD) {
+        response_.body_.clear();
+    }
+
+    event_.mod(fd_, EPOLLOUT);
+
+    cgi_session_ = CgiSession();
 }

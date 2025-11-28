@@ -167,7 +167,8 @@ void CgiProcess::parseCgiResponse(HttpResponse& response,
         parseCgiHeaderLine(line, response);
     }
     response.header_.content_length_ = response.body_.size();
-    if (!response.location_.empty() && response.status_code_ == HttpStatus::OK) {
+    if (!response.location_.empty() &&
+        response.status_code_ == HttpStatus::OK) {
         response.status_code_ = HttpStatus::Found;
     }
 

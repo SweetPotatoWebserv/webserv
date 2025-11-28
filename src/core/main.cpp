@@ -1,10 +1,12 @@
+#include <signal.h>
+
+#include <stdexcept>
+
 #include "../config/HttpConfig.h"
 #include "../config/HttpConfigParser.h"
 #include "../event/Event.h"
 #include "../http/Router.h"
 #include "Server.h"
-#include <signal.h>
-#include <stdexcept>
 
 int main(int argc, char* argv[]) {
     const char* config_path = "default.conf";
@@ -21,7 +23,8 @@ int main(int argc, char* argv[]) {
         // クライアントのコネクションが切断された場合 SIGPIPE になる
         // プロセス自体が落ちるのを防ぐために、SIGPIPE を無視する
         if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
-            throw std::runtime_error("signal() failed: " + std::string(strerror(errno)));
+            throw std::runtime_error("signal() failed: " +
+                                     std::string(strerror(errno)));
         }
         HttpConfig config = HttpConfigParser::parse(config_path);
         Event ev;
