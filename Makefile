@@ -3,7 +3,7 @@ NAME = webserv
 DEV_IMAGE_NAME = webserv-dev
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -pedantic -g
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -pedantic -g #-fsanitize=address
 
 SRC_DIR = src
 SRC = $(wildcard $(SRC_DIR)/*/*.cpp)
@@ -61,7 +61,7 @@ test_cgi: build
 
 internal_test_cgi:
 	@make clean
-	
+
 	@make $(CGI_TEST_NAME)
 
 	@echo "--- Setting up test permissions (inside container) ---"
@@ -71,13 +71,13 @@ internal_test_cgi:
 	@chmod 755 ./cgi-bin/test_headers.py
 	@chmod 755 ./cgi-bin/timeout.py
 	@chmod 755 ./cgi-bin/cwd_test.py
-	
+
 	@echo "--- Verifying permissions in ./cgi-bin/ ---"
 	@ls -la ./cgi-bin/
 
 	@echo "---Run CGI TEST (inside container)---"
 	./$(CGI_TEST_NAME)
-	
+
 $(CGI_TEST_NAME): $(CGI_TEST_OBJ)
 	$(CXX) $(CXXFLAGS) -o $(CGI_TEST_NAME) $(CGI_TEST_OBJ)
 

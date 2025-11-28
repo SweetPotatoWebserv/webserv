@@ -1,5 +1,7 @@
 #include "HttpDate.h"
 
+HttpDate::HttpDate() : time_(std::time(NULL)) {}
+
 std::string HttpDate::getCurrentGMT() {
     std::time_t now = std::time(NULL);
     std::tm* gmt_time = std::gmtime(&now);

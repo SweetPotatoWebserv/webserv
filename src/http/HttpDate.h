@@ -7,7 +7,9 @@
 class HttpDate {
    public:
     static std::string getCurrentGMT();
+    HttpDate();
 
    private:
+    std::time_t time_;
     static const int BUFFER_SIZE = 32;
 };

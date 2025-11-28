@@ -51,6 +51,12 @@ void Fd::FwriteAll(const std::string& buf) const {
     }
 }
 
+void Fd::SafeClose(int fd) {
+    if (fd == -1)
+        return ;
+    ::close(fd);
+}
+
 Fd::~Fd() {
     if (fd_ != -1) {
         ::close(fd_);

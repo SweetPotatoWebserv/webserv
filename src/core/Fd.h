@@ -20,6 +20,7 @@ class Fd {
     int getFd() const;
     std::vector<char> FreadAll() const;
     void FwriteAll(const std::string&) const;
+    static void SafeClose(int fd);
 
    private:
     Fd();

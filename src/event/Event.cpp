@@ -86,8 +86,6 @@ void Event::run() {  // NOLINT
 
             EventData* data = it->second;
             data->callback(data->fd, events[i].events, data->user);
-            // EventData* data = static_cast<EventData*>(events[i].data.ptr);
-            // data->callback(data->fd, events[i].events, data->user);
         }
         ClientHandler::check_timeout_all();
     }

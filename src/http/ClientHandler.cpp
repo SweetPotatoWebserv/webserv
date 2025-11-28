@@ -1,9 +1,9 @@
 #include "ClientHandler.h"
 
-#include <signal.h>
 #include <sys/socket.h>
-#include <sys/wait.h>
 #include <unistd.h>
+#include <signal.h>
+#include <sys/wait.h>
 
 #include <cctype>
 #include <cstring>
@@ -28,45 +28,6 @@ ClientHandler::ClientHandler(int fd, Event& event, Router& router,
       router_(router),
       server_config_(server_config) {  // NOLINT
     getAllHandlers().push_back(this);
-}
-
-void ClientHandler::check_timeout_all() {
-    std::vector<ClientHandler*>& handlers = getAllHandlers();
-    for (std::vector<ClientHandler*>::iterator it = handlers.begin();
-         it != handlers.end(); ++it) {
-        (*it)->check_cgi_timeout();
-    }
-}
-
-void ClientHandler::check_cgi_timeout() {
-    // CGIが実行中でなければ無視
-    if (cgi_session_.pid == -1) {
-        return;
-    }
-
-    std::time_t now = std::time(NULL);
-    if (std::difftime(now, cgi_session_.startTime) >= CGI_TIMEOUT_SEC) {
-        kill(cgi_session_.pid, SIGKILL);
-        waitpid(cgi_session_.pid, NULL, 0);
-
-        // プロセス回収済みなのでPIDをリセット
-        // これで on_cgi_read 側での二重 waitpid を防ぐ
-        cgi_session_.pid = -1;
-
-        // 2. パイプのクローズと監視削除
-        if (cgi_session_.readFd != -1) {
-            event_.del(cgi_session_.readFd);
-            close(cgi_session_.readFd);
-            cgi_session_.readFd = -1;
-        }
-        if (cgi_session_.writeFd != -1) {
-            event_.del(cgi_session_.writeFd);
-            close(cgi_session_.writeFd);
-            cgi_session_.writeFd = -1;
-        }
-
-        handle_cgi_error(HttpStatus::RequestTimeout);
-    }
 }
 
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
@@ -191,7 +152,7 @@ void ClientHandler::on_readable() {
                     reinterpret_cast<EventCallback>(ClientHandler::on_event),
                     this);
 
-                // 書き込み監視（ボディがある場合）
+                // 書き込み監視
                 if (!cgi_session_.bodyBuffer.empty()) {
                     event_.add(cgi_session_.writeFd, EPOLLOUT,
                                reinterpret_cast<EventCallback>(
