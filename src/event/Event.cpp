@@ -3,7 +3,6 @@
 #include <sys/epoll.h>
 
 #include <cstring>
-#include <stdexcept>
 
 #include "../http/ClientHandler.h"
 
@@ -26,7 +25,6 @@ void Event::add(int fd, uint32_t events, EventCallback callback,  // NOLINT
     struct epoll_event ev;
     std::memset(&ev, 0, sizeof(ev));
     ev.events = events;
-    // ev.data.ptr = data;
     ev.data.fd = fd;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) == -1) {
@@ -47,7 +45,6 @@ void Event::mod(int fd, uint32_t events) {  // NOLINT
     struct epoll_event ev;
     std::memset(&ev, 0, sizeof(ev));
     ev.events = events;
-    // ev.data.ptr = data;
     ev.data.fd = fd;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev) == -1) {
@@ -80,14 +77,11 @@ void Event::run() {  // NOLINT
             int fd = events[i].data.fd;
             std::map<int, EventData*>::iterator it = registry_.find(fd);
             if (it == registry_.end()) {
-                // すでに削除されている（前のイベント処理で消された）のでスキップ
                 continue;
             }
 
             EventData* data = it->second;
             data->callback(data->fd, events[i].events, data->user);
-            // EventData* data = static_cast<EventData*>(events[i].data.ptr);
-            // data->callback(data->fd, events[i].events, data->user);
         }
         ClientHandler::check_timeout_all();
     }
