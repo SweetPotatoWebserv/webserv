@@ -11,12 +11,12 @@ std::string MimeTypes::extract_extension(const std::string& file_name) {
 
 std::map<std::string, std::string> MimeTypes::create_content_type_map() {
     std::map<std::string, std::string> content_type_map;
-    content_type_map["html"] = "text/html";
-    content_type_map["htm"] = "text/html";
-    content_type_map["css"] = "text/css";
-    content_type_map["js"] = "application/javascript";
-    content_type_map["json"] = "application/json";
-    content_type_map["txt"] = "text/plain";
+    content_type_map["html"] = "text/html; charset=UTF-8";
+    content_type_map["htm"] = "text/html; charset=UTF-8";
+    content_type_map["css"] = "text/css; charset=UTF-8";
+    content_type_map["js"] = "application/javascript; charset=UTF-8";
+    content_type_map["json"] = "application/json; charset=UTF-8";
+    content_type_map["txt"] = "text/plain; charset=UTF-8";
     content_type_map["jpg"] = "image/jpeg";
     content_type_map["jpeg"] = "image/jpeg";
     content_type_map["png"] = "image/png";
