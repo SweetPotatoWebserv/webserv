@@ -14,6 +14,7 @@
 #include <string>
 
 #include "../core/Common.h"
+#include "../core/Socket.h"
 
 namespace {
 const int CGI_TIMEOUT_MS = 5000;
@@ -49,8 +50,8 @@ CgiResult CgiExecutor::execute(const std::string &scriptPath,
                                     HttpStatus::InternalServerError);
     }
 
-    Socket::set_nonblocking(pipeIn_[1]);   // 親が書き込む方
-    Socket::set_nonblocking(pipeOut_[0]);  // 親が読み込む方
+    fd::Socket::set_nonblocking(pipeIn_[1]);   // 親が書き込む方
+    fd::Socket::set_nonblocking(pipeOut_[0]);  // 親が読み込む方
 
     pid_ = fork();
     if (pid_ == -1) {

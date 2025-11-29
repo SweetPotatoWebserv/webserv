@@ -9,6 +9,7 @@
 #include <stdexcept>
 
 #include "../core/Fd.h"
+#include "../core/FdException.h"
 #include "HttpParser.h"
 #include "MimeTypes.h"
 #include "Router.h"

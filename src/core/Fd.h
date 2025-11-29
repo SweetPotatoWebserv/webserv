@@ -9,24 +9,23 @@
 #include <vector>
 
 namespace fd {
-class Exception : public std::runtime_error {
-   public:
-    explicit Exception(const std::string& message);
-};
-
 class Fd {
    private:
     static const int DEFAULT_BUFFER_SIZE = 4096;
     static const mode_t DEFAULT_MODE =
         0777;  // umask
                // で制限をかけることを前提とするため、フルアクセスに設定する
+
+   protected:
     static const int DEFAULT_FD = -1;
 
-    int fd_;
+    int fd_;  // NOLINT
 
    public:
     static void close(int fd);
 
+    Fd();
+    Fd(const Fd&);
     Fd(const char* filename, int flags, mode_t mode = DEFAULT_MODE);
     ~Fd();
 
@@ -35,8 +34,6 @@ class Fd {
     void writeAll(const std::string&) const;
 
    private:
-    Fd();
-    Fd(const Fd&);
     Fd& operator=(const Fd&);
 };
 }  // namespace fd

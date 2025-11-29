@@ -23,10 +23,6 @@ typedef unsigned short uint16_t;
 extern const char* const HTTP_VERSION;
 extern const uint16_t DEFAULT_PORT;
 extern const char* const DEFAULT_ADDRESS;
-extern const int SOCKET_DOMAIN;
-extern const int SOCKET_TYPE;
-extern const int SOCKET_PROTOCOL;
-extern const int SOCKET_BACKLOG;
 extern const char* const CONTENT_LENGTH;
 extern const char* const TRANSFER_ENCODING;
 extern const char* const CHUNKED;
@@ -94,18 +90,4 @@ class HostHeader {
    private:
     std::string address_;
     uint16_t port_;
-};
-
-class Socket {
-   public:
-    static Socket listen_tcp(const std::string& host, uint16_t port);
-    int getFd() const;
-    Socket& operator=(const Socket& rhs);
-    Socket(const Socket&);
-    ~Socket();
-    static void set_nonblocking(int fd);
-
-   private:
-    int fd_;
-    Socket();
 };

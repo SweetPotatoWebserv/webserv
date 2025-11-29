@@ -9,13 +9,29 @@
 #include <string>
 #include <vector>
 
+#include "FdException.h"
 #include "fcntl.h"
+
+fd::Fd::Fd() { fd_ = Fd::DEFAULT_FD; }
+
+fd::Fd::Fd(const Fd& other) {
+    if (other.fd_ >= 0) {
+        int new_fd = ::dup(other.fd_);
+        if (new_fd == -1) {
+            throw std::runtime_error(
+                std::string("dup failed: ").append(strerror(errno)));
+        }
+        fd_ = new_fd;
+    }
+}
 
 fd::Fd::Fd(const char* filename, int flags, mode_t mode) : fd_(Fd::DEFAULT_FD) {
     fd_ = ::open(filename, flags, mode);
     if (fd_ == Fd::DEFAULT_FD) {
-        throw fd::Exception("Failed to open file '" + std::string(filename) +
-                            "': " + std::string(strerror(errno)));
+        throw fd::Exception(std::string("Failed to open file '")
+                                .append(filename)
+                                .append("': ")
+                                .append(strerror(errno)));
     }
 }
 
@@ -57,6 +73,3 @@ void fd::Fd::close(int fd) {
 }
 
 fd::Fd::~Fd() { Fd::close(this->fd_); }
-
-fd::Exception::Exception(const std::string& message)
-    : std::runtime_error(message) {}
