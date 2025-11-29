@@ -30,10 +30,10 @@ CgiExecutor::CgiExecutor() {
 }
 
 CgiExecutor::~CgiExecutor() {
-    safeClose(pipeIn_[0]);
-    safeClose(pipeIn_[1]);
-    safeClose(pipeOut_[0]);
-    safeClose(pipeOut_[1]);
+    fd::Fd::close(pipeIn_[0]);
+    fd::Fd::close(pipeIn_[1]);
+    fd::Fd::close(pipeOut_[0]);
+    fd::Fd::close(pipeOut_[1]);
 }
 
 CgiResult CgiExecutor::execute(const std::string &scriptPath,
@@ -44,8 +44,8 @@ CgiResult CgiExecutor::execute(const std::string &scriptPath,
     }
 
     if (pipe(pipeOut_) == -1) {
-        safeClose(pipeIn_[0]);
-        safeClose(pipeIn_[1]);
+        fd::Fd::close(pipeIn_[0]);
+        fd::Fd::close(pipeIn_[1]);
         throw CgiExecutionException("Failed to create stdout pipe",
                                     HttpStatus::InternalServerError);
     }
@@ -55,10 +55,10 @@ CgiResult CgiExecutor::execute(const std::string &scriptPath,
 
     pid_ = fork();
     if (pid_ == -1) {
-        safeClose(pipeIn_[0]);
-        safeClose(pipeIn_[1]);
-        safeClose(pipeOut_[0]);
-        safeClose(pipeOut_[1]);
+        fd::Fd::close(pipeIn_[0]);
+        fd::Fd::close(pipeIn_[1]);
+        fd::Fd::close(pipeOut_[0]);
+        fd::Fd::close(pipeOut_[1]);
         throw CgiExecutionException("Failed to fork",
                                     HttpStatus::InternalServerError);
     }
@@ -68,8 +68,8 @@ CgiResult CgiExecutor::execute(const std::string &scriptPath,
         exit(EXIT_FAILURE);
     }
 
-    safeClose(pipeIn_[0]);
-    safeClose(pipeOut_[1]);
+    fd::Fd::close(pipeIn_[0]);
+    fd::Fd::close(pipeOut_[1]);
     CgiResult result;
     result.pid = pid_;
     result.readFd = pipeOut_[0];
@@ -83,7 +83,7 @@ CgiResult CgiExecutor::execute(const std::string &scriptPath,
 int CgiExecutor::initializeEpoll(int pipe_fd) {
     int epoll_fd = epoll_create(1);
     if (epoll_fd == -1) {
-        safeClose(pipe_fd);
+        fd::Fd::close(pipe_fd);
         throw CgiExecutionException("epoll_create failed",
                                     HttpStatus::InternalServerError);
     }
@@ -92,8 +92,8 @@ int CgiExecutor::initializeEpoll(int pipe_fd) {
     ev.events = EPOLLIN | EPOLLHUP | EPOLLERR;
     ev.data.fd = pipe_fd;
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, pipe_fd, &ev) == -1) {
-        safeClose(pipe_fd);
-        safeClose(epoll_fd);
+        fd::Fd::close(pipe_fd);
+        fd::Fd::close(epoll_fd);
         throw CgiExecutionException("epoll_ctl failed",
                                     HttpStatus::InternalServerError);
     }
@@ -102,23 +102,23 @@ int CgiExecutor::initializeEpoll(int pipe_fd) {
 
 void CgiExecutor::executeChildProcess(const std::string &scriptPath,
                                       char *const argv[], char *const envp[]) {
-    safeClose(pipeIn_[1]);
+    fd::Fd::close(pipeIn_[1]);
     if (dup2(pipeIn_[0], STDIN_FILENO) == -1) {
         std::cerr << "CGI Error: dup2 failed for stdin\n";
-        safeClose(pipeIn_[0]);
-        safeClose(pipeOut_[0]);
-        safeClose(pipeOut_[1]);
+        fd::Fd::close(pipeIn_[0]);
+        fd::Fd::close(pipeOut_[0]);
+        fd::Fd::close(pipeOut_[1]);
         return;
     }
-    safeClose(pipeIn_[0]);
+    fd::Fd::close(pipeIn_[0]);
 
-    safeClose(pipeOut_[0]);
+    fd::Fd::close(pipeOut_[0]);
     if (dup2(pipeOut_[1], STDOUT_FILENO) == -1) {
         std::cerr << "CGI Error: dup2 failed for stdout\n";
-        safeClose(pipeOut_[1]);
+        fd::Fd::close(pipeOut_[1]);
         return;
     }
-    safeClose(pipeOut_[1]);
+    fd::Fd::close(pipeOut_[1]);
 
     std::string dir = getScriptDirectory(scriptPath);
     if (chdir(dir.c_str()) == -1) {
@@ -146,22 +146,6 @@ void CgiExecutor::checkChildExitStatus(int status) {
                                     HttpStatus::InternalServerError);
     }
     throw CgiExecutionException("CGI crashed", HttpStatus::InternalServerError);
-}
-
-void CgiExecutor::safeClose(int &fd) {
-    if (fd == -1) {
-        return;
-    }
-
-    int tmp_fd = fd;
-    fd = -1;
-
-    if (close(tmp_fd) == -1) {
-        std::stringstream ss;
-        ss << "Failed CgiExecutor close(" << tmp_fd << ")";
-
-        perror(ss.str().c_str());
-    }
 }
 
 std::string CgiExecutor::getScriptDirectory(const std::string &scriptPath) {
