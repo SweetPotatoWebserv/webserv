@@ -153,9 +153,8 @@ std::string ResponseFactory::find_root_files(const HttpRequest& request,
     return path_name;
 }
 
-HttpResponse ResponseFactory::response_get(
-    const HttpRequest& request,
-    const RouteInfo& route) {
+HttpResponse ResponseFactory::response_get(const HttpRequest& request,
+                                           const RouteInfo& route) {
     HttpResponse response;
     std::string path_name;
     if (request.request_target_.path_.empty()) {
