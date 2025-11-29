@@ -1,8 +1,8 @@
 #include "ResponseFactory.h"
 
 #include <dirent.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 
 #include <sstream>
@@ -15,8 +15,7 @@
 
 namespace {
 
-bool build_safe_path(const std::string& root,
-                     const std::string& request_path,
+bool build_safe_path(const std::string& root, const std::string& request_path,
                      std::string& resolved_path) {
     if (!request_path.empty() && request_path[0] != '/') return false;
 
@@ -112,8 +111,7 @@ std::string ResponseFactory::find_index_files(const HttpRequest& request,
             continue;
         }
         struct stat status;
-        if (stat(path_name.c_str(), &status) != 0 ||
-            !S_ISREG(status.st_mode)) {
+        if (stat(path_name.c_str(), &status) != 0 || !S_ISREG(status.st_mode)) {
             continue;
         }
         std::vector<char> buffer;
@@ -168,8 +166,8 @@ HttpResponse ResponseFactory::response_get(
         return render_error(HttpStatus::InternalServerError, route);
     }
 
-    if (request.request_target_.path_[request.request_target_.path_.size() - 1] ==
-        '/') {
+    if (request.request_target_
+            .path_[request.request_target_.path_.size() - 1] == '/') {
         path_name = find_index_files(request, response, route);
         if (path_name.empty()) {
             std::string file_path;
@@ -236,8 +234,8 @@ HttpResponse ResponseFactory::response_autoindex(const HttpRequest& request,
     HttpResponse response;
 
     std::string file_path;
-    if (!build_safe_path(route.resolve_.root_.value_, request.request_target_.path_,
-                         file_path)) {
+    if (!build_safe_path(route.resolve_.root_.value_,
+                         request.request_target_.path_, file_path)) {
         return render_error(HttpStatus::Forbidden, route);
     }
 
