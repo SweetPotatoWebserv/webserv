@@ -8,25 +8,33 @@
 #include <string>
 #include <vector>
 
-class OpenException : public std::runtime_error {
+namespace fd {
+class Exception : public std::runtime_error {
    public:
-    explicit OpenException(const std::string& message);
+    explicit Exception(const std::string& message);
 };
 
 class Fd {
+   private:
+    static const int DEFAULT_BUFFER_SIZE = 4096;
+    static const mode_t DEFAULT_MODE = 0777;  // umask で制限をかけることを前提とするため、フルアクセスに設定する
+    static const int DEFAULT_FD = -1;
+
+    int fd_;
+
    public:
+    static void close(int fd);
+
     Fd(const char* filename, int flags, mode_t mode = DEFAULT_MODE);
     ~Fd();
+
     int getFd() const;
-    std::vector<char> FreadAll() const;
-    void FwriteAll(const std::string&) const;
-    static void SafeClose(int fd);
+    void readAll(std::vector<char>& response) const;
+    void writeAll(const std::string&) const;
 
    private:
     Fd();
     Fd(const Fd&);
     Fd& operator=(const Fd&);
-    int fd_;
-    static const int DEFAULT_BUFFER_SIZE = 4096;
-    static const mode_t DEFAULT_MODE = 0644;
 };
+}  // namespace fd
