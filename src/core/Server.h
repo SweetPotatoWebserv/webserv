@@ -9,6 +9,7 @@
 #include "../event/Event.h"
 #include "../http/Router.h"
 #include "Common.h"
+#include "Socket.h"
 
 class Server {
    public:
@@ -16,7 +17,7 @@ class Server {
     void start();
 
    private:
-    Socket listen_;
+    const fd::Socket listen_;
     Event& event_;
     Router& router_;
     const ServerConfig server_config_;

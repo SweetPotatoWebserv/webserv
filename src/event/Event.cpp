@@ -3,7 +3,9 @@
 #include <sys/epoll.h>
 
 #include <cstring>
-#include "../http/ClientHandlerManager.h"
+
+#include "../core/Fd.h"
+#include "../http/ClientHandler.h"
 
 Event::Event() {
     epoll_fd_ = epoll_create(1);
@@ -88,7 +90,7 @@ void Event::run() {  // NOLINT
 
 Event::~Event() {
     if (epoll_fd_ >= 0) {
-        ::close(epoll_fd_);
+        fd::Fd::close(epoll_fd_);
     }
     for (std::map<int, EventData*>::iterator it = registry_.begin();
          it != registry_.end(); ++it) {

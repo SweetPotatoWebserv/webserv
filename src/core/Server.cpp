@@ -3,8 +3,8 @@
 #include "../http/ClientHandler.h"
 
 Server::Server(Event& event, Router& router, const ServerConfig& server_config)
-    : listen_(Socket::listen_tcp(server_config.getListens().address,
-                                 server_config.getListens().port)),
+    : listen_(fd::Socket::listen_tcp(server_config.getListens().address,
+                                     server_config.getListens().port)),
       event_(event),
       router_(router),
       server_config_(server_config) {}
@@ -23,7 +23,7 @@ void Server::on_acceptable(int fd, uint32_t event, void* self) {  // NOLINT
         accept(fd, reinterpret_cast<struct sockaddr*>(&client), &len);
     if (client_fd == -1) return;
     std::cout << "accepted\n";
-    Socket::set_nonblocking(client_fd);
+    fd::Socket::set_nonblocking(client_fd);
     ClientHandler* handler = new ClientHandler(
         client_fd, server->event_, server->router_, server->server_config_);
     server->event_.add(client_fd, event,

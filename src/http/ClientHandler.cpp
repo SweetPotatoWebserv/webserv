@@ -9,6 +9,7 @@
 #include <cstring>
 #include <ctime>
 
+#include "../core/Fd.h"
 #include "../core/String.h"
 #include "ClientHandlerManager.h"
 #include "HttpException.h"
@@ -52,12 +53,12 @@ void ClientHandler::check_cgi_timeout() {
         // パイプのクローズと監視削除
         if (cgi_session_.readFd != -1) {
             event_.del(cgi_session_.readFd);
-            close(cgi_session_.readFd);
+            fd::Fd::close(cgi_session_.readFd);
             cgi_session_.readFd = -1;
         }
         if (cgi_session_.writeFd != -1) {
             event_.del(cgi_session_.writeFd);
-            close(cgi_session_.writeFd);
+            fd::Fd::close(cgi_session_.writeFd);
             cgi_session_.writeFd = -1;
         }
 
@@ -98,11 +99,11 @@ void ClientHandler::on_close() {
 void ClientHandler::cleanup() {
     if (cgi_session_.readFd != -1) {
         event_.del(cgi_session_.readFd);
-        close(cgi_session_.readFd);
+        fd::Fd::close(cgi_session_.readFd);
     }
     if (cgi_session_.writeFd != -1) {
         event_.del(cgi_session_.writeFd);
-        close(cgi_session_.writeFd);
+        fd::Fd::close(cgi_session_.writeFd);
     }
     if (cgi_session_.pid != -1) {
         kill(cgi_session_.pid, SIGKILL);
@@ -110,7 +111,8 @@ void ClientHandler::cleanup() {
         cgi_session_.pid = -1;
     }
     event_.del(fd_);
-    ::close(fd_);
+    fd::Fd::close(fd_);
+    delete this;
 }
 
 bool ClientHandler::is_request_ready(const std::string& buffer) {
@@ -189,7 +191,7 @@ void ClientHandler::on_readable() {
                                    ClientHandler::on_event),
                                this);
                 } else {
-                    close(cgi_session_.writeFd);
+                    fd::Fd::close(cgi_session_.writeFd);
                     cgi_session_.writeFd = -1;
                 }
 
@@ -272,12 +274,12 @@ void ClientHandler::on_cgi_read() {
     } else {
         if (cgi_session_.readFd != -1) {
             event_.del(cgi_session_.readFd);
-            close(cgi_session_.readFd);
+            fd::Fd::close(cgi_session_.readFd);
             cgi_session_.readFd = -1;
         }
         if (cgi_session_.writeFd != -1) {
             event_.del(cgi_session_.writeFd);
-            close(cgi_session_.writeFd);
+            fd::Fd::close(cgi_session_.writeFd);
             cgi_session_.writeFd = -1;
         }
 
@@ -291,12 +293,12 @@ void ClientHandler::finish_cgi_process() {
 
     if (fd != -1) {
         event_.del(fd);
-        close(fd);
+        fd::Fd::close(fd);
         cgi_session_.readFd = -1;
     }
     if (cgi_session_.writeFd != -1) {
         event_.del(cgi_session_.writeFd);
-        close(cgi_session_.writeFd);
+        fd::Fd::close(cgi_session_.writeFd);
         cgi_session_.writeFd = -1;
     }
 

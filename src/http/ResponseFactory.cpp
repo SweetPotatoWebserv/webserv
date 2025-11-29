@@ -9,6 +9,7 @@
 #include <stdexcept>
 
 #include "../core/Fd.h"
+#include "../core/FdException.h"
 #include "HttpParser.h"
 #include "MimeTypes.h"
 #include "Router.h"
@@ -83,9 +84,9 @@ HttpResponse ResponseFactory::render_error(int status_code,
 
     std::vector<char> buffer;
     try {
-        Fd fd(error_page_directive.target.c_str(), O_RDONLY);
-        buffer = fd.FreadAll();
-    } catch (const OpenException& e) {
+        fd::Fd fd(error_page_directive.target.c_str(), O_RDONLY);
+        fd.readAll(buffer);
+    } catch (const fd::Exception& e) {
         std::cerr << e.what() << '\n';
         return render_default_error_page(status_code);
     }
@@ -116,9 +117,9 @@ std::string ResponseFactory::find_index_files(const HttpRequest& request,
         }
         std::vector<char> buffer;
         try {
-            Fd fd(path_name.c_str(), O_RDONLY);
-            buffer = fd.FreadAll();
-        } catch (const OpenException& e) {
+            fd::Fd fd(path_name.c_str(), O_RDONLY);
+            fd.readAll(buffer);
+        } catch (const fd::Exception& e) {
             std::cerr << e.what() << '\n';
             continue;
         }
@@ -143,9 +144,9 @@ std::string ResponseFactory::find_root_files(const HttpRequest& request,
 
     std::vector<char> buffer;
     try {
-        Fd fd(path_name.c_str(), O_RDONLY);
-        buffer = fd.FreadAll();
-    } catch (const OpenException& e) {
+        fd::Fd fd(path_name.c_str(), O_RDONLY);
+        fd.readAll(buffer);
+    } catch (const fd::Exception& e) {
         std::cerr << e.what() << '\n';
         return "";
     }
@@ -212,8 +213,8 @@ HttpResponse ResponseFactory::response_post(const HttpRequest& request,
     std::string filename = ss.str();
     std::string fullpath = dir + filename;
     try {
-        Fd fd(fullpath.c_str(), O_CREAT | O_WRONLY | O_TRUNC);
-        fd.FwriteAll(request.body_);
+        fd::Fd fd(fullpath.c_str(), O_CREAT | O_WRONLY | O_TRUNC);
+        fd.writeAll(request.body_);
     } catch (const std::runtime_error& e) {
         std::cerr << e.what() << '\n';
         return render_error(HttpStatus::InternalServerError, route);
