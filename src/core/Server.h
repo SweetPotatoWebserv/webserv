@@ -8,18 +8,21 @@
 
 #include "../event/Event.h"
 #include "../http/Router.h"
+#include "../http/ClientHandlerManager.h"
 #include "Common.h"
 #include "Socket.h"
 
 class Server {
    public:
-    Server(Event& event, Router& router, const ServerConfig& config);
+    Server(Event& event, Router& router, const ServerConfig& config, ClientHandlerManager& manager);
     void start();
 
    private:
+    static void on_timeout(void *self);
     const fd::Socket listen_;
     Event& event_;
     Router& router_;
     const ServerConfig server_config_;
+    ClientHandlerManager manager_;
     static void on_acceptable(int fd, uint32_t event, void* self);
 };

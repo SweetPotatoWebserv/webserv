@@ -19,51 +19,34 @@
 const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
 
 ClientHandler::ClientHandler(int fd, Event& event, Router& router,
-                             ServerConfig server_config, ClientHandlerManager manager)
+                             ServerConfig server_config)
     : fd_(fd),
       event_(event),
       router_(router),
-      server_config_(server_config), // NOLINT,
-      manager_(manager){
-}
+      server_config_(server_config), // NOLINT
+      should_close_(false) {}
 
-void ClientHandler::check_request_timeout() {
+bool ClientHandler::is_request_timeout() const {
     std::time_t now = std::time(NULL);
-
-    if (std::difftime(now, accept_time_.getTime()) >= TIMEOUT_SEC) {
-        manager_->notifyClosed();
-    }
+    return (std::difftime(now, accept_time_.getTime()) >= TIMEOUT_SEC);
 }
 
-void ClientHandler::check_cgi_timeout() {
+bool ClientHandler::is_cgi_timeout() const {
     // CGIが実行中でなければ無視
     if (cgi_session_.pid == -1) {
-        return;
+        return false;
     }
 
     std::time_t now = std::time(NULL);
-    if (std::difftime(now, cgi_session_.startTime) >= TIMEOUT_SEC) {
-        kill(cgi_session_.pid, SIGKILL);
-        waitpid(cgi_session_.pid, NULL, 0);
+    return (std::difftime(now, cgi_session_.startTime) >= TIMEOUT_SEC);
+}
 
-        // プロセス回収済みなのでPIDをリセット
-        // これで on_cgi_read 側での二重 waitpid を防ぐ
-        cgi_session_.pid = -1;
+void ClientHandler::handle_cgi_timeout() {
+    kill(cgi_session_.pid, SIGKILL);
+    waitpid(cgi_session_.pid, NULL, 0);
 
-        // パイプのクローズと監視削除
-        if (cgi_session_.readFd != -1) {
-            event_.del(cgi_session_.readFd);
-            fd::Fd::close(cgi_session_.readFd);
-            cgi_session_.readFd = -1;
-        }
-        if (cgi_session_.writeFd != -1) {
-            event_.del(cgi_session_.writeFd);
-            fd::Fd::close(cgi_session_.writeFd);
-            cgi_session_.writeFd = -1;
-        }
-
-        handle_cgi_error(HttpStatus::RequestTimeout);
-    }
+    cgi_session_.pid = -1;
+    handle_cgi_error(HttpStatus::RequestTimeout);
 }
 
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
@@ -93,7 +76,7 @@ void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
 }
 
 void ClientHandler::on_close() {
-    manager_->notifyClosed(this);
+    should_close_ = true;
 }
 
 void ClientHandler::cleanup() {

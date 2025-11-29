@@ -4,17 +4,17 @@
 #include "../event/Event.h"
 
 class ClientHandler;
-class CgiSession;
 class ClientHandlerManager {
+    private:
+        std::vector<ClientHandler*> handlers_;
+
     public:
-        ClientHandlerManager();
-        ~ClientHandlerManager();
+        void add(ClientHandler* handler) { handlers_.push_back(handler); }
+        std::vector<ClientHandler*> getHandlers() const { return handlers_; }
+
         void check_timeout_all();
         void notifyClosed(ClientHandler* handler);
 
-    private:
-        std::vector<ClientHandler*> handlers_;
-        Event& event_;
-        void check_cgi_timeout(CgiSession& cgi_session);
-        std::vector<ClientHandler> client_handlers_;
+        ClientHandlerManager() {};
+        ~ClientHandlerManager() {};
 };

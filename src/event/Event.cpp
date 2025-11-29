@@ -5,7 +5,6 @@
 #include <cstring>
 
 #include "../core/Fd.h"
-#include "../http/ClientHandler.h"
 
 Event::Event() {
     epoll_fd_ = epoll_create(1);
@@ -65,11 +64,11 @@ void Event::del(int fd) {  // NOLINT
     registry_.erase(iter);
 }
 
-void Event::run() {  // NOLINT
+void Event::run() {
     struct epoll_event events[MAX_EVENTS];
 
     for (;;) {
-        int number_of_fd = epoll_wait(epoll_fd_, events, MAX_EVENTS, -1);
+        int number_of_fd = epoll_wait(epoll_fd_, events, MAX_EVENTS, TIMEOUT_MS);
         if (number_of_fd == -1) {
             throw std::runtime_error("epoll_wait failed:" +
                                      std::string(std::strerror(errno)));
@@ -80,11 +79,12 @@ void Event::run() {  // NOLINT
             if (it == registry_.end()) {
                 continue;
             }
-
             EventData* data = it->second;
             data->callback(data->fd, events[i].events, data->user);
         }
-        ClientHandlerManager::check_timeout_all();
+        if (timeout_callback_) {
+            timeout_callback_(timeout_user_);
+        }
     }
 }
 
@@ -97,4 +97,9 @@ Event::~Event() {
         delete it->second;
     }
     registry_.clear();
+}
+
+void Event::set_timeout_callback(TimeoutCallback callback, void* user) {
+    timeout_callback_ = callback;
+    timeout_user_ = user;
 }

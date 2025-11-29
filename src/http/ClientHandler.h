@@ -1,7 +1,6 @@
 #pragma once
 #include "../cgi/handler_cgi.h"
 #include "../event/Event.h"
-#include "ClientHandlerManager.h"
 #include "HttpParser.h"
 #include "HttpResponse.h"
 #include "ResponseFactory.h"
@@ -10,14 +9,16 @@
 class ClientHandler {
    public:
     ClientHandler(int fd, Event& event, Router& router,
-                  ServerConfig server_config, ClientHandlerManager manager);
+                  ServerConfig server_config);
     static const char* const TRANSFER_ENCODING_CHUNKED_END;
     void handle_cgi_error(int status_code);
     const CgiSession& getCgiSession() const { return cgi_session_; }
     void cleanup();
     static void on_event(int fd, uint32_t event, void* self);
-    void check_cgi_timeout();
-    void check_request_timeout();
+    bool is_cgi_timeout() const;
+    bool is_request_timeout() const;
+    void handle_cgi_timeout();
+    bool should_close() const { return should_close_; }
 
    private:
     int fd_;
@@ -30,7 +31,7 @@ class ClientHandler {
     HttpResponse response_;
     CgiProcess cgi_process_;
     CgiSession cgi_session_;
-    ClientHandlerManager manager_;
+    bool should_close_;
     void finish_cgi_process();
     void on_close();
     void on_readable();
