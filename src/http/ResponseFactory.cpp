@@ -1,6 +1,7 @@
 #include "ResponseFactory.h"
 
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 
@@ -11,6 +12,39 @@
 #include "HttpParser.h"
 #include "MimeTypes.h"
 #include "Router.h"
+
+namespace {
+
+bool build_safe_path(const std::string& root, const std::string& request_path,
+                     std::string& resolved_path) {
+    if (!request_path.empty() && request_path[0] != '/') return false;
+
+    std::vector<std::string> segments;
+    std::stringstream ss(request_path);
+    std::string segment;
+    while (std::getline(ss, segment, '/')) {
+        if (segment.empty() || segment == ".") continue;
+        if (segment == "..") {
+            if (segments.empty()) return false;
+            segments.pop_back();
+        } else {
+            segments.push_back(segment);
+        }
+    }
+
+    std::ostringstream os;
+    os << root;
+    if (!root.empty() && root[root.size() - 1] != '/') os << '/';
+    for (std::vector<std::string>::size_type i = 0; i < segments.size(); ++i) {
+        os << segments[i];
+        if (i + 1 < segments.size()) os << '/';
+    }
+
+    resolved_path = os.str();
+    return true;
+}
+
+}  // namespace
 
 HttpResponse ResponseFactory::render_default_error_page(int status_code) {
     HttpResponse response;
@@ -64,12 +98,22 @@ HttpResponse ResponseFactory::render_error(int status_code,
     return response;
 }
 
-std::string ResponseFactory::find_index_files(const HttpRequest& request, HttpResponse& response, const RouteInfo& route) {
+std::string ResponseFactory::find_index_files(const HttpRequest& request,
+                                              HttpResponse& response,
+                                              const RouteInfo& route) {
     std::string path_name;
     for (std::vector<std::string>::const_iterator index_files =
-            route.resolve_.index_files_.begin();
-            index_files != route.resolve_.index_files_.end(); ++index_files) {
-        path_name = route.resolve_.root_.value_ + request.request_target_.path_ + *index_files;
+             route.resolve_.index_files_.begin();
+         index_files != route.resolve_.index_files_.end(); ++index_files) {
+        if (!build_safe_path(route.resolve_.root_.value_,
+                             request.request_target_.path_ + *index_files,
+                             path_name)) {
+            continue;
+        }
+        struct stat status;
+        if (stat(path_name.c_str(), &status) != 0 || !S_ISREG(status.st_mode)) {
+            continue;
+        }
         std::vector<char> buffer;
         try {
             Fd fd(path_name.c_str(), O_RDONLY);
@@ -84,43 +128,55 @@ std::string ResponseFactory::find_index_files(const HttpRequest& request, HttpRe
     return path_name;
 }
 
-std::string ResponseFactory::find_root_files(const HttpRequest& request, HttpResponse& response, const RouteInfo& route) {
+std::string ResponseFactory::find_root_files(const HttpRequest& request,
+                                             HttpResponse& response,
+                                             const RouteInfo& route) {
     std::string path_name;
-    DIR *directory = NULL;
-    if (route.resolve_.root_.is_set_)
-        directory = opendir(route.resolve_.root_.value_.c_str());
-    if (directory == NULL) {
-        throw std::runtime_error("Failed to open directory '" + route.resolve_.root_.value_ + "': " + std::string(strerror(errno)));
+    if (!build_safe_path(route.resolve_.root_.value_,
+                         request.request_target_.path_, path_name)) {
+        return "";
     }
-    struct dirent* entry;
-    while ((entry = readdir(directory)) != NULL) {
-        std::vector<char> buffer;
-        // 先頭のスラッシュを削除
-        if (entry->d_name == request.request_target_.path_.substr(1)) {
-            try {
-                path_name = route.resolve_.root_.value_ + request.request_target_.path_;
-                Fd fd(path_name.c_str(), O_RDONLY);
-                buffer = fd.FreadAll();
-            } catch(const OpenException& e) {
-                std::cerr << e.what() << '\n';
-            }
-            response.body_.assign(buffer.begin(), buffer.end());
-            break;
-        }
+    struct stat status;
+    if (stat(path_name.c_str(), &status) != 0 || !S_ISREG(status.st_mode)) {
+        return "";
     }
+
+    std::vector<char> buffer;
+    try {
+        Fd fd(path_name.c_str(), O_RDONLY);
+        buffer = fd.FreadAll();
+    } catch (const OpenException& e) {
+        std::cerr << e.what() << '\n';
+        return "";
+    }
+    response.body_.assign(buffer.begin(), buffer.end());
     return path_name;
 }
 
-HttpResponse ResponseFactory::response_get(const HttpRequest& request, // NOLINT
+HttpResponse ResponseFactory::response_get(const HttpRequest& request,
                                            const RouteInfo& route) {
     HttpResponse response;
     std::string path_name;
-    if (request.request_target_.path_[request.request_target_.path_.size()-1] == '/') {
+    if (request.request_target_.path_.empty()) {
+        return render_error(HttpStatus::BadRequest, route);
+    }
+
+    if (!route.resolve_.root_.is_set_) {
+        return render_error(HttpStatus::InternalServerError, route);
+    }
+
+    if (request.request_target_
+            .path_[request.request_target_.path_.size() - 1] == '/') {
         path_name = find_index_files(request, response, route);
-        if (path_name == "") {
-            std::string file_path = route.resolve_.root_.value_ + request.request_target_.path_;
+        if (path_name.empty()) {
+            std::string file_path;
+            if (!build_safe_path(route.resolve_.root_.value_,
+                                 request.request_target_.path_, file_path)) {
+                return render_error(HttpStatus::Forbidden, route);
+            }
             struct stat status;
-            if (stat(file_path.c_str(), &status) == 0 && S_ISDIR(status.st_mode)) {
+            if (stat(file_path.c_str(), &status) == 0 &&
+                S_ISDIR(status.st_mode)) {
                 if (route.resolve_.autoindex_.is_set_ &&
                     route.resolve_.autoindex_.value_) {
                     return response_autoindex(request, route);
@@ -131,6 +187,9 @@ HttpResponse ResponseFactory::response_get(const HttpRequest& request, // NOLINT
         }
     } else {
         path_name = find_root_files(request, response, route);
+        if (path_name.empty()) {
+            return render_error(HttpStatus::NotFound, route);
+        }
     }
 
     response.status_code_ = HttpStatus::OK;
@@ -173,8 +232,11 @@ HttpResponse ResponseFactory::response_autoindex(const HttpRequest& request,
                                                  const RouteInfo& route) {
     HttpResponse response;
 
-    std::string file_path =
-        route.resolve_.root_.value_ + request.request_target_.path_;
+    std::string file_path;
+    if (!build_safe_path(route.resolve_.root_.value_,
+                         request.request_target_.path_, file_path)) {
+        return render_error(HttpStatus::Forbidden, route);
+    }
 
     DIR* directory = opendir(file_path.c_str());
     if (directory == NULL) {
