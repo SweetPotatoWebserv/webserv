@@ -16,18 +16,9 @@ fd::Socket::Socket() {
     }
 }
 
-fd::Socket::Socket(const Socket& other) : Fd(other) {
-    if (other.fd_ >= 0) {
-        int new_fd = ::dup(other.fd_);
-        if (new_fd == -1) {
-            throw std::runtime_error(
-                std::string("dup failed: ").append(strerror(errno)));
-        }
-        fd_ = new_fd;
-    }
-}
+fd::Socket::Socket(const Socket& other) : Fd(other) {}
 
-fd::Socket::~Socket() { fd::Fd::close(fd_); }
+fd::Socket::~Socket() {}
 
 fd::Socket fd::Socket::listen_tcp(const std::string& host, uint16_t port) {
     fd::Socket server_fd;

@@ -14,7 +14,7 @@
 
 fd::Fd::Fd() { fd_ = Fd::DEFAULT_FD; }
 
-fd::Fd::Fd(const Fd& other) {
+fd::Fd::Fd(const Fd& other) : fd_(Fd::DEFAULT_FD) {
     if (other.fd_ >= 0) {
         int new_fd = ::dup(other.fd_);
         if (new_fd == -1) {
