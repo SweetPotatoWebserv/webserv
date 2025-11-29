@@ -18,11 +18,51 @@
 const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
 
 ClientHandler::ClientHandler(int fd, Event& event, Router& router,
-                             ServerConfig server_config)
+                             ServerConfig server_config, ClientHandlerManager manager)
     : fd_(fd),
       event_(event),
       router_(router),
-      server_config_(server_config) {  // NOLINT
+      server_config_(server_config), // NOLINT,
+      manager_(manager){
+}
+
+void ClientHandler::check_request_timeout() {
+    std::time_t now = std::time(NULL);
+
+    if (std::difftime(now, accept_time_.getTime()) >= TIMEOUT_SEC) {
+        manager_->notifyClosed();
+    }
+}
+
+void ClientHandler::check_cgi_timeout() {
+    // CGIが実行中でなければ無視
+    if (cgi_session_.pid == -1) {
+        return;
+    }
+
+    std::time_t now = std::time(NULL);
+    if (std::difftime(now, cgi_session_.startTime) >= TIMEOUT_SEC) {
+        kill(cgi_session_.pid, SIGKILL);
+        waitpid(cgi_session_.pid, NULL, 0);
+
+        // プロセス回収済みなのでPIDをリセット
+        // これで on_cgi_read 側での二重 waitpid を防ぐ
+        cgi_session_.pid = -1;
+
+        // パイプのクローズと監視削除
+        if (cgi_session_.readFd != -1) {
+            event_.del(cgi_session_.readFd);
+            close(cgi_session_.readFd);
+            cgi_session_.readFd = -1;
+        }
+        if (cgi_session_.writeFd != -1) {
+            event_.del(cgi_session_.writeFd);
+            close(cgi_session_.writeFd);
+            cgi_session_.writeFd = -1;
+        }
+
+        handle_cgi_error(HttpStatus::RequestTimeout);
+    }
 }
 
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT

@@ -8,6 +8,7 @@ class HttpDate {
    public:
     static std::string getCurrentGMT();
     HttpDate();
+    const std::time_t& getTime() const { return time_; }
 
    private:
     std::time_t time_;

@@ -1,12 +1,14 @@
 #pragma once
 
 #include <vector>
-#include "ClientHandler.h"
 #include "../event/Event.h"
 
+class ClientHandler;
+class CgiSession;
 class ClientHandlerManager {
     public:
-        check_reponse_timeout();
+        ClientHandlerManager();
+        ~ClientHandlerManager();
         void check_timeout_all();
         void notifyClosed(ClientHandler* handler);
 
@@ -15,5 +17,4 @@ class ClientHandlerManager {
         Event& event_;
         void check_cgi_timeout(CgiSession& cgi_session);
         std::vector<ClientHandler> client_handlers_;
-        static const int CGI_TIMEOUT_SEC = 5;
 };

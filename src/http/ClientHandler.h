@@ -10,12 +10,14 @@
 class ClientHandler {
    public:
     ClientHandler(int fd, Event& event, Router& router,
-                  ServerConfig server_config);
+                  ServerConfig server_config, ClientHandlerManager manager);
     static const char* const TRANSFER_ENCODING_CHUNKED_END;
     void handle_cgi_error(int status_code);
     const CgiSession& getCgiSession() const { return cgi_session_; }
     void cleanup();
     static void on_event(int fd, uint32_t event, void* self);
+    void check_cgi_timeout();
+    void check_request_timeout();
 
    private:
     int fd_;
@@ -30,8 +32,6 @@ class ClientHandler {
     CgiSession cgi_session_;
     ClientHandlerManager manager_;
     void finish_cgi_process();
-    static const int BUFFER_SIZE = 4096;
-    static const int RECV_FLG = 0;
     void on_close();
     void on_readable();
     void on_writable();
@@ -44,4 +44,7 @@ class ClientHandler {
     static bool is_complete_transfer(
         const std::string& buffer, const std::string& message_head,
         const std::vector<std::string>& transfer_encoding);
+    static const int BUFFER_SIZE = 4096;
+    static const int RECV_FLG = 0;
+    static const int TIMEOUT_SEC = 5;
 };

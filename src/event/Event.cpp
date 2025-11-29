@@ -3,6 +3,7 @@
 #include <sys/epoll.h>
 
 #include <cstring>
+#include "../http/ClientHandlerManager.h"
 
 Event::Event() {
     epoll_fd_ = epoll_create(1);
@@ -81,7 +82,7 @@ void Event::run() {  // NOLINT
             EventData* data = it->second;
             data->callback(data->fd, events[i].events, data->user);
         }
-        ClientHandler::check_timeout_all();
+        ClientHandlerManager::check_timeout_all();
     }
 }
 
