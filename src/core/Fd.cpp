@@ -14,7 +14,8 @@
 Fd::Fd(const char* filename, int flags, mode_t mode) : fd_(-1) {
     fd_ = ::open(filename, flags, mode);
     if (fd_ == -1) {
-        throw OpenException("open() failed: " + std::string(strerror(errno)));
+        throw OpenException("Failed to open file '" + std::string(filename) +
+                            "': " + std::string(strerror(errno)));
     }
 }
 

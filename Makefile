@@ -61,7 +61,7 @@ test_cgi: build
 
 internal_test_cgi:
 	@make clean
-	
+
 	@make $(CGI_TEST_NAME)
 
 	@echo "--- Setting up test permissions (inside container) ---"
@@ -71,13 +71,13 @@ internal_test_cgi:
 	@chmod 755 ./cgi-bin/test_headers.py
 	@chmod 755 ./cgi-bin/timeout.py
 	@chmod 755 ./cgi-bin/cwd_test.py
-	
+
 	@echo "--- Verifying permissions in ./cgi-bin/ ---"
 	@ls -la ./cgi-bin/
 
 	@echo "---Run CGI TEST (inside container)---"
 	./$(CGI_TEST_NAME)
-	
+
 $(CGI_TEST_NAME): $(CGI_TEST_OBJ)
 	$(CXX) $(CXXFLAGS) -o $(CGI_TEST_NAME) $(CGI_TEST_OBJ)
 
@@ -101,5 +101,11 @@ run:
 	docker run -it --rm -p 8080:8080 --mount type=bind,src="$(CURDIR)",target=/src $(DEV_IMAGE_NAME)
 
 up: build run
+
+format:
+	clang-format -i src/*/*.cpp src/*/*.h
+
+linter:
+	clang-tidy src/*/*.cpp -- -I./src -std=c++98
 
 .PHONY: all clean fclean re test run-test build run up
