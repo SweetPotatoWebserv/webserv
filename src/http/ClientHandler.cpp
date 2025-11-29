@@ -10,14 +10,10 @@
 #include <ctime>
 
 #include "../core/String.h"
+#include "ClientHandlerManager.h"
 #include "HttpException.h"
 #include "ResponseFactory.h"
 #include "Router.h"
-
-std::vector<ClientHandler*>& ClientHandler::getAllHandlers() {
-    static std::vector<ClientHandler*> handlers;
-    return handlers;
-}
 
 const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
 
@@ -27,7 +23,6 @@ ClientHandler::ClientHandler(int fd, Event& event, Router& router,
       event_(event),
       router_(router),
       server_config_(server_config) {  // NOLINT
-    getAllHandlers().push_back(this);
 }
 
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
@@ -57,14 +52,10 @@ void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
 }
 
 void ClientHandler::on_close() {
-    std::vector<ClientHandler*>& handlers = getAllHandlers();
-    for (std::vector<ClientHandler*>::iterator it = handlers.begin();
-         it != handlers.end(); ++it) {
-        if (*it == this) {
-            handlers.erase(it);
-            break;
-        }
-    }
+    manager_->notifyClosed(this);
+}
+
+void ClientHandler::cleanup() {
     if (cgi_session_.readFd != -1) {
         event_.del(cgi_session_.readFd);
         close(cgi_session_.readFd);
@@ -80,7 +71,6 @@ void ClientHandler::on_close() {
     }
     event_.del(fd_);
     ::close(fd_);
-    delete this;
 }
 
 bool ClientHandler::is_request_ready(const std::string& buffer) {

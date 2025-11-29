@@ -5,8 +5,6 @@
 #include <cstring>
 #include <stdexcept>
 
-#include "../http/ClientHandler.h"
-
 Event::Event() {
     epoll_fd_ = epoll_create(1);
     if (epoll_fd_ == -1) {
@@ -26,7 +24,7 @@ void Event::add(int fd, uint32_t events, EventCallback callback,  // NOLINT
     struct epoll_event ev;
     std::memset(&ev, 0, sizeof(ev));
     ev.events = events;
-    // ev.data.ptr = data;
+    ev.data.ptr = data;
     ev.data.fd = fd;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) == -1) {

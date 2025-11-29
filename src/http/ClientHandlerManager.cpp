@@ -5,6 +5,15 @@
 
 
 
+void ClientHandlerManager::notifyClosed(ClientHandler* handler) {
+    std::vector<ClientHandler*>::iterator handler_itr = std::find(handlers_.begin(), handlers_.end(), handler);
+    if (handler_itr != handlers_.end()) {
+        handlers_.erase(handler_itr);
+    }
+    handler->cleanup();
+    delete handler;
+}
+
 void check_cgi_timeout(CgiSession& cgi_session) {
 
 }
@@ -40,4 +49,3 @@ void ClientHandlerManager::check_timeout_all() {
         }
     }
 }
-
