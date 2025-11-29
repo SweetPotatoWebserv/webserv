@@ -103,6 +103,7 @@ std::string ResponseFactory::find_index_files(const HttpRequest& request,
                                               HttpResponse& response,
                                               const RouteInfo& route) {
     std::string path_name;
+    if (!route.resolve_.root_.is_set_) return path_name;
     for (std::vector<std::string>::const_iterator index_files =
              route.resolve_.index_files_.begin();
          index_files != route.resolve_.index_files_.end(); ++index_files) {
@@ -164,6 +165,10 @@ HttpResponse ResponseFactory::response_get(
     std::string path_name;
     if (request.request_target_.path_.empty()) {
         return render_error(HttpStatus::BadRequest, route);
+    }
+
+    if (!route.resolve_.root_.is_set_) {
+        return render_error(HttpStatus::InternalServerError, route);
     }
 
     if (request.request_target_.path_[request.request_target_.path_.size() - 1] ==
