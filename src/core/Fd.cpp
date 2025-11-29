@@ -9,54 +9,67 @@
 #include <string>
 #include <vector>
 
+#include "FdException.h"
 #include "fcntl.h"
 
-Fd::Fd(const char* filename, int flags, mode_t mode) : fd_(-1) {
-    fd_ = ::open(filename, flags, mode);
-    if (fd_ == -1) {
-        throw OpenException("Failed to open file '" + std::string(filename) +
-                            "': " + std::string(strerror(errno)));
+fd::Fd::Fd() { fd_ = Fd::DEFAULT_FD; }
+
+fd::Fd::Fd(const Fd& other) : fd_(Fd::DEFAULT_FD) {
+    if (other.fd_ >= 0) {
+        int new_fd = ::dup(other.fd_);
+        if (new_fd == -1) {
+            throw std::runtime_error(
+                std::string("dup failed: ").append(strerror(errno)));
+        }
+        fd_ = new_fd;
     }
 }
 
-int Fd::getFd() const { return fd_; }
+fd::Fd::Fd(const char* filename, int flags, mode_t mode) : fd_(Fd::DEFAULT_FD) {
+    fd_ = ::open(filename, flags, mode);
+    if (fd_ == Fd::DEFAULT_FD) {
+        throw fd::Exception(std::string("Failed to open file '")
+                                .append(filename)
+                                .append("': ")
+                                .append(strerror(errno)));
+    }
+}
 
-std::vector<char> Fd::FreadAll() const {
-    std::vector<char> result;
-    char buf[DEFAULT_BUFFER_SIZE];
+int fd::Fd::getFd() const { return fd_; }
+
+void fd::Fd::readAll(std::vector<char>& response) const {
+    response.clear();
+    char buf[Fd::DEFAULT_BUFFER_SIZE];
 
     while (true) {
-        ssize_t len = ::read(fd_, buf, DEFAULT_BUFFER_SIZE);
+        ssize_t len = ::read(fd_, buf, Fd::DEFAULT_BUFFER_SIZE);
         if (len == -1) {
-            throw std::runtime_error("read() failed: " +
-                                     std::string(strerror(errno)));
+            throw std::runtime_error(
+                std::string("read() failed: ").append(strerror(errno)));
         }
         if (len == 0) break;
-        result.insert(result.end(), buf, buf + len);
+        response.insert(response.end(), buf, buf + len);
     }
-    return result;
 }
 
-void Fd::FwriteAll(const std::string& buf) const {
+void fd::Fd::writeAll(const std::string& buf) const {
     std::string::size_type total_written = 0;
     std::string::size_type buf_size = buf.size();
     while (total_written < buf_size) {
         ssize_t len =
             ::write(fd_, buf.c_str() + total_written, buf_size - total_written);
         if (len == -1)
-            throw std::runtime_error("write() failed: " +
-                                     std::string(strerror(errno)));
+            throw std::runtime_error(
+                std::string("write() failed: ").append((strerror(errno))));
         if (len == 0)
             throw std::runtime_error("write() returned 0 unexpectedly");
         total_written += static_cast<std::string::size_type>(len);
     }
 }
 
-Fd::~Fd() {
-    if (fd_ != -1) {
-        ::close(fd_);
-    }
+void fd::Fd::close(int fd) {
+    if (fd == Fd::DEFAULT_FD) return;
+    ::close(fd);
 }
 
-OpenException::OpenException(const std::string& message)
-    : std::runtime_error(message) {}
+fd::Fd::~Fd() { Fd::close(this->fd_); }

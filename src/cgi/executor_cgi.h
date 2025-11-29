@@ -39,7 +39,6 @@ class CgiExecutor {
 
     CgiResult execute(const std::string &scriptPath, char *const argv[],
                       char *const envp[]);
-    static void safeClose(int &fd);
 
    private:
     pid_t pid_;

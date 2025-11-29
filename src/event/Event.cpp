@@ -4,6 +4,7 @@
 
 #include <cstring>
 
+#include "../core/Fd.h"
 #include "../http/ClientHandler.h"
 
 Event::Event() {
@@ -89,7 +90,7 @@ void Event::run() {  // NOLINT
 
 Event::~Event() {
     if (epoll_fd_ >= 0) {
-        ::close(epoll_fd_);
+        fd::Fd::close(epoll_fd_);
     }
     for (std::map<int, EventData*>::iterator it = registry_.begin();
          it != registry_.end(); ++it) {
