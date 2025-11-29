@@ -3,7 +3,8 @@
 #include <sys/epoll.h>
 
 #include <cstring>
-#include <stdexcept>
+
+#include "../core/Fd.h"
 
 Event::Event() {
     epoll_fd_ = epoll_create(1);
@@ -24,7 +25,6 @@ void Event::add(int fd, uint32_t events, EventCallback callback,  // NOLINT
     struct epoll_event ev;
     std::memset(&ev, 0, sizeof(ev));
     ev.events = events;
-    ev.data.ptr = data;
     ev.data.fd = fd;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) == -1) {
@@ -45,7 +45,6 @@ void Event::mod(int fd, uint32_t events) {  // NOLINT
     struct epoll_event ev;
     std::memset(&ev, 0, sizeof(ev));
     ev.events = events;
-    // ev.data.ptr = data;
     ev.data.fd = fd;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev) == -1) {
@@ -65,11 +64,11 @@ void Event::del(int fd) {  // NOLINT
     registry_.erase(iter);
 }
 
-void Event::run() {  // NOLINT
+void Event::run() {
     struct epoll_event events[MAX_EVENTS];
 
     for (;;) {
-        int number_of_fd = epoll_wait(epoll_fd_, events, MAX_EVENTS, -1);
+        int number_of_fd = epoll_wait(epoll_fd_, events, MAX_EVENTS, TIMEOUT_MS);
         if (number_of_fd == -1) {
             throw std::runtime_error("epoll_wait failed:" +
                                      std::string(std::strerror(errno)));
@@ -78,24 +77,29 @@ void Event::run() {  // NOLINT
             int fd = events[i].data.fd;
             std::map<int, EventData*>::iterator it = registry_.find(fd);
             if (it == registry_.end()) {
-                // すでに削除されている（前のイベント処理で消された）のでスキップ
                 continue;
             }
-
             EventData* data = it->second;
             data->callback(data->fd, events[i].events, data->user);
         }
-        ClientHandler::check_timeout_all();
+        if (timeout_callback_) {
+            timeout_callback_(timeout_user_);
+        }
     }
 }
 
 Event::~Event() {
     if (epoll_fd_ >= 0) {
-        ::close(epoll_fd_);
+        fd::Fd::close(epoll_fd_);
     }
     for (std::map<int, EventData*>::iterator it = registry_.begin();
          it != registry_.end(); ++it) {
         delete it->second;
     }
     registry_.clear();
+}
+
+void Event::set_timeout_callback(TimeoutCallback callback, void* user) {
+    timeout_callback_ = callback;
+    timeout_user_ = user;
 }

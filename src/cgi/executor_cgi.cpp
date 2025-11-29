@@ -14,6 +14,7 @@
 #include <string>
 
 #include "../core/Common.h"
+#include "../core/Socket.h"
 
 namespace {
 const int CGI_TIMEOUT_MS = 5000;
@@ -29,26 +30,10 @@ CgiExecutor::CgiExecutor() {
 }
 
 CgiExecutor::~CgiExecutor() {
-    safeClose(pipeIn_[0]);
-    safeClose(pipeIn_[1]);
-    safeClose(pipeOut_[0]);
-    safeClose(pipeOut_[1]);
-}
-
-void CgiExecutor::writeAll(int fd, const char *buffer, size_t size) {
-    size_t total_written = 0;
-    while (total_written < size) {
-        ssize_t written =
-            write(fd, buffer + total_written, size - total_written);
-
-        if (written < 0) {
-            std::cerr << "CGI warning: failed to write cgi stdin fully. errno: "
-                      << strerror(errno) << "\n";
-            return;
-        }
-
-        total_written += written;
-    }
+    fd::Fd::close(pipeIn_[0]);
+    fd::Fd::close(pipeIn_[1]);
+    fd::Fd::close(pipeOut_[0]);
+    fd::Fd::close(pipeOut_[1]);
 }
 
 CgiResult CgiExecutor::execute(const std::string &scriptPath,
@@ -59,21 +44,21 @@ CgiResult CgiExecutor::execute(const std::string &scriptPath,
     }
 
     if (pipe(pipeOut_) == -1) {
-        safeClose(pipeIn_[0]);
-        safeClose(pipeIn_[1]);
+        fd::Fd::close(pipeIn_[0]);
+        fd::Fd::close(pipeIn_[1]);
         throw CgiExecutionException("Failed to create stdout pipe",
                                     HttpStatus::InternalServerError);
     }
 
-    Socket::set_nonblocking(pipeIn_[1]);   // 親が書き込む方
-    Socket::set_nonblocking(pipeOut_[0]);  // 親が読み込む方
+    fd::Socket::set_nonblocking(pipeIn_[1]);   // 親が書き込む方
+    fd::Socket::set_nonblocking(pipeOut_[0]);  // 親が読み込む方
 
     pid_ = fork();
     if (pid_ == -1) {
-        safeClose(pipeIn_[0]);
-        safeClose(pipeIn_[1]);
-        safeClose(pipeOut_[0]);
-        safeClose(pipeOut_[1]);
+        fd::Fd::close(pipeIn_[0]);
+        fd::Fd::close(pipeIn_[1]);
+        fd::Fd::close(pipeOut_[0]);
+        fd::Fd::close(pipeOut_[1]);
         throw CgiExecutionException("Failed to fork",
                                     HttpStatus::InternalServerError);
     }
@@ -83,8 +68,8 @@ CgiResult CgiExecutor::execute(const std::string &scriptPath,
         exit(EXIT_FAILURE);
     }
 
-    safeClose(pipeIn_[0]);
-    safeClose(pipeOut_[1]);
+    fd::Fd::close(pipeIn_[0]);
+    fd::Fd::close(pipeOut_[1]);
     CgiResult result;
     result.pid = pid_;
     result.readFd = pipeOut_[0];
@@ -98,7 +83,7 @@ CgiResult CgiExecutor::execute(const std::string &scriptPath,
 int CgiExecutor::initializeEpoll(int pipe_fd) {
     int epoll_fd = epoll_create(1);
     if (epoll_fd == -1) {
-        safeClose(pipe_fd);
+        fd::Fd::close(pipe_fd);
         throw CgiExecutionException("epoll_create failed",
                                     HttpStatus::InternalServerError);
     }
@@ -107,101 +92,33 @@ int CgiExecutor::initializeEpoll(int pipe_fd) {
     ev.events = EPOLLIN | EPOLLHUP | EPOLLERR;
     ev.data.fd = pipe_fd;
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, pipe_fd, &ev) == -1) {
-        safeClose(pipe_fd);
-        safeClose(epoll_fd);
+        fd::Fd::close(pipe_fd);
+        fd::Fd::close(epoll_fd);
         throw CgiExecutionException("epoll_ctl failed",
                                     HttpStatus::InternalServerError);
     }
     return epoll_fd;
 }
 
-std::string CgiExecutor::readParentProcess(const std::string &requestBody) {
-    if (!requestBody.empty()) {
-        writeAll(pipeIn_[1], requestBody.c_str(), requestBody.size());
-    }
-    safeClose(pipeIn_[1]);
-
-    int epoll_fd = initializeEpoll(pipeOut_[0]);
-
-    std::string cgi_output;
-    struct epoll_event events[MAX_EPOLL_EVENTS];
-    bool timeout_occurred = false;
-
-    bool hup_occurred = false;
-    while (true) {
-        int num_events =
-            epoll_wait(epoll_fd, events, MAX_EPOLL_EVENTS, CGI_TIMEOUT_MS);
-
-        if (num_events == -1) {
-            std::cerr << "CGI Error: epoll_wait failed\n";
-            break;
-        }
-
-        if (num_events == 0) {
-            timeout_occurred = true;
-            kill(pid_, SIGKILL);
-            std::cerr << "CGI Error: script timed out\n";
-            break;
-        }
-
-        if (events[0].events & EPOLLIN) {
-            char buffer[BUFFER_SIZE];
-            ssize_t bytes_read = read(pipeOut_[0], buffer, sizeof(buffer));
-
-            if (bytes_read > 0) {
-                cgi_output.append(buffer, bytes_read);
-            } else if (bytes_read == 0) {
-                // 正常終了: データが尽きた。
-                break;
-            } else {
-                std::cerr << "CGI warning: failed to read from cgi stdout\n";
-                break;
-            }
-        }
-
-        if (events[0].events & (EPOLLHUP | EPOLLERR)) {
-            hup_occurred = true;
-        }
-
-        if (hup_occurred && !(events[0].events & EPOLLIN)) {
-            break;
-        }
-    }
-
-    safeClose(epoll_fd);
-    safeClose(pipeOut_[0]);
-
-    int status;
-    waitpid(pid_, &status, 0);
-
-    if (timeout_occurred) {
-        throw CgiExecutionException("CGI script timed out",
-                                    HttpStatus::RequestTimeout);
-    }
-
-    checkChildExitStatus(status);
-    return cgi_output;
-}
-
 void CgiExecutor::executeChildProcess(const std::string &scriptPath,
                                       char *const argv[], char *const envp[]) {
-    safeClose(pipeIn_[1]);
+    fd::Fd::close(pipeIn_[1]);
     if (dup2(pipeIn_[0], STDIN_FILENO) == -1) {
         std::cerr << "CGI Error: dup2 failed for stdin\n";
-        safeClose(pipeIn_[0]);
-        safeClose(pipeOut_[0]);
-        safeClose(pipeOut_[1]);
+        fd::Fd::close(pipeIn_[0]);
+        fd::Fd::close(pipeOut_[0]);
+        fd::Fd::close(pipeOut_[1]);
         return;
     }
-    safeClose(pipeIn_[0]);
+    fd::Fd::close(pipeIn_[0]);
 
-    safeClose(pipeOut_[0]);
+    fd::Fd::close(pipeOut_[0]);
     if (dup2(pipeOut_[1], STDOUT_FILENO) == -1) {
         std::cerr << "CGI Error: dup2 failed for stdout\n";
-        safeClose(pipeOut_[1]);
+        fd::Fd::close(pipeOut_[1]);
         return;
     }
-    safeClose(pipeOut_[1]);
+    fd::Fd::close(pipeOut_[1]);
 
     std::string dir = getScriptDirectory(scriptPath);
     if (chdir(dir.c_str()) == -1) {
@@ -231,22 +148,6 @@ void CgiExecutor::checkChildExitStatus(int status) {
     throw CgiExecutionException("CGI crashed", HttpStatus::InternalServerError);
 }
 
-void CgiExecutor::safeClose(int &fd) {
-    if (fd == -1) {
-        return;
-    }
-
-    int tmp_fd = fd;
-    fd = -1;
-
-    if (close(tmp_fd) == -1) {
-        std::stringstream ss;
-        ss << "Failed CgiExecutor close(" << tmp_fd << ")";
-
-        perror(ss.str().c_str());
-    }
-}
-
 std::string CgiExecutor::getScriptDirectory(const std::string &scriptPath) {
     std::string::size_type pos = scriptPath.rfind('/');
 
@@ -254,7 +155,7 @@ std::string CgiExecutor::getScriptDirectory(const std::string &scriptPath) {
         return ".";
     }
 
-    // スラッシュが先頭にある場合 /test.py はルートを返す
+    // スラッシュが先頭にある場合ルートを返す
     if (pos == 0) {
         return "/";
     }

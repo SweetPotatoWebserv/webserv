@@ -60,7 +60,7 @@ void ResolveConfig::resolve_error_pages_internal(  // NOLINT
                   .target[error_page_directive.target.size() - 1] == '/')) {
             std::string absolute_path = base_root + error_page_directive.target;
             try {
-                Fd fd(absolute_path.c_str(), O_RDONLY);
+                fd::Fd fd(absolute_path.c_str(), O_RDONLY);
                 error_page_directive.target = absolute_path;
             } catch (std::runtime_error& e) {
                 std::cerr << e.what() << '\n';
@@ -75,7 +75,7 @@ void ResolveConfig::resolve_error_pages_internal(  // NOLINT
             std::string absolute_path =
                 base_root + error_page_directive.target + *index;
             try {
-                Fd fd(absolute_path.c_str(), O_RDONLY);
+                fd::Fd fd(absolute_path.c_str(), O_RDONLY);
                 error_page_directive.target = absolute_path;
                 found = true;
                 break;

@@ -29,12 +29,13 @@ int main(int argc, char* argv[]) {
         HttpConfig config = HttpConfigParser::parse(config_path);
         Event ev;
         Router router(config);
+        ClientHandlerManager manager;
         const std::vector<ServerConfig>& server_configs = config.getservers();
         std::vector<Server> servers;
         size_t server_count = server_configs.size();
         servers.reserve(server_count);
         for (size_t i = 0; i < server_count; ++i) {
-            servers.push_back(Server(ev, router, server_configs[i]));
+            servers.push_back(Server(ev, router, server_configs[i], manager));
         }
 
         for (size_t i = 0; i < server_count; ++i) {

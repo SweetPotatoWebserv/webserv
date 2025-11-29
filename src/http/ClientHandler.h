@@ -1,7 +1,6 @@
 #pragma once
 #include "../cgi/handler_cgi.h"
 #include "../event/Event.h"
-#include "ClientHandlerManager.h"
 #include "HttpParser.h"
 #include "HttpResponse.h"
 #include "ResponseFactory.h"
@@ -16,6 +15,10 @@ class ClientHandler {
     const CgiSession& getCgiSession() const { return cgi_session_; }
     void cleanup();
     static void on_event(int fd, uint32_t event, void* self);
+    bool is_cgi_timeout() const;
+    bool is_request_timeout() const;
+    void handle_cgi_timeout();
+    bool should_close() const { return should_close_; }
 
    private:
     int fd_;
@@ -28,10 +31,8 @@ class ClientHandler {
     HttpResponse response_;
     CgiProcess cgi_process_;
     CgiSession cgi_session_;
-    ClientHandlerManager manager_;
+    bool should_close_;
     void finish_cgi_process();
-    static const int BUFFER_SIZE = 4096;
-    static const int RECV_FLG = 0;
     void on_close();
     void on_readable();
     void on_writable();
@@ -44,4 +45,7 @@ class ClientHandler {
     static bool is_complete_transfer(
         const std::string& buffer, const std::string& message_head,
         const std::vector<std::string>& transfer_encoding);
+    static const int BUFFER_SIZE = 4096;
+    static const int RECV_FLG = 0;
+    static const int TIMEOUT_SEC = 5;
 };
