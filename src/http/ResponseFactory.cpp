@@ -103,7 +103,6 @@ std::string ResponseFactory::find_index_files(const HttpRequest& request,
                                               HttpResponse& response,
                                               const RouteInfo& route) {
     std::string path_name;
-    if (!route.resolve_.root_.is_set_) return "";
     for (std::vector<std::string>::const_iterator index_files =
              route.resolve_.index_files_.begin();
          index_files != route.resolve_.index_files_.end(); ++index_files) {
@@ -135,12 +134,6 @@ std::string ResponseFactory::find_root_files(const HttpRequest& request,
                                              HttpResponse& response,
                                              const RouteInfo& route) {
     std::string path_name;
-    if (!route.resolve_.root_.is_set_) {
-        // 上位の response_get で root 未設定を検出して 500 を返す設計なので、
-        // ここでは空文字を返して呼び出し側のエラーハンドリングに任せる。
-        return "";
-    }
-
     if (!build_safe_path(route.resolve_.root_.value_,
                          request.request_target_.path_, path_name)) {
         return "";
@@ -163,7 +156,7 @@ std::string ResponseFactory::find_root_files(const HttpRequest& request,
 }
 
 HttpResponse ResponseFactory::response_get(
-    const HttpRequest& request,  // NOLINT
+    const HttpRequest& request,
     const RouteInfo& route) {
     HttpResponse response;
     std::string path_name;
