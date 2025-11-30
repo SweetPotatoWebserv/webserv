@@ -42,10 +42,23 @@ bool ClientHandler::is_cgi_timeout() const {
 }
 
 void ClientHandler::handle_cgi_timeout() {
-    kill(cgi_session_.pid, SIGKILL);
-    waitpid(cgi_session_.pid, NULL, 0);
+    if (cgi_session_.readFd != -1) {
+        event_.del(cgi_session_.readFd);
+        fd::Fd::close(cgi_session_.readFd);
+        cgi_session_.readFd = -1;
+    }
+    if (cgi_session_.writeFd != -1) {
+        event_.del(cgi_session_.writeFd);
+        fd::Fd::close(cgi_session_.writeFd);
+        cgi_session_.writeFd = -1;
+    }
 
-    cgi_session_.pid = -1;
+    if (cgi_session_.pid != -1) {
+        kill(cgi_session_.pid, SIGKILL);
+        waitpid(cgi_session_.pid, NULL, 0);
+        cgi_session_.pid = -1;
+    }
+
     handle_cgi_error(HttpStatus::RequestTimeout);
 }
 

@@ -179,7 +179,7 @@ void CgiProcess::parseCgiResponse(HttpResponse& response,
 
     if ((response.status_code_ == HttpStatus::OK ||
          response.status_code_ == HttpStatus::Created) &&
-        response.location_.empty() &&  // リダイレクトでもない
+        response.location_.empty() &&            // リダイレクトでもない
         response.header_.content_type_.empty())  // Content-Typeが空
     {
         // レスポンスが不正なので 500に上書きする

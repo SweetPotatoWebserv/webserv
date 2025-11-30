@@ -21,12 +21,13 @@ void ClientHandlerManager::check_timeout_all() {
         if (handler->should_close()) {
             remove = true;
         }
-        if (!remove && handler->is_request_timeout()) {
-            remove = true;
-        }
-
         if (!remove && handler->is_cgi_timeout()) {
             handler->handle_cgi_timeout();
+            ++handler_itr;
+            continue;
+        }
+
+        if (!remove && handler->is_request_timeout()) {
             remove = true;
         }
 
