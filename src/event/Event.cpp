@@ -6,7 +6,7 @@
 
 #include "../core/Fd.h"
 
-Event::Event() {
+Event::Event() : timeout_callback_(NULL), timeout_user_(NULL) {
     epoll_fd_ = epoll_create(1);
     if (epoll_fd_ == -1) {
         throw std::runtime_error(std::string("epoll_create: ").append(std::strerror(errno)));
