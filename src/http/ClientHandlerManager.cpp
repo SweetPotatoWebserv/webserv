@@ -1,7 +1,8 @@
 #include "ClientHandlerManager.h"
 
-#include <algorithm>
 #include <sys/wait.h>
+
+#include <algorithm>
 
 #include "ClientHandler.h"
 
