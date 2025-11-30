@@ -23,7 +23,6 @@ ClientHandler::ClientHandler(int fd, Event& event, Router& router,
     : fd_(fd),
       event_(event),
       router_(router),
-      accept_time_(),
       server_config_(server_config),
       should_close_(false) {}
 
