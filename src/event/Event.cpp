@@ -54,7 +54,9 @@ void Event::del(int fd) {  // NOLINT
     std::map<int, EventData*>::iterator iter = registry_.find(fd);
     if (iter == registry_.end()) return;
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, NULL) == -1) {
-        throw std::runtime_error(std::string("epoll_ctl DEL failed: ").append(std::strerror(errno)));
+        if (errno != EBADF && errno != ENOENT) {
+            throw std::runtime_error(std::string("epoll_ctl DEL failed: ").append(std::strerror(errno)));
+        }
     }
     delete iter->second;
     registry_.erase(iter);

@@ -24,7 +24,7 @@ class ClientHandler {
     int fd_;
     Event& event_;
     Router& router_;
-    HttpDate accept_time_;
+    HttpDate last_activity_;
     const ServerConfig& server_config_;
     std::string buffer_;
     HttpRequest request_;

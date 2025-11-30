@@ -28,7 +28,7 @@ ClientHandler::ClientHandler(int fd, Event& event, Router& router,
 
 bool ClientHandler::is_request_timeout() const {
     std::time_t now = std::time(NULL);
-    return (std::difftime(now, accept_time_.getTime()) >= TIMEOUT_SEC);
+    return (std::difftime(now, last_activity_.getTime()) >= TIMEOUT_SEC);
 }
 
 bool ClientHandler::is_cgi_timeout() const {
@@ -159,6 +159,7 @@ void ClientHandler::on_readable() {
         return;
     }
     buffer_.append(buf, len);
+    last_activity_ = HttpDate();
     if (ClientHandler::is_request_ready(buffer_)) {
         HttpException exception(HttpStatus::OK);
         RouteInfo info;
@@ -209,6 +210,7 @@ void ClientHandler::on_writable() {
         on_close();
         return;
     }
+    last_activity_ = HttpDate();
     buffer_.clear();
     response_.clear();
     cgi_session_ = CgiSession();
@@ -242,7 +244,7 @@ void ClientHandler::handle_cgi_error(int status_code) {
     HttpException exception(status_code);
     response_ = ResponseFactory::make(request_, RouteInfo(), exception);
 
-    // クライアントへ送信フェーズへ移行
+    last_activity_ = HttpDate();
     event_.mod(fd_, EPOLLOUT);
 
     if (cgi_session_.pid != -1) {
