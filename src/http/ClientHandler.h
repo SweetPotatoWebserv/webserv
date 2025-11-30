@@ -9,14 +9,35 @@
 class ClientHandler {
    public:
     ClientHandler(int fd, Event& event, Router& router,
-                  ServerConfig server_config);
+                  const ServerConfig& server_config);
+    static const char* const TRANSFER_ENCODING_CHUNKED_END;
+    void handle_cgi_error(int status_code);
+    const CgiSession& getCgiSession() const { return cgi_session_; }
+    void cleanup();
     static void on_event(int fd, uint32_t event, void* self);
+    bool is_cgi_timeout() const;
+    bool is_request_timeout() const;
+    void handle_cgi_timeout();
+    bool should_close() const { return should_close_; }
+
+   private:
+    int fd_;
+    Event& event_;
+    Router& router_;
+    HttpDate last_activity_;
+    const ServerConfig& server_config_;
+    std::string buffer_;
+    HttpRequest request_;
+    HttpResponse response_;
+    CgiProcess cgi_process_;
+    CgiSession cgi_session_;
+    bool should_close_;
+    void finish_cgi_process();
     void on_close();
     void on_readable();
     void on_writable();
     void on_cgi_read();
     void on_cgi_write();
-    static void check_timeout_all();
     static bool is_request_ready(const std::string& buffer);
     static bool is_complete_content_length(
         const std::string& buffer, const std::string& message_head,
@@ -24,24 +45,7 @@ class ClientHandler {
     static bool is_complete_transfer(
         const std::string& buffer, const std::string& message_head,
         const std::vector<std::string>& transfer_encoding);
-    static const char* const TRANSFER_ENCODING_CHUNKED_END;
-
-    void handle_cgi_error(int status_code);
-
-   private:
-    int fd_;
-    Event& event_;
-    Router& router_;
-    ServerConfig server_config_;
-    std::string buffer_;
-    HttpRequest request_;
-    HttpResponse response_;
-    CgiProcess cgi_process_;
-    CgiSession cgi_session_;
-    void check_cgi_timeout();
-    void finish_cgi_process();
-    static std::vector<ClientHandler*>& getAllHandlers();
     static const int BUFFER_SIZE = 4096;
     static const int RECV_FLG = 0;
-    static const int CGI_TIMEOUT_SEC = 5;
+    static const int TIMEOUT_SEC = 5;
 };

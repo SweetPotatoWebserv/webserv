@@ -23,18 +23,19 @@ int main(int argc, char* argv[]) {
         // クライアントのコネクションが切断された場合 SIGPIPE になる
         // プロセス自体が落ちるのを防ぐために、SIGPIPE を無視する
         if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
-            throw std::runtime_error("signal() failed: " +
-                                     std::string(strerror(errno)));
+            throw std::runtime_error(std::string("signal() failed: ").append(strerror(errno)));
         }
         HttpConfig config = HttpConfigParser::parse(config_path);
         Event ev;
         Router router(config);
+        ClientHandlerManager manager;
+        ev.set_timeout_callback(Server::on_timeout, &manager);
         const std::vector<ServerConfig>& server_configs = config.getservers();
         std::vector<Server> servers;
         size_t server_count = server_configs.size();
         servers.reserve(server_count);
         for (size_t i = 0; i < server_count; ++i) {
-            servers.push_back(Server(ev, router, server_configs[i]));
+            servers.push_back(Server(ev, router, server_configs[i], manager));
         }
 
         for (size_t i = 0; i < server_count; ++i) {

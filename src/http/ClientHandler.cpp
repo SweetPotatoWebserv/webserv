@@ -11,63 +11,55 @@
 
 #include "../core/Fd.h"
 #include "../core/String.h"
+#include "ClientHandlerManager.h"
 #include "HttpException.h"
 #include "ResponseFactory.h"
 #include "Router.h"
 
-std::vector<ClientHandler*>& ClientHandler::getAllHandlers() {
-    static std::vector<ClientHandler*> handlers;
-    return handlers;
-}
-
 const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
 
 ClientHandler::ClientHandler(int fd, Event& event, Router& router,
-                             ServerConfig server_config)
+                             const ServerConfig& server_config)
     : fd_(fd),
       event_(event),
       router_(router),
-      server_config_(server_config) {  // NOLINT
-    getAllHandlers().push_back(this);
+      server_config_(server_config),
+      should_close_(false) {}
+
+bool ClientHandler::is_request_timeout() const {
+    std::time_t now = std::time(NULL);
+    return (std::difftime(now, last_activity_.getTime()) >= TIMEOUT_SEC);
 }
 
-void ClientHandler::check_timeout_all() {
-    std::vector<ClientHandler*>& handlers = getAllHandlers();
-    for (std::vector<ClientHandler*>::iterator it = handlers.begin();
-         it != handlers.end(); ++it) {
-        (*it)->check_cgi_timeout();
-    }
-}
-
-void ClientHandler::check_cgi_timeout() {
+bool ClientHandler::is_cgi_timeout() const {
     // CGIが実行中でなければ無視
     if (cgi_session_.pid == -1) {
-        return;
+        return false;
     }
 
     std::time_t now = std::time(NULL);
-    if (std::difftime(now, cgi_session_.startTime) >= CGI_TIMEOUT_SEC) {
+    return (std::difftime(now, cgi_session_.startTime) >= TIMEOUT_SEC);
+}
+
+void ClientHandler::handle_cgi_timeout() {
+    if (cgi_session_.readFd != -1) {
+        event_.del(cgi_session_.readFd);
+        fd::Fd::close(cgi_session_.readFd);
+        cgi_session_.readFd = -1;
+    }
+    if (cgi_session_.writeFd != -1) {
+        event_.del(cgi_session_.writeFd);
+        fd::Fd::close(cgi_session_.writeFd);
+        cgi_session_.writeFd = -1;
+    }
+
+    if (cgi_session_.pid != -1) {
         kill(cgi_session_.pid, SIGKILL);
         waitpid(cgi_session_.pid, NULL, 0);
-
-        // プロセス回収済みなのでPIDをリセット
-        // これで on_cgi_read 側での二重 waitpid を防ぐ
         cgi_session_.pid = -1;
-
-        // 2. パイプのクローズと監視削除
-        if (cgi_session_.readFd != -1) {
-            event_.del(cgi_session_.readFd);
-            fd::Fd::close(cgi_session_.readFd);
-            cgi_session_.readFd = -1;
-        }
-        if (cgi_session_.writeFd != -1) {
-            event_.del(cgi_session_.writeFd);
-            fd::Fd::close(cgi_session_.writeFd);
-            cgi_session_.writeFd = -1;
-        }
-
-        handle_cgi_error(HttpStatus::RequestTimeout);
     }
+
+    handle_cgi_error(HttpStatus::RequestTimeout);
 }
 
 void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
@@ -97,14 +89,10 @@ void ClientHandler::on_event(int fd, uint32_t event, void* self) {  // NOLINT
 }
 
 void ClientHandler::on_close() {
-    std::vector<ClientHandler*>& handlers = getAllHandlers();
-    for (std::vector<ClientHandler*>::iterator it = handlers.begin();
-         it != handlers.end(); ++it) {
-        if (*it == this) {
-            handlers.erase(it);
-            break;
-        }
-    }
+    should_close_ = true;
+}
+
+void ClientHandler::cleanup() {
     if (cgi_session_.readFd != -1) {
         event_.del(cgi_session_.readFd);
         fd::Fd::close(cgi_session_.readFd);
@@ -120,7 +108,6 @@ void ClientHandler::on_close() {
     }
     event_.del(fd_);
     fd::Fd::close(fd_);
-    delete this;
 }
 
 bool ClientHandler::is_request_ready(const std::string& buffer) {
@@ -172,6 +159,7 @@ void ClientHandler::on_readable() {
         return;
     }
     buffer_.append(buf, len);
+    last_activity_ = HttpDate();
     if (ClientHandler::is_request_ready(buffer_)) {
         HttpException exception(HttpStatus::OK);
         RouteInfo info;
@@ -192,7 +180,7 @@ void ClientHandler::on_readable() {
                     reinterpret_cast<EventCallback>(ClientHandler::on_event),
                     this);
 
-                // 書き込み監視（ボディがある場合）
+                // 書き込み監視
                 if (!cgi_session_.bodyBuffer.empty()) {
                     event_.add(cgi_session_.writeFd, EPOLLOUT,
                                reinterpret_cast<EventCallback>(
@@ -212,6 +200,7 @@ void ClientHandler::on_readable() {
             }
         }
         response_ = ResponseFactory::make(request_, info, exception);
+        last_activity_ = HttpDate();
         event_.mod(fd_, EPOLLOUT);
     }
 }
@@ -222,6 +211,7 @@ void ClientHandler::on_writable() {
         on_close();
         return;
     }
+    last_activity_ = HttpDate();
     buffer_.clear();
     response_.clear();
     cgi_session_ = CgiSession();
@@ -255,7 +245,7 @@ void ClientHandler::handle_cgi_error(int status_code) {
     HttpException exception(status_code);
     response_ = ResponseFactory::make(request_, RouteInfo(), exception);
 
-    // クライアントへ送信フェーズへ移行
+    last_activity_ = HttpDate();
     event_.mod(fd_, EPOLLOUT);
 
     if (cgi_session_.pid != -1) {
@@ -326,6 +316,7 @@ void ClientHandler::finish_cgi_process() {
 
             HttpException exception(HttpStatus::InternalServerError);
             response_ = ResponseFactory::make(request_, RouteInfo(), exception);
+            last_activity_ = HttpDate();
             event_.mod(fd_, EPOLLOUT);
             cgi_session_ = CgiSession();
             return;
@@ -335,6 +326,7 @@ void ClientHandler::finish_cgi_process() {
 
         HttpException exception(HttpStatus::InternalServerError);
         response_ = ResponseFactory::make(request_, RouteInfo(), exception);
+        last_activity_ = HttpDate();
         event_.mod(fd_, EPOLLOUT);
         cgi_session_ = CgiSession();
         return;
@@ -345,6 +337,7 @@ void ClientHandler::finish_cgi_process() {
 
         HttpException exception(HttpStatus::InternalServerError);
         response_ = ResponseFactory::make(request_, RouteInfo(), exception);
+        last_activity_ = HttpDate();
         event_.mod(fd_, EPOLLOUT);
         cgi_session_ = CgiSession();
         return;
@@ -356,6 +349,7 @@ void ClientHandler::finish_cgi_process() {
         response_.body_.clear();
     }
 
+    last_activity_ = HttpDate();
     event_.mod(fd_, EPOLLOUT);
 
     cgi_session_ = CgiSession();

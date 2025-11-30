@@ -13,7 +13,11 @@
 #include <string>
 #include <vector>
 
-enum Method { MethodGET, MethodHEAD, MethodPOST, MethodDELETE, MethodUNKNOWN };
+enum Method { MethodGET,
+              MethodHEAD,
+              MethodPOST,
+              MethodDELETE,
+              MethodUNKNOWN };
 
 Method string_to_method(const std::string& method_str);
 

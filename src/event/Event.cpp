@@ -5,13 +5,11 @@
 #include <cstring>
 
 #include "../core/Fd.h"
-#include "../http/ClientHandler.h"
 
-Event::Event() {
+Event::Event() : timeout_callback_(NULL), timeout_user_(NULL) {
     epoll_fd_ = epoll_create(1);
     if (epoll_fd_ == -1) {
-        throw std::runtime_error("epoll_create: " +
-                                 std::string(std::strerror(errno)));
+        throw std::runtime_error(std::string("epoll_create: ").append(std::strerror(errno)));
     }
 }
 
@@ -30,8 +28,7 @@ void Event::add(int fd, uint32_t events, EventCallback callback,  // NOLINT
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) == -1) {
         delete data;
-        throw std::runtime_error("epoll_ctl ADD failed: " +
-                                 std::string(std::strerror(errno)));
+        throw std::runtime_error(std::string("epoll_ctl ADD failed: ").append(std::strerror(errno)));
     }
     registry_[fd] = data;
 }
@@ -49,8 +46,12 @@ void Event::mod(int fd, uint32_t events) {  // NOLINT
     ev.data.fd = fd;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev) == -1) {
-        throw std::runtime_error("epoll_ctl MOD failed: " +
-                                 std::string(std::strerror(errno)));
+        if (errno == EBADF || errno == ENOENT) {
+            delete iter->second;
+            registry_.erase(iter);
+            return;
+        }
+        throw std::runtime_error(std::string("epoll_ctl MOD failed: ").append(std::strerror(errno)));
     }
 }
 
@@ -58,21 +59,21 @@ void Event::del(int fd) {  // NOLINT
     std::map<int, EventData*>::iterator iter = registry_.find(fd);
     if (iter == registry_.end()) return;
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, NULL) == -1) {
-        throw std::runtime_error("epoll_ctl DEL failed: " +
-                                 std::string(std::strerror(errno)));
+        if (errno != EBADF && errno != ENOENT) {
+            throw std::runtime_error(std::string("epoll_ctl DEL failed: ").append(std::strerror(errno)));
+        }
     }
     delete iter->second;
     registry_.erase(iter);
 }
 
-void Event::run() {  // NOLINT
+void Event::run() {
     struct epoll_event events[MAX_EVENTS];
 
     for (;;) {
-        int number_of_fd = epoll_wait(epoll_fd_, events, MAX_EVENTS, -1);
+        int number_of_fd = epoll_wait(epoll_fd_, events, MAX_EVENTS, TIMEOUT_MS);
         if (number_of_fd == -1) {
-            throw std::runtime_error("epoll_wait failed:" +
-                                     std::string(std::strerror(errno)));
+            throw std::runtime_error(std::string("epoll_wait failed:").append(std::strerror(errno)));
         }
         for (int i = 0; i < number_of_fd; ++i) {
             int fd = events[i].data.fd;
@@ -80,11 +81,13 @@ void Event::run() {  // NOLINT
             if (it == registry_.end()) {
                 continue;
             }
-
             EventData* data = it->second;
             data->callback(data->fd, events[i].events, data->user);
         }
-        ClientHandler::check_timeout_all();
+
+        if (timeout_callback_) {
+            timeout_callback_(timeout_user_);
+        }
     }
 }
 
@@ -97,4 +100,9 @@ Event::~Event() {
         delete it->second;
     }
     registry_.clear();
+}
+
+void Event::set_timeout_callback(TimeoutCallback callback, void* user) {
+    timeout_callback_ = callback;
+    timeout_user_ = user;
 }
