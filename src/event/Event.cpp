@@ -46,6 +46,11 @@ void Event::mod(int fd, uint32_t events) {  // NOLINT
     ev.data.fd = fd;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev) == -1) {
+        if (errno == EBADF || errno == ENOENT) {
+            delete iter->second;
+            registry_.erase(iter);
+            return;
+        }
         throw std::runtime_error(std::string("epoll_ctl MOD failed: ").append(std::strerror(errno)));
     }
 }

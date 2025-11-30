@@ -200,6 +200,7 @@ void ClientHandler::on_readable() {
             }
         }
         response_ = ResponseFactory::make(request_, info, exception);
+        last_activity_ = HttpDate();
         event_.mod(fd_, EPOLLOUT);
     }
 }
@@ -315,6 +316,7 @@ void ClientHandler::finish_cgi_process() {
 
             HttpException exception(HttpStatus::InternalServerError);
             response_ = ResponseFactory::make(request_, RouteInfo(), exception);
+            last_activity_ = HttpDate();
             event_.mod(fd_, EPOLLOUT);
             cgi_session_ = CgiSession();
             return;
@@ -324,6 +326,7 @@ void ClientHandler::finish_cgi_process() {
 
         HttpException exception(HttpStatus::InternalServerError);
         response_ = ResponseFactory::make(request_, RouteInfo(), exception);
+        last_activity_ = HttpDate();
         event_.mod(fd_, EPOLLOUT);
         cgi_session_ = CgiSession();
         return;
@@ -334,6 +337,7 @@ void ClientHandler::finish_cgi_process() {
 
         HttpException exception(HttpStatus::InternalServerError);
         response_ = ResponseFactory::make(request_, RouteInfo(), exception);
+        last_activity_ = HttpDate();
         event_.mod(fd_, EPOLLOUT);
         cgi_session_ = CgiSession();
         return;
@@ -345,6 +349,7 @@ void ClientHandler::finish_cgi_process() {
         response_.body_.clear();
     }
 
+    last_activity_ = HttpDate();
     event_.mod(fd_, EPOLLOUT);
 
     cgi_session_ = CgiSession();
