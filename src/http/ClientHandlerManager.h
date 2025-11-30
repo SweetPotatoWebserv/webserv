@@ -14,7 +14,6 @@ class ClientHandlerManager {
     std::vector<ClientHandler*> getHandlers() const { return handlers_; }
 
     void check_timeout_all();
-    void notifyClosed(ClientHandler* handler);
 
     ClientHandlerManager(){};
     ~ClientHandlerManager(){};
