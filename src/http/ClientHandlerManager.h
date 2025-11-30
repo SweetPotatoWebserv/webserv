@@ -11,10 +11,10 @@ class ClientHandlerManager {
 
    public:
     void add(ClientHandler* handler) { handlers_.push_back(handler); }
-    std::vector<ClientHandler*> getHandlers() const { return handlers_; }
+    const std::vector<ClientHandler*>& getHandlers() const { return handlers_; }
 
     void check_timeout_all();
 
     ClientHandlerManager(){};
-    ~ClientHandlerManager(){};
+    ~ClientHandlerManager();
 };

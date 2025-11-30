@@ -1,5 +1,6 @@
 #include "ClientHandlerManager.h"
 
+#include <algorithm>
 #include <sys/wait.h>
 
 #include "ClientHandler.h"
@@ -30,4 +31,12 @@ void ClientHandlerManager::check_timeout_all() {
             handler_itr++;
         }
     }
+}
+
+ClientHandlerManager::~ClientHandlerManager() {
+    for (std::vector<ClientHandler*>::iterator handler_itr = handlers_.begin();
+         handler_itr != handlers_.end(); ++handler_itr) {
+        delete *handler_itr;
+    }
+    handlers_.clear();
 }
