@@ -9,7 +9,6 @@ Server::Server(Event& event, Router& router, const ServerConfig& server_config, 
       router_(router),
       server_config_(server_config),
       manager_(manager) {
-    event_.set_timeout_callback(Server::on_timeout, &manager_);
 }
 
 void Server::start() {
@@ -22,8 +21,7 @@ void Server::on_acceptable(int fd, uint32_t event, void* self) {  // NOLINT
     struct sockaddr_in client;
     socklen_t len = sizeof(client);
 
-    int client_fd =
-        accept(fd, reinterpret_cast<struct sockaddr*>(&client), &len);
+    int client_fd = accept(fd, reinterpret_cast<struct sockaddr*>(&client), &len);
     if (client_fd == -1) return;
     std::cout << "accepted\n";
     fd::Socket::set_nonblocking(client_fd);

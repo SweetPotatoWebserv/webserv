@@ -9,7 +9,7 @@
 class ClientHandler {
    public:
     ClientHandler(int fd, Event& event, Router& router,
-                  ServerConfig server_config);
+                  const ServerConfig& server_config);
     static const char* const TRANSFER_ENCODING_CHUNKED_END;
     void handle_cgi_error(int status_code);
     const CgiSession& getCgiSession() const { return cgi_session_; }
@@ -25,7 +25,7 @@ class ClientHandler {
     Event& event_;
     Router& router_;
     HttpDate accept_time_;
-    ServerConfig server_config_;
+    const ServerConfig& server_config_;
     std::string buffer_;
     HttpRequest request_;
     HttpResponse response_;

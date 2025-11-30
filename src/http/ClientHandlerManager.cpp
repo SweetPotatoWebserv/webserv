@@ -14,7 +14,6 @@ void ClientHandlerManager::notifyClosed(ClientHandler* handler) {
 }
 
 void ClientHandlerManager::check_timeout_all() {
-    std::cout << handlers_.size() << '\n';
     for (std::vector<ClientHandler*>::iterator handler_itr = handlers_.begin(); handler_itr != handlers_.end();) {
         ClientHandler* handler = *handler_itr;
         bool remove = false;

@@ -19,11 +19,11 @@
 const char* const ClientHandler::TRANSFER_ENCODING_CHUNKED_END = "0\r\n\r\n";
 
 ClientHandler::ClientHandler(int fd, Event& event, Router& router,
-                             ServerConfig server_config)
+                             const ServerConfig& server_config)
     : fd_(fd),
       event_(event),
       router_(router),
-      server_config_(server_config),  // NOLINT
+      server_config_(server_config),
       should_close_(false) {}
 
 bool ClientHandler::is_request_timeout() const {
@@ -95,7 +95,6 @@ void ClientHandler::cleanup() {
     }
     event_.del(fd_);
     fd::Fd::close(fd_);
-    delete this;
 }
 
 bool ClientHandler::is_request_ready(const std::string& buffer) {

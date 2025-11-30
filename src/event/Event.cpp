@@ -9,8 +9,7 @@
 Event::Event() {
     epoll_fd_ = epoll_create(1);
     if (epoll_fd_ == -1) {
-        throw std::runtime_error("epoll_create: " +
-                                 std::string(std::strerror(errno)));
+        throw std::runtime_error(std::string("epoll_create: ").append(std::strerror(errno)));
     }
 }
 
@@ -29,8 +28,7 @@ void Event::add(int fd, uint32_t events, EventCallback callback,  // NOLINT
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) == -1) {
         delete data;
-        throw std::runtime_error("epoll_ctl ADD failed: " +
-                                 std::string(std::strerror(errno)));
+        throw std::runtime_error(std::string("epoll_ctl ADD failed: ").append(std::strerror(errno)));
     }
     registry_[fd] = data;
 }
@@ -48,8 +46,7 @@ void Event::mod(int fd, uint32_t events) {  // NOLINT
     ev.data.fd = fd;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev) == -1) {
-        throw std::runtime_error("epoll_ctl MOD failed: " +
-                                 std::string(std::strerror(errno)));
+        throw std::runtime_error(std::string("epoll_ctl MOD failed: ").append(std::strerror(errno)));
     }
 }
 
@@ -57,8 +54,7 @@ void Event::del(int fd) {  // NOLINT
     std::map<int, EventData*>::iterator iter = registry_.find(fd);
     if (iter == registry_.end()) return;
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, NULL) == -1) {
-        throw std::runtime_error("epoll_ctl DEL failed: " +
-                                 std::string(std::strerror(errno)));
+        throw std::runtime_error(std::string("epoll_ctl DEL failed: ").append(std::strerror(errno)));
     }
     delete iter->second;
     registry_.erase(iter);
@@ -70,8 +66,7 @@ void Event::run() {
     for (;;) {
         int number_of_fd = epoll_wait(epoll_fd_, events, MAX_EVENTS, TIMEOUT_MS);
         if (number_of_fd == -1) {
-            throw std::runtime_error("epoll_wait failed:" +
-                                     std::string(std::strerror(errno)));
+            throw std::runtime_error(std::string("epoll_wait failed:").append(std::strerror(errno)));
         }
         for (int i = 0; i < number_of_fd; ++i) {
             int fd = events[i].data.fd;
@@ -82,6 +77,7 @@ void Event::run() {
             EventData* data = it->second;
             data->callback(data->fd, events[i].events, data->user);
         }
+
         if (timeout_callback_) {
             timeout_callback_(timeout_user_);
         }
